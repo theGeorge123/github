@@ -13,6 +13,7 @@ local remotes = getOrCreate("Folder", "Remotes", ReplicatedStorage)
 getOrCreate("RemoteEvent", "RoundState", remotes)
 getOrCreate("RemoteEvent", "DataUpdated", remotes)
 getOrCreate("RemoteFunction", "PurchaseUpgrade", remotes)
+getOrCreate("RemoteFunction", "GetProfile", remotes)
 
 local services = script.Parent:WaitForChild("Services")
 

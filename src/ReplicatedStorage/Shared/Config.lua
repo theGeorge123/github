@@ -13,7 +13,7 @@ Config.RoundWinCoins = 100
 Config.ArenaSize = 160
 Config.ArenaY = 20
 Config.HazardStartY = -4
-Config.HazardEndY = 18
+Config.HazardEndY = 26
 
 Config.BaseWalkSpeed = 16
 Config.BaseJumpPower = 50

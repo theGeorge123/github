@@ -196,4 +196,10 @@ remotes.RoundState.OnClientEvent:Connect(function(data)
     end
 end)
 
+local ok, initialProfile = pcall(function()
+    return remotes.GetProfile:InvokeServer()
+end)
+if ok and type(initialProfile) == "table" then
+    profile = initialProfile
+end
 refresh()

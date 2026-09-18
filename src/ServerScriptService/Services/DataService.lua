@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DataService = {}
 
@@ -58,32 +57,46 @@ local function updateLeaderstats(player)
     leaderstats.Wins.Value = profile.Wins
 end
 
+local function loadPlayer(player)
+    local loaded
+    local ok = pcall(function()
+        loaded = store:GetAsync("u_" .. player.UserId)
+    end)
+
+    profiles[player] = reconcile(ok and loaded or nil)
+
+    local leaderstats = Instance.new("Folder")
+    leaderstats.Name = "leaderstats"
+    leaderstats.Parent = player
+
+    local coins = Instance.new("IntValue")
+    coins.Name = "Coins"
+    coins.Parent = leaderstats
+
+    local wins = Instance.new("IntValue")
+    wins.Name = "Wins"
+    wins.Parent = leaderstats
+
+    updateLeaderstats(player)
+    remotes.DataUpdated:FireClient(player, profiles[player])
+end
+
 function DataService.Init(remoteFolder)
     remotes = remoteFolder
 
-    Players.PlayerAdded:Connect(function(player)
-        local loaded
-        local ok = pcall(function()
-            loaded = store:GetAsync("u_" .. player.UserId)
-        end)
+    remotes.GetProfile.OnServerInvoke = function(player)
+        local timeout = os.clock() + 5
+        while not profiles[player] and os.clock() < timeout do
+            task.wait(0.05)
+        end
+        return profiles[player] or copyDefault()
+    end
 
-        profiles[player] = reconcile(ok and loaded or nil)
+    Players.PlayerAdded:Connect(loadPlayer)
 
-        local leaderstats = Instance.new("Folder")
-        leaderstats.Name = "leaderstats"
-        leaderstats.Parent = player
-
-        local coins = Instance.new("IntValue")
-        coins.Name = "Coins"
-        coins.Parent = leaderstats
-
-        local wins = Instance.new("IntValue")
-        wins.Name = "Wins"
-        wins.Parent = leaderstats
-
-        updateLeaderstats(player)
-        remotes.DataUpdated:FireClient(player, profiles[player])
-    end)
+    for _, player in ipairs(Players:GetPlayers()) do
+        task.spawn(loadPlayer, player)
+    end
 
     Players.PlayerRemoving:Connect(function(player)
         DataService.Save(player)

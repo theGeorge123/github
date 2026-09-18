@@ -21,13 +21,21 @@ end
 
 local function alivePlayers(participants)
     local alive = {}
-    for player in pairs(participants) do
+    for player, isAlive in pairs(participants) do
         local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-        if player.Parent == Players and humanoid and humanoid.Health > 0 then
+        if isAlive and player.Parent == Players and humanoid and humanoid.Health > 0 then
             table.insert(alive, player)
         end
     end
     return alive
+end
+
+local function markDeath(participants, player)
+    local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    humanoid.Died:Connect(function()
+        participants[player] = false
+    end)
 end
 
 function RoundService.Init(dataService, worldService, crystalService, remoteFolder)
@@ -52,12 +60,14 @@ function RoundService.Start()
             local participants = {}
 
             for index, player in ipairs(Players:GetPlayers()) do
-                participants[player] = true
                 if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
                     player:LoadCharacter()
                     player.CharacterAdded:Wait()
                     task.wait(0.1)
                 end
+
+                participants[player] = true
+                markDeath(participants, player)
                 WorldService.TeleportToArena(player, index)
             end
 
