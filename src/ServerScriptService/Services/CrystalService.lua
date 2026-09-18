@@ -10,6 +10,12 @@ local folder
 local running = false
 local DataService
 local WorldService
+local TelemetryService
+local sessionCollected = {}
+
+local function milestone(value)
+    return value == 1 or value == 10 or value == 25 or value == 50
+end
 
 local function createCrystal()
     if not running then return end
@@ -40,6 +46,13 @@ local function createCrystal()
         claimed = true
         DataService.Add(player, "Coins", Config.CoinReward)
         DataService.Add(player, "XP", Config.XPReward)
+        DataService.AddQuestProgress(player, "Collect", 1)
+
+        sessionCollected[player] = (sessionCollected[player] or 0) + 1
+        if milestone(sessionCollected[player]) then
+            TelemetryService.Log(player, "CrystalMilestone", sessionCollected[player])
+        end
+
         crystal:Destroy()
 
         task.delay(Config.CrystalRespawnDelay, function()
@@ -50,13 +63,18 @@ local function createCrystal()
     end)
 end
 
-function CrystalService.Init(dataService, worldService)
+function CrystalService.Init(dataService, worldService, telemetryService)
     DataService = dataService
     WorldService = worldService
+    TelemetryService = telemetryService
 
     folder = Instance.new("Folder")
     folder.Name = "Crystals"
     folder.Parent = workspace
+
+    Players.PlayerRemoving:Connect(function(player)
+        sessionCollected[player] = nil
+    end)
 
     RunService.Heartbeat:Connect(function(dt)
         if not running then return end

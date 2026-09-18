@@ -1,3 +1,4 @@
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local function getOrCreate(className, name, parent)
@@ -14,6 +15,8 @@ getOrCreate("RemoteEvent", "RoundState", remotes)
 getOrCreate("RemoteEvent", "DataUpdated", remotes)
 getOrCreate("RemoteFunction", "PurchaseUpgrade", remotes)
 getOrCreate("RemoteFunction", "GetProfile", remotes)
+getOrCreate("RemoteFunction", "ClaimDaily", remotes)
+getOrCreate("RemoteFunction", "ClaimQuest", remotes)
 
 local services = script.Parent:WaitForChild("Services")
 
@@ -22,12 +25,24 @@ local WorldService = require(services.WorldService)
 local UpgradeService = require(services.UpgradeService)
 local CrystalService = require(services.CrystalService)
 local RoundService = require(services.RoundService)
+local RetentionService = require(services.RetentionService)
+local TelemetryService = require(services.TelemetryService)
 
 WorldService.Init()
 DataService.Init(remotes)
-UpgradeService.Init(DataService, remotes)
-CrystalService.Init(DataService, WorldService)
-RoundService.Init(DataService, WorldService, CrystalService, remotes)
+RetentionService.Init(DataService, TelemetryService, remotes)
+UpgradeService.Init(DataService, TelemetryService, remotes)
+CrystalService.Init(DataService, WorldService, TelemetryService)
+RoundService.Init(DataService, WorldService, CrystalService, TelemetryService, remotes)
 RoundService.Start()
+
+local function logJoin(player)
+    TelemetryService.Log(player, "SessionStarted", 1)
+end
+
+Players.PlayerAdded:Connect(logJoin)
+for _, player in ipairs(Players:GetPlayers()) do
+    logJoin(player)
+end
 
 print("Crystal Rush server started")

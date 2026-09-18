@@ -8,6 +8,7 @@ local RoundService = {}
 local DataService
 local WorldService
 local CrystalService
+local TelemetryService
 local remotes
 local roundNumber = 0
 
@@ -38,10 +39,11 @@ local function markDeath(participants, player)
     end)
 end
 
-function RoundService.Init(dataService, worldService, crystalService, remoteFolder)
+function RoundService.Init(dataService, worldService, crystalService, telemetryService, remoteFolder)
     DataService = dataService
     WorldService = worldService
     CrystalService = crystalService
+    TelemetryService = telemetryService
     remotes = remoteFolder
 end
 
@@ -68,6 +70,8 @@ function RoundService.Start()
 
                 participants[player] = true
                 markDeath(participants, player)
+                DataService.AddQuestProgress(player, "Rounds", 1)
+                TelemetryService.Log(player, "RoundStarted", roundNumber)
                 WorldService.TeleportToArena(player, index)
             end
 
@@ -90,11 +94,14 @@ function RoundService.Start()
             local survivors = alivePlayers(participants)
             for _, player in ipairs(survivors) do
                 DataService.Add(player, "Coins", Config.RoundSurvivalCoins)
+                DataService.AddQuestProgress(player, "Survive", 1)
+                TelemetryService.Log(player, "RoundSurvived", roundNumber)
             end
 
             if #survivors == 1 then
                 DataService.Add(survivors[1], "Coins", Config.RoundWinCoins)
                 DataService.Add(survivors[1], "Wins", 1)
+                TelemetryService.Log(survivors[1], "RoundWon", roundNumber)
             end
 
             broadcast("RoundOver", 5)

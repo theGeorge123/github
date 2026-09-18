@@ -26,6 +26,17 @@ local function stroke(object, transparency)
     s.Parent = object
 end
 
+local function buttonBase(text)
+    local button = Instance.new("TextButton")
+    button.BackgroundColor3 = Color3.fromRGB(100, 80, 255)
+    button.Font = Enum.Font.GothamBold
+    button.Text = text
+    button.TextColor3 = Color3.new(1, 1, 1)
+    button.TextSize = 17
+    roundify(button, 14)
+    return button
+end
+
 local top = Instance.new("Frame")
 top.Size = UDim2.new(0, 420, 0, 78)
 top.Position = UDim2.new(0.5, -210, 0, 22)
@@ -76,16 +87,16 @@ statLabel.TextColor3 = Color3.fromRGB(240, 240, 248)
 statLabel.TextSize = 18
 statLabel.Parent = stats
 
-local shopButton = Instance.new("TextButton")
-shopButton.Size = UDim2.new(0, 170, 0, 52)
+local shopButton = buttonBase("UPGRADES")
+shopButton.Size = UDim2.new(0, 170, 0, 50)
 shopButton.Position = UDim2.new(1, -192, 0, 28)
-shopButton.BackgroundColor3 = Color3.fromRGB(100, 80, 255)
-shopButton.Font = Enum.Font.GothamBold
-shopButton.Text = "UPGRADES"
-shopButton.TextColor3 = Color3.new(1, 1, 1)
-shopButton.TextSize = 18
 shopButton.Parent = gui
-roundify(shopButton, 14)
+
+local dailyButton = buttonBase("DAILY REWARD")
+dailyButton.Size = UDim2.new(0, 170, 0, 50)
+dailyButton.Position = UDim2.new(1, -192, 0, 88)
+dailyButton.BackgroundColor3 = Color3.fromRGB(30, 170, 150)
+dailyButton.Parent = gui
 
 local shop = Instance.new("Frame")
 shop.Size = UDim2.new(0, 390, 0, 360)
@@ -116,25 +127,77 @@ message.TextColor3 = Color3.fromRGB(255, 220, 130)
 message.TextSize = 15
 message.Parent = shop
 
+local questPanel = Instance.new("Frame")
+questPanel.Size = UDim2.new(0, 300, 0, 220)
+questPanel.Position = UDim2.new(0, 22, 1, -245)
+questPanel.BackgroundColor3 = Color3.fromRGB(20, 22, 34)
+questPanel.BackgroundTransparency = 0.08
+questPanel.Parent = gui
+roundify(questPanel, 16)
+stroke(questPanel)
+
+local questTitle = Instance.new("TextLabel")
+questTitle.Size = UDim2.new(1, -20, 0, 36)
+questTitle.Position = UDim2.new(0, 10, 0, 6)
+questTitle.BackgroundTransparency = 1
+questTitle.Font = Enum.Font.GothamBold
+questTitle.Text = "DAILY QUESTS"
+questTitle.TextColor3 = Color3.fromRGB(150, 235, 255)
+questTitle.TextSize = 18
+questTitle.Parent = questPanel
+
 local profile = {
     Coins = 0,
     XP = 0,
     Wins = 0,
     Upgrades = { Speed = 0, Jump = 0, Magnet = 0 },
+    Daily = { Streak = 0, CanClaim = true },
+    Quests = {
+        Progress = { Collect = 0, Rounds = 0, Survive = 0 },
+        Claimed = { Collect = false, Rounds = false, Survive = false },
+    },
 }
 
-local buttons = {}
+local upgradeButtons = {}
+local questButtons = {}
 
 local function refresh()
     statLabel.Text = string.format("Coins: %d\nXP: %d\nWins: %d", profile.Coins or 0, profile.XP or 0, profile.Wins or 0)
 
-    for name, button in pairs(buttons) do
+    local daily = profile.Daily or {}
+    if daily.CanClaim then
+        dailyButton.Text = string.format("DAILY REWARD • %d🔥", daily.Streak or 0)
+        dailyButton.AutoButtonColor = true
+        dailyButton.BackgroundColor3 = Color3.fromRGB(30, 170, 150)
+    else
+        dailyButton.Text = string.format("CLAIMED • %d DAY STREAK", daily.Streak or 0)
+        dailyButton.AutoButtonColor = false
+        dailyButton.BackgroundColor3 = Color3.fromRGB(65, 70, 80)
+    end
+
+    for name, button in pairs(upgradeButtons) do
         local level = profile.Upgrades and profile.Upgrades[name] or 0
         local data = Config.Upgrades[name]
         if level >= data.maxLevel then
             button.Text = string.format("%s  Lv.%d  •  MAX", name, level)
         else
             button.Text = string.format("%s  Lv.%d  •  %d Coins", name, level, Config.getUpgradeCost(name, level))
+        end
+    end
+
+    for name, button in pairs(questButtons) do
+        local data = Config.Quests[name]
+        local progress = profile.Quests and profile.Quests.Progress and profile.Quests.Progress[name] or 0
+        local claimed = profile.Quests and profile.Quests.Claimed and profile.Quests.Claimed[name]
+        if claimed then
+            button.Text = string.format("✓ %s  •  CLAIMED", data.label)
+            button.BackgroundColor3 = Color3.fromRGB(50, 80, 70)
+        elseif progress >= data.target then
+            button.Text = string.format("%s  •  CLAIM +%d", data.label, data.reward)
+            button.BackgroundColor3 = Color3.fromRGB(30, 140, 115)
+        else
+            button.Text = string.format("%s  •  %d/%d", data.label, progress, data.target)
+            button.BackgroundColor3 = Color3.fromRGB(42, 45, 67)
         end
     end
 end
@@ -150,7 +213,7 @@ for index, name in ipairs({ "Speed", "Jump", "Magnet" }) do
     button.Parent = shop
     roundify(button, 14)
     stroke(button, 0.65)
-    buttons[name] = button
+    upgradeButtons[name] = button
 
     button.MouseButton1Click:Connect(function()
         local ok, result, msg = pcall(function()
@@ -162,6 +225,29 @@ for index, name in ipairs({ "Speed", "Jump", "Magnet" }) do
             TweenService:Create(button, TweenInfo.new(0.25), {
                 BackgroundColor3 = Color3.fromRGB(42, 45, 67)
             }):Play()
+        end
+    end)
+end
+
+for index, name in ipairs({ "Collect", "Rounds", "Survive" }) do
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, -20, 0, 48)
+    button.Position = UDim2.new(0, 10, 0, 44 + (index - 1) * 56)
+    button.BackgroundColor3 = Color3.fromRGB(42, 45, 67)
+    button.Font = Enum.Font.GothamMedium
+    button.TextColor3 = Color3.fromRGB(240, 240, 248)
+    button.TextSize = 14
+    button.TextWrapped = true
+    button.Parent = questPanel
+    roundify(button, 10)
+    questButtons[name] = button
+
+    button.MouseButton1Click:Connect(function()
+        local ok, result, msg = pcall(function()
+            return remotes.ClaimQuest:InvokeServer(name)
+        end)
+        if ok and result then
+            message.Text = "Quest reward: " .. tostring(msg)
         end
     end)
 end
@@ -179,6 +265,20 @@ hint.Parent = gui
 
 shopButton.MouseButton1Click:Connect(function()
     shop.Visible = not shop.Visible
+end)
+
+dailyButton.MouseButton1Click:Connect(function()
+    if profile.Daily and not profile.Daily.CanClaim then
+        return
+    end
+
+    local ok, result, msg = pcall(function()
+        return remotes.ClaimDaily:InvokeServer()
+    end)
+
+    if ok and result then
+        message.Text = "Daily reward: " .. tostring(msg)
+    end
 end)
 
 remotes.DataUpdated.OnClientEvent:Connect(function(data)

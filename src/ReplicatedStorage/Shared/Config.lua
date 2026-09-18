@@ -18,6 +18,30 @@ Config.HazardEndY = 26
 Config.BaseWalkSpeed = 16
 Config.BaseJumpPower = 50
 
+Config.DailyReward = {
+    baseCoins = 50,
+    streakBonus = 25,
+    maxCoins = 250,
+}
+
+Config.Quests = {
+    Collect = {
+        label = "Collect 15 crystals",
+        target = 15,
+        reward = 100,
+    },
+    Rounds = {
+        label = "Play 3 rounds",
+        target = 3,
+        reward = 150,
+    },
+    Survive = {
+        label = "Survive a round",
+        target = 1,
+        reward = 125,
+    },
+}
+
 Config.Upgrades = {
     Speed = {
         maxLevel = 10,

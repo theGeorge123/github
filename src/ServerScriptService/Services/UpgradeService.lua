@@ -5,6 +5,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 
 local UpgradeService = {}
 local DataService
+local TelemetryService
 
 local function apply(player)
     local profile = DataService.Get(player)
@@ -19,8 +20,9 @@ local function apply(player)
     humanoid.JumpPower = Config.BaseJumpPower + profile.Upgrades.Jump * Config.Upgrades.Jump.valuePerLevel
 end
 
-function UpgradeService.Init(dataService, remoteFolder)
+function UpgradeService.Init(dataService, telemetryService, remoteFolder)
     DataService = dataService
+    TelemetryService = telemetryService
 
     remoteFolder.PurchaseUpgrade.OnServerInvoke = function(player, name)
         local upgrade = Config.Upgrades[name]
@@ -41,6 +43,7 @@ function UpgradeService.Init(dataService, remoteFolder)
 
         DataService.SetUpgrade(player, name, level + 1)
         apply(player)
+        TelemetryService.Log(player, "UpgradePurchased", cost)
         return true, "Upgraded"
     end
 
