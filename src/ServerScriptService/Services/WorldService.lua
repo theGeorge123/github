@@ -451,19 +451,25 @@ function WorldService.Init(onStart)
         local column = (arenaId - 1) % 2
         local row = math.floor((arenaId - 1) / 2)
         local center = Vector3.new(column == 0 and -43 or 43, 0.6, -34 + row * 72)
-        local arena = createArena(arenaId, center)
-        arena.Prompt.Triggered:Connect(function(player)
-            onStart(player, arenaId)
-        end)
-        WorldService.Arenas[arenaId] = arena
-        WorldService.ShowArena(
-            arenaId,
-            "AVAILABLE\nTHE CASTLE GUARD | 1,000 ELO\nConvince him to open the gate.\n8 moves | 3 minutes",
-            false,
-            0,
-            0,
-            "Available"
-        )
+
+        local ok, arenaOrError = pcall(createArena, arenaId, center)
+        if ok then
+            local arena = arenaOrError
+            arena.Prompt.Triggered:Connect(function(player)
+                onStart(player, arenaId)
+            end)
+            WorldService.Arenas[arenaId] = arena
+            WorldService.ShowArena(
+                arenaId,
+                "AVAILABLE\nTHE CASTLE GUARD | 1,000 ELO\nConvince him to open the gate.\n8 moves | 3 minutes",
+                false,
+                0,
+                0,
+                "Available"
+            )
+        else
+            warn("BEAT_THE_BOT_ARENA_BUILD_FAILED", arenaId, arenaOrError)
+        end
     end
 
     leaderboard = board("Leaderboard", Vector3.new(0, 15, -88), Vector3.new(38, 24, 1), palette.Gold)
@@ -478,6 +484,12 @@ function WorldService.Init(onStart)
     local humanVsAI = board("HumanVsAI", Vector3.new(0, 10, 28), Vector3.new(28, 10, 1), palette.Cyan)
     humanVsAI.Name = "HumanVsAI"
     WorldService.HumanVsAI = humanVsAI
+
+    if #WorldService.Arenas == 0 then
+        error("No arenas were created. Check BEAT_THE_BOT_ARENA_BUILD_FAILED warnings above.")
+    end
+
+    print("BEAT_THE_BOT_WORLD_READY", #WorldService.Arenas, "arenas", WorldService.Spawn:GetFullName())
 end
 
 function WorldService.ShowArena(arenaId, message, won, progress, suspicion, status)

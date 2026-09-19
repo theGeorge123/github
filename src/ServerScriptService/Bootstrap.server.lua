@@ -21,9 +21,70 @@ local rematch = Instance.new("RemoteEvent")
 rematch.Name = "Rematch"
 rematch.Parent = remotes
 
+local fallbackFolder = Instance.new("Folder")
+fallbackFolder.Name = "BeatTheBotFallback"
+fallbackFolder.Parent = workspace
+
+local fallbackFloor = Instance.new("Part")
+fallbackFloor.Name = "EmergencyFloor"
+fallbackFloor.Size = Vector3.new(600, 4, 600)
+fallbackFloor.Position = Vector3.new(0, -4, 0)
+fallbackFloor.Anchored = true
+fallbackFloor.CanCollide = true
+fallbackFloor.Material = Enum.Material.Slate
+fallbackFloor.Color = Color3.fromRGB(20, 25, 38)
+fallbackFloor.Parent = fallbackFolder
+
+local fallbackSpawn = Instance.new("SpawnLocation")
+fallbackSpawn.Name = "EmergencySpawn"
+fallbackSpawn.Size = Vector3.new(18, 1, 18)
+fallbackSpawn.Position = Vector3.new(0, 1, 70)
+fallbackSpawn.Anchored = true
+fallbackSpawn.CanCollide = true
+fallbackSpawn.Neutral = true
+fallbackSpawn.Duration = 0
+fallbackSpawn.Material = Enum.Material.Neon
+fallbackSpawn.Color = Color3.fromRGB(73, 220, 236)
+fallbackSpawn.Parent = fallbackFolder
+
+WorldService.Spawn = fallbackSpawn
+
 DataService.Init()
 MatchService.Init(DataService, WorldService, state, submit, rematch)
-WorldService.Init(MatchService.Start)
+
+local worldOk, worldError = pcall(function()
+    WorldService.Init(MatchService.Start)
+end)
+
+if worldOk then
+    print("BEAT_THE_BOT_WORLD_BUILD_OK", #WorldService.Arenas, "arenas")
+else
+    warn("BEAT_THE_BOT_WORLD_BUILD_FAILED:", worldError)
+
+    local sign = Instance.new("Part")
+    sign.Name = "BuildFailureSign"
+    sign.Size = Vector3.new(30, 12, 1)
+    sign.Position = Vector3.new(0, 10, 55)
+    sign.Anchored = true
+    sign.CanCollide = false
+    sign.Color = Color3.fromRGB(120, 30, 40)
+    sign.Parent = fallbackFolder
+
+    local surface = Instance.new("SurfaceGui")
+    surface.Face = Enum.NormalId.Front
+    surface.CanvasSize = Vector2.new(900, 360)
+    surface.Parent = sign
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.fromScale(1, 1)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.TextWrapped = true
+    label.TextScaled = true
+    label.Font = Enum.Font.GothamBold
+    label.Text = "WORLD BUILD FAILED\nOpen View > Output and copy the red BEAT_THE_BOT_WORLD_BUILD_FAILED error."
+    label.Parent = surface
+end
 
 local leaving = {}
 
@@ -45,7 +106,12 @@ local function placeCharacter(character)
 
     task.defer(function()
         if character.Parent and WorldService.Spawn and WorldService.Spawn.Parent then
-            character:PivotTo(WorldService.Spawn.CFrame + Vector3.new(0, 4, 0))
+            character:PivotTo(WorldService.Spawn.CFrame + Vector3.new(0, 5, 0))
+            local rootPartNow = character:FindFirstChild("HumanoidRootPart")
+            if rootPartNow then
+                rootPartNow.AssemblyLinearVelocity = Vector3.zero
+                rootPartNow.AssemblyAngularVelocity = Vector3.zero
+            end
         end
     end)
 end
