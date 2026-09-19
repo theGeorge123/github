@@ -168,9 +168,10 @@ local function refreshProfileCard()
     local losses = leaderstats:FindFirstChild("Losses")
     local insight = leaderstats:FindFirstChild("Insight")
     profileDetails.Text = string.format(
-        "ELO %d  •  %s\nWins %d  •  Losses %d  •  Insight %d\nDaily streak %d  •  Equipped title: %s\nVIP %s  •  Founder %s",
+        "ELO %d  •  %s  •  Server rank %s\nWins %d  •  Losses %d  •  Insight %d\nDaily streak %d  •  Equipped title: %s\nVIP %s  •  Founder %s",
         elo and elo.Value or 0,
         player:GetAttribute("RankTitle") or "Outsider",
+        player:GetAttribute("ServerRank") and ("#" .. tostring(player:GetAttribute("ServerRank"))) or "—",
         wins and wins.Value or 0,
         losses and losses.Value or 0,
         insight and insight.Value or 0,
@@ -757,7 +758,7 @@ task.spawn(function()
     wins.Changed:Connect(refresh)
     losses.Changed:Connect(refresh)
     insight.Changed:Connect(refresh)
-    for _, attribute in ipairs({ "RankTitle", "DailyStreak", "EquippedTitle", "VIP", "Founder", "SessionOnly" }) do
+    for _, attribute in ipairs({ "RankTitle", "ServerRank", "DailyStreak", "EquippedTitle", "VIP", "Founder", "SessionOnly" }) do
         player:GetAttributeChangedSignal(attribute):Connect(refresh)
     end
     refresh()
