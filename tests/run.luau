@@ -376,6 +376,14 @@ local function fixture()
         end
 end
 
+test("returning-player onboarding state uses persisted play evidence", function()
+    assert(not ProfileStore.HasPlayed(nil))
+    assert(not ProfileStore.HasPlayed({ Wins = 0, Losses = 0, Mastery = {}, DailyTrial = {} }))
+    assert(ProfileStore.HasPlayed({ Wins = 1 }))
+    assert(ProfileStore.HasPlayed({ Wins = 0, Losses = 0, Mastery = { aldric = { Attempts = 1 } } }))
+    assert(ProfileStore.HasPlayed({ Wins = 0, Losses = 0, Mastery = {}, DailyTrial = { Result = { Won = false } } }))
+end)
+
 test("schema-1 profiles migrate without losing competitive history", function()
     local repository, records = fixture()
     records["77"] = {

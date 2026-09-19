@@ -8,7 +8,9 @@ local MatchService = require(services.MatchService)
 local EntitlementService = require(services.EntitlementService)
 local FastTravelService = require(services.FastTravelService)
 local CosmeticService = require(services.CosmeticService)
+local TelemetryService = require(services.TelemetryService)
 local TesterPolicy = require(script.Parent.Core.TesterPolicy)
+local ProfileStore = require(script.Parent.Core.ProfileStore)
 
 local previousRemotes = ReplicatedStorage:FindFirstChild("BeatTheBotRemotes")
 if previousRemotes then
@@ -160,6 +162,7 @@ local function join(player)
     task.spawn(function()
         local profile = DataService.Load(player)
         if profile and player.Parent then
+            TelemetryService.ProfileLoaded(player, ProfileStore.HasPlayed(profile))
             EntitlementService.Publish(player)
             EntitlementService.GrantOwnedCosmetics(player, DataService)
             WorldService.Refresh(DataService)
