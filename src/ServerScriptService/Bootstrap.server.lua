@@ -1,25 +1,34 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local services = script.Parent.Services
+
 local DataService = require(services.DataService)
 local WorldService = require(services.WorldService)
 local MatchService = require(services.MatchService)
+local EntitlementService = require(services.EntitlementService)
+local FastTravelService = require(services.FastTravelService)
+local CosmeticService = require(services.CosmeticService)
+
+local previousRemotes = ReplicatedStorage:FindFirstChild("BeatTheBotRemotes")
+if previousRemotes then
+    previousRemotes:Destroy()
+end
 
 local remotes = Instance.new("Folder")
 remotes.Name = "BeatTheBotRemotes"
 remotes.Parent = ReplicatedStorage
 
-local state = Instance.new("RemoteEvent")
-state.Name = "State"
-state.Parent = remotes
+local function remoteEvent(name)
+    local event = Instance.new("RemoteEvent")
+    event.Name = name
+    event.Parent = remotes
+    return event
+end
 
-local submit = Instance.new("RemoteEvent")
-submit.Name = "Submit"
-submit.Parent = remotes
-
-local rematch = Instance.new("RemoteEvent")
-rematch.Name = "Rematch"
-rematch.Parent = remotes
+local state = remoteEvent("State")
+local submit = remoteEvent("Submit")
+local rematch = remoteEvent("Rematch")
+local equipCosmetic = remoteEvent("EquipCosmetic")
 
 local fallbackFolder = Instance.new("Folder")
 fallbackFolder.Name = "BeatTheBotFallback"
@@ -51,13 +60,30 @@ WorldService.Spawn = fallbackSpawn
 
 DataService.Init()
 MatchService.Init(DataService, WorldService, state, submit, rematch)
+FastTravelService.Init(DataService, WorldService, EntitlementService, state)
+CosmeticService.Init(DataService, state, equipCosmetic)
 
 local worldOk, worldError = pcall(function()
-    WorldService.Init(MatchService.Start)
+    WorldService.Init(MatchService.Start, MatchService.StartDaily)
 end)
 
 if worldOk then
-    print("BEAT_THE_BOT_WORLD_BUILD_OK", #WorldService.Arenas, "arenas")
+    fallbackFolder:Destroy()
+
+    for destinationId, prompt in pairs(WorldService.FastTravelPrompts) do
+        prompt.Triggered:Connect(function(player)
+            FastTravelService.Request(player, destinationId)
+        end)
+    end
+
+    if WorldService.VIPPrompt then
+        WorldService.VIPPrompt.Triggered:Connect(FastTravelService.RequestVIPObservatory)
+    end
+    if WorldService.VIPReturnPrompt then
+        WorldService.VIPReturnPrompt.Triggered:Connect(FastTravelService.ReturnToPlaza)
+    end
+
+    print("BEAT_THE_BOT_WORLD_BUILD_OK", #WorldService.Arenas, "ranked arenas plus Daily Trial")
 else
     warn("BEAT_THE_BOT_WORLD_BUILD_FAILED:", worldError)
 
@@ -82,7 +108,7 @@ else
     label.TextWrapped = true
     label.TextScaled = true
     label.Font = Enum.Font.GothamBold
-    label.Text = "WORLD BUILD FAILED\nOpen View > Output and copy the red BEAT_THE_BOT_WORLD_BUILD_FAILED error."
+    label.Text = "WORLD BUILD FAILED\nOpen View > Output and copy the BEAT_THE_BOT_WORLD_BUILD_FAILED error."
     label.Parent = surface
 end
 
@@ -107,10 +133,10 @@ local function placeCharacter(character)
     task.defer(function()
         if character.Parent and WorldService.Spawn and WorldService.Spawn.Parent then
             character:PivotTo(WorldService.Spawn.CFrame + Vector3.new(0, 5, 0))
-            local rootPartNow = character:FindFirstChild("HumanoidRootPart")
-            if rootPartNow then
-                rootPartNow.AssemblyLinearVelocity = Vector3.zero
-                rootPartNow.AssemblyAngularVelocity = Vector3.zero
+            local currentRoot = character:FindFirstChild("HumanoidRootPart")
+            if currentRoot then
+                currentRoot.AssemblyLinearVelocity = Vector3.zero
+                currentRoot.AssemblyAngularVelocity = Vector3.zero
             end
         end
     end)
@@ -118,6 +144,7 @@ end
 
 local function join(player)
     player.RespawnLocation = WorldService.Spawn
+    EntitlementService.Publish(player)
 
     player.CharacterAdded:Connect(placeCharacter)
     player.CharacterRemoving:Connect(function()
@@ -128,7 +155,14 @@ local function join(player)
         task.spawn(placeCharacter, player.Character)
     end
 
-    task.spawn(DataService.Load, player)
+    task.spawn(function()
+        local profile = DataService.Load(player)
+        if profile and player.Parent then
+            EntitlementService.Publish(player)
+            EntitlementService.GrantOwnedCosmetics(player, DataService)
+            WorldService.Refresh(DataService)
+        end
+    end)
 end
 
 Players.PlayerAdded:Connect(join)
@@ -148,6 +182,7 @@ end)
 game:BindToClose(function()
     MatchService.Closing = true
     local pending = 0
+
     for player in pairs(DataService.Sessions) do
         pending += 1
         task.spawn(function()
@@ -158,13 +193,14 @@ game:BindToClose(function()
             pending -= 1
         end)
     end
+
     local deadline = os.clock() + 25
     while pending > 0 and os.clock() < deadline do
         task.wait(0.1)
     end
 end)
 
-print("Beat the Bot v0.3.2 ready: AI conversation build, full-match memory, server-owned scoring.")
+print("Beat the Bot v0.4 AI Citadel ready: server-owned progression, Daily Trial, mastery, Insight and placeholder VIP.")
 if worldOk then
     print("BEAT_THE_BOT_STARTUP_OK")
 end
