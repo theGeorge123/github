@@ -31,6 +31,7 @@ end
 local state = remoteEvent("State")
 local submit = remoteEvent("Submit")
 local rematch = remoteEvent("Rematch")
+local exitChallenge = remoteEvent("ExitChallenge")
 local equipCosmetic = remoteEvent("EquipCosmetic")
 
 local fallbackFolder = Instance.new("Folder")
@@ -62,7 +63,7 @@ fallbackSpawn.Parent = fallbackFolder
 WorldService.Spawn = fallbackSpawn
 
 DataService.Init()
-MatchService.Init(DataService, WorldService, state, submit, rematch)
+MatchService.Init(DataService, WorldService, state, submit, rematch, exitChallenge)
 FastTravelService.Init(DataService, WorldService, EntitlementService, state)
 CosmeticService.Init(DataService, state, equipCosmetic)
 
