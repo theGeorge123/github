@@ -18,22 +18,22 @@ local humanVsAI
 local championLabel
 
 local palette = {
-    Night = Color3.fromRGB(32, 42, 58),
-    Deep = Color3.fromRGB(48, 58, 74),
-    Stone = Color3.fromRGB(142, 137, 127),
-    DarkStone = Color3.fromRGB(88, 94, 104),
-    WetStone = Color3.fromRGB(72, 87, 104),
-    WarmStone = Color3.fromRGB(158, 137, 108),
+    Night = Color3.fromRGB(23, 40, 50),
+    Deep = Color3.fromRGB(38, 54, 64),
+    Stone = Color3.fromRGB(217, 223, 219),
+    DarkStone = Color3.fromRGB(105, 124, 133),
+    WetStone = Color3.fromRGB(86, 108, 120),
+    WarmStone = Color3.fromRGB(179, 171, 151),
     Wood = Color3.fromRGB(88, 58, 39),
     Iron = Color3.fromRGB(49, 54, 62),
     Gold = Color3.fromRGB(220, 174, 75),
     Amber = Color3.fromRGB(244, 154, 65),
-    Cyan = Color3.fromRGB(79, 202, 220),
+    Cyan = Color3.fromRGB(53, 201, 190),
     Blue = Color3.fromRGB(91, 130, 181),
     Violet = Color3.fromRGB(126, 102, 177),
     Green = Color3.fromRGB(83, 163, 111),
-    Red = Color3.fromRGB(186, 67, 71),
-    White = Color3.fromRGB(235, 239, 244),
+    Red = Color3.fromRGB(232, 120, 112),
+    White = Color3.fromRGB(244, 246, 242),
 }
 
 local accentByName = {
@@ -73,7 +73,8 @@ local function addTextSurface(target, face, text, textColor, backgroundColor)
     local surface = Instance.new("SurfaceGui")
     surface.Face = face or Enum.NormalId.Front
     surface.CanvasSize = Vector2.new(1000, 500)
-    surface.LightInfluence = 0
+    surface.LightInfluence = 0.15
+    surface.AlwaysOnTop = false
     surface.Parent = target
 
     local frame = Instance.new("Frame")
@@ -111,7 +112,7 @@ local function board(name, position, size, text, accent, parent)
     assembly.Name = name .. "Assembly"
     assembly.Parent = parent
 
-    local panel = part(name, size, position, palette.Deep, assembly, Enum.Material.WoodPlanks)
+    local panel = part(name, size, position, palette.Deep, assembly, Enum.Material.Metal)
     local trim = 0.55
     for _, edge in ipairs({
         { "TopFrame", Vector3.new(size.X + 1.2, trim, size.Z + 0.35), Vector3.new(0, size.Y / 2 + trim / 2, 0) },
@@ -126,7 +127,7 @@ local function board(name, position, size, text, accent, parent)
     local groundY = position.Y - size.Y / 2
     local postHeight = math.max(2, groundY)
     for _, x in ipairs({ -size.X * 0.34, size.X * 0.34 }) do
-        part("BoardPost", Vector3.new(0.8, postHeight, 0.8), Vector3.new(position.X + x, groundY - postHeight / 2, position.Z + 0.35), palette.Wood, assembly, Enum.Material.WoodPlanks)
+        part("BoardPost", Vector3.new(0.8, postHeight, 0.8), Vector3.new(position.X + x, groundY - postHeight / 2, position.Z + 0.35), palette.Iron, assembly, Enum.Material.Metal)
     end
 
     return panel, addTextSurface(panel, Enum.NormalId.Front, text, accent, palette.Night)
@@ -203,13 +204,13 @@ local function districtSign(name, position, title, subtitle, accent, parent)
 end
 
 local function configureLighting()
-    Lighting.ClockTime = 13.5
-    Lighting.Brightness = 3
-    Lighting.Ambient = Color3.fromRGB(132, 139, 153)
-    Lighting.OutdoorAmbient = Color3.fromRGB(170, 176, 187)
+    Lighting.ClockTime = 14
+    Lighting.Brightness = 2.2
+    Lighting.Ambient = Color3.fromRGB(100, 110, 120)
+    Lighting.OutdoorAmbient = Color3.fromRGB(145, 155, 165)
     Lighting.ColorShift_Top = Color3.fromRGB(255, 242, 218)
     Lighting.ShadowSoftness = 0.42
-    Lighting.ExposureCompensation = 0.15
+    Lighting.ExposureCompensation = 0
 
     pcall(function()
         Lighting.LightingStyle = Enum.LightingStyle.Realistic
@@ -223,28 +224,15 @@ local function configureLighting()
 
     local atmosphere = Instance.new("Atmosphere")
     atmosphere.Name = "BeatTheBot_Atmosphere"
-    atmosphere.Density = 0.2
+    atmosphere.Density = 0.15
     atmosphere.Offset = 0.18
-    atmosphere.Haze = 0.8
-    atmosphere.Glare = 0.12
+    atmosphere.Haze = 0.5
+    atmosphere.Glare = 0
     atmosphere.Color = Color3.fromRGB(205, 221, 238)
     atmosphere.Decay = Color3.fromRGB(156, 176, 196)
     atmosphere.Parent = Lighting
 
-    local bloom = Instance.new("BloomEffect")
-    bloom.Name = "BeatTheBot_Bloom"
-    bloom.Intensity = 0.18
-    bloom.Size = 16
-    bloom.Threshold = 1.45
-    bloom.Parent = Lighting
-
-    local color = Instance.new("ColorCorrectionEffect")
-    color.Name = "BeatTheBot_Color"
-    color.Brightness = 0.035
-    color.Contrast = 0.08
-    color.Saturation = 0.05
-    color.TintColor = Color3.fromRGB(255, 248, 232)
-    color.Parent = Lighting
+    -- Establish exposure and materials before adding post-processing effects.
 end
 
 local function createStylizedOpponent(center, parent)
@@ -275,18 +263,18 @@ local function createStylizedOpponent(center, parent)
 
     local highlight = Instance.new("Highlight")
     highlight.Name = "OpponentHighlight"
-    highlight.FillTransparency = 0.92
-    highlight.OutlineTransparency = 0.22
+    highlight.FillTransparency = 1
+    highlight.OutlineTransparency = 0.72
     highlight.OutlineColor = palette.Cyan
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.DepthMode = Enum.HighlightDepthMode.Occluded
     highlight.Parent = model
 
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "OpponentName"
     billboard.Size = UDim2.fromOffset(220, 54)
     billboard.StudsOffset = Vector3.new(0, 2.7, 0)
-    billboard.MaxDistance = 55
-    billboard.AlwaysOnTop = true
+    billboard.MaxDistance = 28
+    billboard.AlwaysOnTop = false
     billboard.Parent = head
 
     local text = Instance.new("TextLabel")
@@ -348,7 +336,7 @@ local function createArena(arenaId, center, districtId, accent, daily)
     prompt.ActionText = daily and "Enter Daily Trial" or "Challenge Opponent"
     prompt.ObjectText = daily and "Daily Trial" or (DistrictDefinitions.Get(districtId).Name .. " | Ranked")
     prompt.MaxActivationDistance = 12
-    prompt.RequiresLineOfSight = false
+    prompt.RequiresLineOfSight = true
     prompt.HoldDuration = 0
     prompt.Parent = console
 
@@ -386,8 +374,8 @@ local function createCentralPlaza(onDaily)
     folder.Name = "CentralPlaza"
     folder.Parent = root
 
-    path(Vector3.new(0, 0, 210), Vector3.new(180, 2, 115), folder, Enum.Material.Slate, Color3.fromRGB(104, 105, 108))
-    path(Vector3.new(0, 0.65, 177), Vector3.new(26, 0.45, 68), folder, Enum.Material.Cobblestone, palette.WarmStone)
+    path(Vector3.new(0, 0, 210), Vector3.new(180, 2, 115), folder, Enum.Material.Concrete, palette.Stone)
+    path(Vector3.new(0, 0.65, 207), Vector3.new(16, 0.45, 82), folder, Enum.Material.Concrete, palette.Gold)
     for _, z in ipairs({ 236, 218, 200, 182 }) do
         lantern(Vector3.new(-16, 3.1, z), folder, palette.Gold)
         lantern(Vector3.new(16, 3.1, z), folder, palette.Gold)
@@ -395,13 +383,13 @@ local function createCentralPlaza(onDaily)
 
     local spawn = Instance.new("SpawnLocation")
     spawn.Name = "CitadelSpawn"
-    spawn.Size = Vector3.new(14, 1, 14)
+    spawn.Size = Vector3.new(30, 1, 26)
     spawn.Position = Vector3.new(0, 1.5, 245)
     spawn.Anchored = true
     spawn.Neutral = true
     spawn.Duration = 0
-    spawn.Material = Enum.Material.Slate
-    spawn.Color = palette.Cyan
+    spawn.Material = Enum.Material.Concrete
+    spawn.Color = palette.Stone
     spawn.Parent = folder
     WorldService.Spawn = spawn
 
