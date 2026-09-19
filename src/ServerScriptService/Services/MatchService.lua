@@ -18,6 +18,7 @@ local MatchService = {
     Matches = {},
     Slots = {},
     LastArena = {},
+    LastOpponent = {},
     Closing = false,
 }
 
@@ -257,7 +258,7 @@ local function startMatch(player, arenaId, mode, opponent, plan, trustedRematch)
             tell(player, "No ranked opponent is available for your current progression.")
             return
         end
-        opponent = OpponentDefinitions.Select(profile.Elo, rng:NextNumber(), districtId)
+        opponent = OpponentDefinitions.Select(profile.Elo, rng:NextNumber(), districtId, MatchService.LastOpponent[player])
     end
 
     local concern = OpponentDefinitions.SelectConcern(opponent, rng:NextNumber())
@@ -284,6 +285,7 @@ local function startMatch(player, arenaId, mode, opponent, plan, trustedRematch)
     }
 
     MatchService.Matches[player] = match
+    MatchService.LastOpponent[player] = opponent.Id
     MatchService.Slots[arenaId] = match
     if arena.Prompt then
         arena.Prompt.Enabled = false
@@ -627,6 +629,7 @@ function MatchService.Leave(player)
     end
     lastRequest[player] = nil
     MatchService.LastArena[player] = nil
+    MatchService.LastOpponent[player] = nil
 end
 
 function MatchService.Init(data, world, stateRemote, submitRemote, rematchRemote)
