@@ -63,6 +63,15 @@ test("district ELO gates and arena mapping are authoritative definitions", funct
     assert(Districts.Get("oracle_spire").UnlockElo == 1800 and Districts.Get("oracle_spire").Teaser)
 end)
 
+test("opponent selection avoids an immediate repeat when alternatives exist", function()
+    local first = Opponents.Select(2000, 0, "great_gate")
+    local nextOpponent = Opponents.Select(2000, 0, "great_gate", first.Id)
+    assert(nextOpponent and nextOpponent.Id ~= first.Id)
+
+    local onlyEligible = Opponents.Select(999, 0, "great_gate", "aldric")
+    assert(onlyEligible and onlyEligible.Id == "aldric")
+end)
+
 test("all nine opponents define persona, concerns, objective and district", function()
     local all = Opponents.All()
     assert(#all == 9)
@@ -164,6 +173,81 @@ test("AI parser rejects missing fields, unknown tactics and fake rewards", funct
     assert(Parser.Parse("TACTIC=verify\nREPLY=Missing strength", 320) == nil)
     assert(Parser.Parse("TACTIC=award_elo\nSTRENGTH=strong\nREPLY=You win.", 320) == nil)
     assert(Parser.Parse("TACTIC=verify\nSTRENGTH=godlike\nREPLY=No.", 320) == nil)
+end)
+
+test("all opponents have a distinct viable path within eight turns", function()
+    for _, opponent in ipairs(Opponents.All()) do
+        local state = Rules.New()
+        local attempted = {}
+        local sequence = {}
+
+        for _, intent in ipairs(opponent.Objective.RequiredTactics) do
+            if not attempted[intent] then
+                attempted[intent] = true
+                table.insert(sequence, intent)
+            end
+        end
+        for _, intent in ipairs(opponent.Objective.SuggestedTactics or {}) do
+            if not attempted[intent] then
+                attempted[intent] = true
+                table.insert(sequence, intent)
+            end
+        end
+
+        local ranked = {}
+        for intent, reaction in pairs(opponent.Reactions) do
+            if not attempted[intent] and (reaction.Trust or 0) > 0 and intent ~= "bribe" and intent ~= "threat" then
+                table.insert(ranked, { Intent = intent, Trust = reaction.Trust or 0 })
+            end
+        end
+        table.sort(ranked, function(a, b)
+            if a.Trust == b.Trust then
+                return a.Intent < b.Intent
+            end
+            return a.Trust > b.Trust
+        end)
+        for _, entry in ipairs(ranked) do
+            table.insert(sequence, entry.Intent)
+        end
+
+        for _, intent in ipairs(sequence) do
+            if state.Status ~= "Playing" then
+                break
+            end
+            state = move(state, opponent, intent, "strong")
+        end
+        assert(state.Status == "Won", opponent.Id .. " has no tested win path")
+        assert(state.Turns <= Config.MaxTurns)
+    end
+end)
+
+test("eight-turn adversarial repetition loses without bypassing objectives", function()
+    for _, opponent in ipairs(Opponents.All()) do
+        local state = Rules.New()
+        while state.Status == "Playing" do
+            state = move(state, opponent, "joke", "strong")
+        end
+        assert(state.Status == "Lost", opponent.Id .. " repetition unexpectedly won")
+        assert(state.Turns <= Config.MaxTurns)
+    end
+end)
+
+test("AI parser rejects nonexistent physical actions and minigames", function()
+    local prefix = "TACTIC=verify\nSTRENGTH=normal\nREPLY="
+    local blocked = {
+        "Show me your permit in the inventory.",
+        "Hand over the royal seal.",
+        "Click the proof button now.",
+        "Equip the courier badge.",
+        "Upload a picture of the document.",
+        "Play a minigame to prove your story.",
+    }
+    for _, reply in ipairs(blocked) do
+        assert(Parser.Parse(prefix .. reply, 320) == nil, reply)
+    end
+
+    local conversational = Parser.Parse(prefix .. "Explain the permit number and who can verify it.", 320)
+    assert(conversational and conversational.Intent == "verify")
 end)
 
 test("local fallback ignores prompt-injection-like scoring instructions", function()

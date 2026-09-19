@@ -39,6 +39,30 @@ local function utf8SafeLimit(value, maxBytes)
     return cut
 end
 
+local forbiddenReplyPatterns = {
+    "show me your permit",
+    "show me your papers",
+    "show me your document",
+    "show me your badge",
+    "show me your inventory",
+    "show your permit",
+    "show your papers",
+    "show your document",
+    "show your badge",
+    "show your inventory",
+    "hand me ",
+    "hand over ",
+    "give me the item",
+    "click the ",
+    "equip ",
+    "upload ",
+    "open your inventory",
+    "play a minigame",
+    "play a mini game",
+    "complete a minigame",
+    "complete a mini game",
+}
+
 local function cleanReply(reply, maxBytes)
     reply = unwrap(reply):gsub("[\r\n]+", " "):gsub("%s+", " ")
     if reply == "" then
@@ -47,6 +71,13 @@ local function cleanReply(reply, maxBytes)
     reply = utf8SafeLimit(reply, maxBytes)
     if reply == "" or utf8.len(reply) == nil then
         return nil
+    end
+
+    local normalized = string.lower(reply)
+    for _, pattern in ipairs(forbiddenReplyPatterns) do
+        if string.find(normalized, pattern, 1, true) then
+            return nil
+        end
     end
     return reply
 end
