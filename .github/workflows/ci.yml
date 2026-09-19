@@ -1,0 +1,45 @@
+name: Beat the Bot CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Luau tests + Rojo build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Roblox toolchain
+        uses: CompeyDev/setup-rokit@v0.2.1
+        with:
+          path: .
+          cache: false
+
+      - name: Run pure Luau regression tests
+        run: luau tests/run.luau
+
+      - name: Compile every Luau source
+        run: find src tests -name '*.lua' -o -name '*.luau' | while read file; do luau-compile --null "$file"; done
+
+      - name: Build production place
+        run: |
+          mkdir -p build
+          rojo build default.project.json -o build/BeatTheBot.rbxlx
+
+      - name: Verify built script contents
+        run: python3 scripts/verify_build.py build/BeatTheBot.rbxlx
+
+      - name: Build Studio smoke place
+        run: rojo build test.project.json -o build/BeatTheBotSmoke.rbxlx
+
+      - name: Check whitespace errors
+        run: git diff --check

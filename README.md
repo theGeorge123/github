@@ -1,10 +1,10 @@
-# Beat the Bot — v0.2 vertical slice
+# Beat the Bot — v0.3 AI Guard vertical slice
 
 **Eight moves. One stubborn guard. Convince him to open the gate.**
 
-This repository contains a code-first Roblox vertical slice focused on one polished competitive conversation encounter. The current opponent is deliberately **deterministic local logic, not a live LLM**. That lets us validate the game loop, arena presentation, ranking feedback, rematch behavior, spectator readability, and persistence before introducing model latency and variability.
+This repository contains a code-first Roblox competitive conversation game. Typed arguments now route through Roblox-native `TextGenerator`; three Guard personalities interpret persuasion differently, while deterministic server rules still own Trust, Suspicion, wins, losses, and ELO.
 
-## What v0.2 adds
+## Current v0.3 slice
 
 - Medieval gatehouse arenas instead of greybox stages.
 - Realistic dusk lighting, atmosphere, bloom, torches, local lights, stone/metal/fabric materials.
@@ -100,3 +100,8 @@ Open that file in Studio and press Play. A successful run prints:
 `BEAT_THE_BOT_SMOKE_PASS`
 
 The previous Crystal Rush implementation remains available in Git history at commit `478889db19750074773ec8575debcabf674e21ef`.
+
+
+## Automated CI
+
+Every push to `main` now runs Luau regression tests, compile checks, a production Rojo build, exact built-source verification, a smoke-place build, and whitespace checks through GitHub Actions. See `docs/AI_RELEASE_GATE.md` for the public-release checklist.
