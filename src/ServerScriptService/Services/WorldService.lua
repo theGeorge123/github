@@ -290,11 +290,11 @@ local function createArena(arenaId, center, districtId, accent, daily)
     folder.Name = daily and "DailyArena" or ("Arena" .. tostring(arenaId))
     folder.Parent = root
 
-    path(center, Vector3.new(42, 1.2, 36), folder, Enum.Material.Slate, districtId == "watch" and palette.WetStone or palette.DarkStone)
-    wall(center + Vector3.new(-20, 5, -8), Vector3.new(2, 10, 24), folder)
-    wall(center + Vector3.new(20, 5, -8), Vector3.new(2, 10, 24), folder)
-    torch(center + Vector3.new(-15, 3, 5), folder)
-    torch(center + Vector3.new(15, 3, 5), folder)
+    path(center, Vector3.new(58, 1.2, 48), folder, Enum.Material.Slate, districtId == "watch" and palette.WetStone or palette.DarkStone)
+    wall(center + Vector3.new(-28, 5, -8), Vector3.new(2, 10, 34), folder)
+    wall(center + Vector3.new(28, 5, -8), Vector3.new(2, 10, 34), folder)
+    torch(center + Vector3.new(-21, 3, 7), folder)
+    torch(center + Vector3.new(21, 3, 7), folder)
 
     local gateParts = gateAssembly(center, folder, accent)
     local opponent = createStylizedOpponent(center, folder)
