@@ -8,9 +8,9 @@ local MatchService = require(services.MatchService)
 local EntitlementService = require(services.EntitlementService)
 local FastTravelService = require(services.FastTravelService)
 local CosmeticService = require(services.CosmeticService)
-local TelemetryService = require(services.TelemetryService)
-local TesterPolicy = require(script.Parent.Core.TesterPolicy)
-local ProfileStore = require(script.Parent.Core.ProfileStore)
+local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
+local DebateService = require(services.DebateService)
+local DebateWorldService = require(services.DebateWorldService)
 
 local previousRemotes = ReplicatedStorage:FindFirstChild("BeatTheBotRemotes")
 if previousRemotes then
@@ -31,8 +31,15 @@ end
 local state = remoteEvent("State")
 local submit = remoteEvent("Submit")
 local rematch = remoteEvent("Rematch")
-local exitChallenge = remoteEvent("ExitChallenge")
 local equipCosmetic = remoteEvent("EquipCosmetic")
+local debateState = remoteEvent("DebateState")
+local debateSubmit = remoteEvent("DebateSubmit")
+
+if Config.DebateEnabled then
+    DebateService.Init(debateState, debateSubmit)
+    DebateWorldService.Init()
+    WorldService.Spawn = DebateWorldService.Spawn
+end
 
 local fallbackFolder = Instance.new("Folder")
 fallbackFolder.Name = "BeatTheBotFallback"
@@ -63,11 +70,12 @@ fallbackSpawn.Parent = fallbackFolder
 WorldService.Spawn = fallbackSpawn
 
 DataService.Init()
-MatchService.Init(DataService, WorldService, state, submit, rematch, exitChallenge)
+MatchService.Init(DataService, WorldService, state, submit, rematch)
 FastTravelService.Init(DataService, WorldService, EntitlementService, state)
 CosmeticService.Init(DataService, state, equipCosmetic)
 
 local worldOk, worldError = pcall(function()
+    if Config.DebateEnabled then return end
     WorldService.Init(MatchService.Start, MatchService.StartDaily)
 end)
 
@@ -87,7 +95,11 @@ if worldOk then
         WorldService.VIPReturnPrompt.Triggered:Connect(FastTravelService.ReturnToPlaza)
     end
 
-    print("BEAT_THE_BOT_WORLD_BUILD_OK", #WorldService.Arenas, "ranked arenas plus Daily Trial")
+    if Config.DebateEnabled then
+        print("BEAT_THE_BOT_DEBATE_LAYOUT_READY", "scripted practice; live AI pending")
+    else
+        print("BEAT_THE_BOT_WORLD_BUILD_OK", #WorldService.Arenas, "ranked arenas plus Daily Trial")
+    end
 else
     warn("BEAT_THE_BOT_WORLD_BUILD_FAILED:", worldError)
 
@@ -149,7 +161,6 @@ end
 local function join(player)
     player.RespawnLocation = WorldService.Spawn
     EntitlementService.Publish(player)
-    player:SetAttribute("PrivateTester", TesterPolicy.IsTester(player))
 
     player.CharacterAdded:Connect(placeCharacter)
     player.CharacterRemoving:Connect(function()
@@ -163,7 +174,6 @@ local function join(player)
     task.spawn(function()
         local profile = DataService.Load(player)
         if profile and player.Parent then
-            TelemetryService.ProfileLoaded(player, ProfileStore.HasPlayed(profile))
             EntitlementService.Publish(player)
             EntitlementService.GrantOwnedCosmetics(player, DataService)
             WorldService.Refresh(DataService)
