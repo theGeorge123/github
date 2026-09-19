@@ -1,106 +1,107 @@
-# Beat the Bot — v0.3 AI Guard vertical slice
+# Beat the Bot v0.4 — AI Citadel
 
-**Eight moves. One stubborn guard. Convince him to open the gate.**
+Beat the Bot is a Roblox persuasion game in which the player challenges AI characters in a shared medieval citadel. The server owns competitive state; generated dialogue can classify a tactic and reply in character, but it cannot award wins, Trust, Suspicion, ELO, Insight, mastery, cosmetics, entitlements, Daily Trial results, streaks, or district access.
 
-This repository contains a code-first Roblox competitive conversation game. Typed arguments now route through Roblox-native `TextGenerator`; three Guard personalities interpret persuasion differently, while deterministic server rules still own Trust, Suspicion, wins, losses, and ELO.
+## Core loop
 
-## Current v0.3 slice
+Challenge an AI opponent → persuade successfully → gain ELO, mastery and cosmetic Insight → unlock deeper districts → face harder opponents → return for the Daily Trial and progression.
 
-- Medieval gatehouse arenas instead of greybox stages.
-- Realistic dusk lighting, atmosphere, bloom, torches, local lights, stone/metal/fabric materials.
-- Humanoid Castle Guard with a fallback stylized model if avatar creation is unavailable.
-- Animated portcullis victory reveal and guard-state highlighting.
-- Boss-style HUD with animated Trust and Suspicion meters.
-- Strong victory/defeat overlay with ELO change.
-- One-click server-authoritative rematch.
-- Improved plaza, Humans vs AI board, leaderboard, and champion pedestal.
-- The existing server-owned match rules, anti-forgery checks, safe spectator summaries, and persistent profile architecture remain intact.
+## AI Citadel
 
-## Play in Roblox Studio
+The runtime-generated world is a single route:
 
-1. Install Roblox Studio and Rojo 7.7.0. `aftman.toml` pins Rojo.
-2. Run:
+Central Plaza → Great Gate → Customs Quarter → Watch District → Royal Court teaser → Oracle Spire teaser.
 
-```sh
-mkdir -p build
-rojo build default.project.json -o build/BeatTheBot.rbxlx
-```
+| District | Access | Status |
+| --- | ---: | --- |
+| Central Plaza | 0 ELO | Spawn, Daily Trial, status/leaderboards, VIP entry |
+| Great Gate | Immediate | Ranked |
+| Customs Quarter | 1100 ELO | Ranked |
+| Watch District | 1250 ELO | Ranked |
+| Royal Court | 1500 ELO | Visual teaser |
+| Oracle Spire | 1800 ELO | Visual teaser |
 
-3. Open `build/BeatTheBot.rbxlx` in Roblox Studio.
-4. Press **Play**, walk to a glowing console, and activate **Challenge Guard**.
-5. Try to beat the Guard, then use the result card to rematch immediately.
+Ranked access is revalidated on the server when a match starts. Teleporting a local character into a locked area does not unlock its ranked challenge.
 
-The world is generated at runtime. Use a new empty place when serving through Rojo so unrelated template scripts do not interfere.
+## Opponents
 
-## Current rules
+Great Gate: Sir Aldric, Captain Brann, Warden Elowen.
 
-- You are a courier carrying a sealed delivery permit.
-- Establish the entry requirements, present the permit, offer verification, then accept an escort.
-- Each correct step earns 25% Trust. **100% Trust wins**, including on move eight.
-- Eight unsuccessful moves, 100% Suspicion, 180 seconds, character reset, or leaving mid-match loses.
-- Bribes add 25 Suspicion; threats add 40.
-- Starting ELO is 1,000; Guard ELO is fixed at 1,000; K=32; floor=100.
-- The server owns turns, timers, outcomes, ratings, stats, arena ownership, and rematches.
+Customs Quarter: Officer Vale, Clerk Mirelle, Guildmaster Orren.
 
-The fixed puzzle is intentionally learnable. Its ELO is a prototype progression score, not yet a calibrated measure of persuasion skill.
+Watch District: Detective Sera, Inspector Cael, Captain Nyra.
 
-## AI architecture
+Opponent definitions are data-driven and include district, ELO, unlock requirement, persona, speaking style, hidden concerns, deterministic scoring reactions, objective and visual configuration. Missions include authorization, customs declarations, cooperation and interrogation rather than only opening a gate.
 
-`AI/LocalAdapter.lua` currently performs bounded intent classification. `AI/Adapter.lua` validates the result against an allowlist. `Core/Rules.lua` alone decides Trust, Suspicion, turns, wins, and losses.
+## Progression
 
-The next AI version should preserve that separation:
+Rank titles are data-driven: Outsider, Courier, Envoy, Investigator, Diplomat, Mastermind and AI Breaker.
 
-```text
-player text
-   ↓
-AI provider interprets intent / tactic
-   ↓
-validated structured output
-   ↓
-server Rules scores the move
-   ↓
-Trust / Suspicion / result
-```
+Each opponent persists attempts, wins, losses, mastery XP, mastery level and best successful message count. Milestones can award profile frames, titles, victory effects and auras.
 
-The model should never directly award ELO, currency, or victory.
+Insight is a server-owned cosmetic currency. Match completion, wins, first win of the day, Daily Trial and streak/milestone progression can award it. Placeholder VIP receives a 25% Insight multiplier only; it never receives a ranked modifier.
 
-## Saving
+## Daily Trial
 
-Production uses Roblox `DataStoreService`, store `BeatTheBot_Profiles_v1`, keyed by `Player.UserId`. Studio defaults to session-only profiles via `StudioPersistence = false`, so local playtesting cannot accidentally modify production data.
+The Central Plaza Daily Trial uses a deterministic UTC day key and scenario. One official attempt is reserved server-side per player per UTC day. Reconnects and server hopping cannot create another official attempt. Later runs are practice and cannot overwrite the official result or alter ELO.
 
-Stored data includes ELO, best ELO, wins, losses, a bounded last-match result, an active-match marker, and a session lease. Raw conversations are not persisted.
+Stored official results are leaderboard-ready: result, message count, completion time, final Trust, final Suspicion, opponent and day key. Daily streaks and rewards are idempotent.
 
-## Safety
+## VIP and Founder placeholders
 
-Typed input is validated and filtered before classification. Raw player text is never broadcast to spectators, stored, logged, or echoed into arena boards. Spectators only see predefined safe move summaries plus developer-authored Guard replies.
+v0.4 deliberately creates no live Marketplace product and charges no Robux.
 
-No generated model output is enabled yet. Any future AI provider must pass moderation, privacy, latency, cost, abuse, and content-maturity checks before public release.
+Server-side placeholder entitlements support the visible VIP Observatory, VIP cosmetics, +25% cosmetic Insight and fast travel to districts the player already unlocked through ELO. Founder implies VIP and can grant a Founder title. VIP cannot alter ELO, Trust, Suspicion, ranked AI difficulty, message limits, official Daily attempts or district progression.
+
+Placeholder user IDs live in Config.Entitlements. Replace that source only after a real entitlement design is reviewed.
+
+## AI and privacy boundary
+
+A match keeps at most eight player/opponent exchanges in memory. Raw history is supplied only to the current AI turn and discarded with the match. It is never stored in the profile and never sent to spectator boards.
+
+Roblox TextGenerator output is constrained to tactic, strength and reply. The parser validates the tactic/strength vocabulary, safely truncates UTF-8 replies and rejects malformed generations. The deterministic Rules module alone changes Trust/Suspicion and determines terminal match state. Generation failures fall back to the deterministic local classifier or consume no move.
+
+## Persistence and authority
+
+The profile store stays on BeatTheBot_Profiles_v1 and migrates schema 1 → schema 2 in place. Unknown/newer schemas are rejected rather than overwritten.
+
+Schema 2 adds Insight, mastery, cosmetic ownership/equipped state, Daily Trial/streak state and reward claims while preserving UpdateAsync, session leases, abandoned-match recovery and idempotent results.
+
+Client RemoteEvents are untrusted. The client has no remote that accepts an ELO, Insight, mastery XP, reward, entitlement, Daily result, streak or district unlock amount.
+
+## Architecture
+
+See docs/ARCHITECTURE.md.
+
+Key modules:
+
+- Core definitions: DistrictDefinitions, OpponentDefinitions, RankDefinitions, RewardDefinitions, CosmeticDefinitions, DailyTrialDefinitions.
+- Competitive core: Rules, Protocol, ProfileStore, History.
+- Services: ProgressionService, RewardService, MasteryService, DailyTrialService, EntitlementService, FastTravelService, CosmeticService, MatchService, DataService, WorldService.
+- AI: Adapter, RobloxAdapter, LocalAdapter, ResponseParser.
 
 ## Verification
 
-With Luau/Rojo installed:
+Pure regression suite:
 
-```sh
-luau tests/run.luau
-mkdir -p build
-rojo build default.project.json -o build/BeatTheBot.rbxlx
-python3 scripts/verify_build.py build/BeatTheBot.rbxlx
-git diff --check
-```
+    luau tests/run.luau
 
-For the Roblox-engine smoke test:
+Production build:
 
-```sh
-rojo build test.project.json -o build/BeatTheBotSmoke.rbxlx
-```
+    mkdir -p build
+    rojo build default.project.json -o build/BeatTheBot.rbxlx
+    python3 scripts/verify_build.py build/BeatTheBot.rbxlx
 
-Open that file in Studio and press Play. A successful run prints:
+Studio smoke build:
 
-`BEAT_THE_BOT_SMOKE_PASS`
+    rojo build test.project.json -o build/BeatTheBotSmoke.rbxlx
 
-The previous Crystal Rush implementation remains available in Git history at commit `478889db19750074773ec8575debcabf674e21ef`.
+CI also syntax-checks every Luau source with the installed Luau runtime and uploads both Rojo place files as the BeatTheBot-v0.4-builds artifact.
 
+Roblox-runtime behavior still requires Studio/private-experience validation. The exact checklist is maintained in docs/TESTING.md; automated CI is not treated as proof of Roblox runtime behavior.
 
-## Automated CI
+## Release boundary
 
-Every push to `main` now runs Luau regression tests, compile checks, a production Rojo build, exact built-source verification, a smoke-place build, and whitespace checks through GitHub Actions. See `docs/AI_RELEASE_GATE.md` for the public-release checklist.
+v0.4 intentionally does not activate Robux monetization, a global/friends leaderboard, or paid extra Daily attempts. It also does not persist raw conversation history. These are deliberate product/security boundaries rather than missing shortcuts.
+
+The senior final audit prompt is in docs/GPT6_FINAL_AUDIT.md.

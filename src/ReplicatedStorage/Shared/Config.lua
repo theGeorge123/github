@@ -1,6 +1,7 @@
 return table.freeze({
     GameName = "Beat the Bot",
-    OpponentName = "The Castle Guard",
+    Version = "0.4.0",
+    ProfileSchema = 2,
     OpponentRating = 1000,
     InitialRating = 1000,
     RatingK = 32,
@@ -15,20 +16,25 @@ return table.freeze({
     StoreName = "BeatTheBot_Profiles_v1",
     StudioPersistence = false,
 
-    -- Roblox-native AI. If generation fails, typed moves do not consume a turn;
-    -- quick moves remain available as the deterministic degraded mode.
     AIProvider = "Roblox",
     AIRequestMaxTokens = 90,
     AIReplyMaxBytes = 320,
 
+    Entitlements = {
+        VIPUserIds = {},
+        FounderUserIds = {},
+    },
+
     Choices = {
-        { Id = "requirements", Text = "What do I need to enter?" },
-        { Id = "permit", Text = "Here is my delivery permit." },
-        { Id = "verify", Text = "Please check the royal seal." },
-        { Id = "escort", Text = "You can escort me inside." },
-        { Id = "flattery", Text = "Compliment the guard's reputation." },
-        { Id = "authority", Text = "Invoke credible royal authority." },
-        { Id = "joke", Text = "Try to make the guard laugh." },
-        { Id = "bribe", Text = "Offer the guard some gold." },
+        { Id = "requirements", Text = "Ask what would satisfy the rules." },
+        { Id = "permit", Text = "Explain your credentials or authorization." },
+        { Id = "verify", Text = "Offer a concrete detail they can verify." },
+        { Id = "escort", Text = "Offer a supervised, lower-risk compromise." },
+        { Id = "flattery", Text = "Appeal to their pride or reputation." },
+        { Id = "authority", Text = "Invoke credible authority." },
+        { Id = "urgency", Text = "Explain why delay creates a real problem." },
+        { Id = "joke", Text = "Use humor to lower the tension." },
+        { Id = "bribe", Text = "Offer them something improper." },
+        { Id = "threat", Text = "Try intimidation." },
     },
 })

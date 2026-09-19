@@ -111,15 +111,94 @@ stroke(header, colors.Cyan, 1.5, 0.45)
 
 local stats = label(header, "BEAT THE BOT  |  Loading profile...", 16, colors.Cyan, Enum.Font.GothamBold)
 stats.Position = UDim2.fromOffset(14, 2)
-stats.Size = UDim2.new(1, -128, 0, 34)
+stats.Size = UDim2.new(1, -232, 0, 34)
 
-local guidance = label(header, "Walk to a glowing arena console. Convince a Guard in 8 messages.", 12, colors.Muted)
+local guidance = label(header, "Explore the AI Citadel. Ranked districts unlock through ELO; Daily Trial is in the plaza.", 12, colors.Muted)
 guidance.Position = UDim2.fromOffset(14, 32)
 guidance.Size = UDim2.new(1, -28, 0, 30)
+
+local profileButton = button(header, "PROFILE", colors.Panel2)
+profileButton.Size = UDim2.fromOffset(96, 32)
+profileButton.Position = UDim2.new(1, -214, 0, 5)
 
 local toggle = button(header, "MATCH", Color3.fromRGB(31, 74, 92))
 toggle.Size = UDim2.fromOffset(96, 32)
 toggle.Position = UDim2.new(1, -110, 0, 5)
+
+local profileCard = Instance.new("Frame")
+profileCard.AnchorPoint = Vector2.new(0.5, 0)
+profileCard.Position = UDim2.new(0.5, 0, 0, 82)
+profileCard.Size = UDim2.new(0.92, 0, 0, 250)
+profileCard.BackgroundColor3 = colors.Background
+profileCard.BackgroundTransparency = 0.02
+profileCard.Visible = false
+profileCard.ZIndex = 15
+profileCard.Parent = screen
+corner(profileCard, 16)
+stroke(profileCard, colors.Gold, 1.5, 0.3)
+
+local profileConstraint = Instance.new("UISizeConstraint")
+profileConstraint.MaxSize = Vector2.new(560, 250)
+profileConstraint.Parent = profileCard
+
+local profileTitle = label(profileCard, "CITADEL PROFILE", 21, colors.Gold, Enum.Font.GothamBold)
+profileTitle.Position = UDim2.fromOffset(18, 12)
+profileTitle.Size = UDim2.new(1, -36, 0, 30)
+profileTitle.ZIndex = 16
+
+local profileDetails = label(profileCard, "Loading profile...", 15, colors.White, Enum.Font.GothamMedium)
+profileDetails.Position = UDim2.fromOffset(18, 50)
+profileDetails.Size = UDim2.new(1, -36, 0, 92)
+profileDetails.TextYAlignment = Enum.TextYAlignment.Top
+profileDetails.ZIndex = 16
+
+local masteryDetails = label(profileCard, "Start a match to inspect opponent mastery.", 13, colors.Muted)
+masteryDetails.Position = UDim2.fromOffset(18, 144)
+masteryDetails.Size = UDim2.new(1, -36, 0, 88)
+masteryDetails.TextYAlignment = Enum.TextYAlignment.Top
+masteryDetails.ZIndex = 16
+
+local function refreshProfileCard()
+    local leaderstats = player:FindFirstChild("leaderstats")
+    if not leaderstats then
+        return
+    end
+    local elo = leaderstats:FindFirstChild("Elo")
+    local wins = leaderstats:FindFirstChild("Wins")
+    local losses = leaderstats:FindFirstChild("Losses")
+    local insight = leaderstats:FindFirstChild("Insight")
+    profileDetails.Text = string.format(
+        "ELO %d  •  %s  •  Server rank %s\nWins %d  •  Losses %d  •  Insight %d\nDaily streak %d  •  Equipped title: %s\nVIP %s  •  Founder %s",
+        elo and elo.Value or 0,
+        player:GetAttribute("RankTitle") or "Outsider",
+        player:GetAttribute("ServerRank") and ("#" .. tostring(player:GetAttribute("ServerRank"))) or "—",
+        wins and wins.Value or 0,
+        losses and losses.Value or 0,
+        insight and insight.Value or 0,
+        player:GetAttribute("DailyStreak") or 0,
+        player:GetAttribute("EquippedTitle") ~= "" and player:GetAttribute("EquippedTitle") or "None",
+        player:GetAttribute("VIP") and "Yes" or "No",
+        player:GetAttribute("Founder") and "Yes" or "No"
+    )
+    if current and current.Mastery then
+        masteryDetails.Text = string.format(
+            "%s mastery\nLevel %d  •  XP %d  •  Wins %d/%d attempts\nBest successful run: %s messages",
+            current.OpponentName or current.GuardName or "Opponent",
+            current.Mastery.Level or 0,
+            current.Mastery.XP or 0,
+            current.Mastery.Wins or 0,
+            current.Mastery.Attempts or 0,
+            current.Mastery.BestSuccessfulMessageCount and tostring(current.Mastery.BestSuccessfulMessageCount) or "—"
+        )
+    end
+end
+
+profileButton.Activated:Connect(function()
+    profileCard.Visible = not profileCard.Visible
+    if profileCard.Visible then
+        refreshProfileCard()
+    end
+end)
 
 local panel = Instance.new("Frame")
 panel.AnchorPoint = Vector2.new(0.5, 0)
@@ -303,7 +382,7 @@ local function startThinking()
     if thinkingWrapper and thinkingWrapper.Parent then
         thinkingWrapper:Destroy()
     end
-    thinkingWrapper, thinkingSpeaker, thinkingBubble = addConversationBubble("GUARD", "Thinking…", false, true)
+    thinkingWrapper, thinkingSpeaker, thinkingBubble = addConversationBubble("OPPONENT", "Thinking…", false, true)
     scrollToLatest()
 end
 
@@ -416,7 +495,7 @@ local function submit(kind, value, displayText)
     pending = true
     pendingTurn = current.Turns + 1
     lastSent = os.clock()
-    guidance.Text = "The Guard is thinking about what you said..."
+    guidance.Text = "The opponent is thinking about what you said..."
 
     local shown = displayText or value
     pendingPlayerWrapper, _, pendingPlayerBubble = addConversationBubble("YOU", shown, true, false)
@@ -452,10 +531,11 @@ input.FocusLost:Connect(function(enterPressed)
 end)
 
 toggle.Activated:Connect(function()
+    profileCard.Visible = false
     if current then
         panel.Visible = not panel.Visible
     else
-        guidance.Text = "Walk to a glowing console and challenge a Guard."
+        guidance.Text = "Walk to a glowing Citadel challenge console or enter the Daily Trial."
     end
 end)
 
@@ -508,10 +588,16 @@ plazaButton.ZIndex = 21
 
 local function showResult(packet)
     local won = packet.Status == "Won"
-    resultTitle.Text = won and "GATE OPEN" or "THE GUARD WINS"
+    resultTitle.Text = won and "PERSUASION SUCCESS" or "OPPONENT HOLDS"
     resultTitle.TextColor3 = won and colors.Green or colors.Red
     resultReason.Text = packet.Message
-    resultRating.Text = string.format("ELO %+d", packet.Delta or 0)
+    if packet.Mode == "Ranked" then
+        resultRating.Text = string.format("RANKED • ELO %+d", packet.Delta or 0)
+    elseif packet.Mode == "Daily" then
+        resultRating.Text = "OFFICIAL DAILY SCORE LOCKED"
+    else
+        resultRating.Text = "PRACTICE • ELO UNCHANGED"
+    end
     resultOverlay.Visible = true
     resultScale.Scale = 0.86
 
@@ -564,6 +650,7 @@ stateRemote.OnClientEvent:Connect(function(packet)
     end
 
     current = packet
+    refreshProfileCard()
 
     animateMeter(trustFill, trustValue, packet.Progress)
     animateMeter(suspicionFill, suspicionValue, packet.Suspicion)
@@ -580,17 +667,20 @@ stateRemote.OnClientEvent:Connect(function(packet)
     lastSuspicion = packet.Suspicion
 
     title.Text = packet.Status == "Playing"
-        and string.upper(packet.GuardName or "THE GUARD")
-        or (packet.Status == "Won" and "GATE OPEN" or "GATE CLOSED")
+        and string.upper(packet.OpponentName or packet.GuardName or "AI OPPONENT")
+        or (packet.Status == "Won" and "PERSUASION SUCCESS" or "CHALLENGE ENDED")
 
     subtitle.Text = string.format(
-        "AI-POWERED  •  %s  •  %d ELO  •  %d MESSAGES",
-        packet.GuardTitle or "Guard",
-        packet.GuardRating or 1000,
+        "%s  •  %s  •  %d ELO  •  MASTERY %d  •  %d MESSAGES",
+        string.upper(packet.Mode or "Ranked"),
+        packet.OpponentTitle or packet.GuardTitle or "Opponent",
+        packet.OpponentRating or packet.GuardRating or 1000,
+        packet.Mastery and packet.Mastery.Level or 0,
         Config.MaxTurns
     )
 
-    rematchButton.Text = "REMATCH " .. string.upper(packet.GuardName or "THE GUARD")
+    rematchButton.Text = packet.Mode == "Daily" and "PRACTICE TODAY'S TRIAL"
+        or ("REMATCH " .. string.upper(packet.OpponentName or packet.GuardName or "OPPONENT"))
 
     if packet.Turns == 0 and lastRenderedTurn < 0 then
         addConversationBubble(string.upper(packet.GuardName or "GUARD"), packet.Message, false, false)
@@ -628,7 +718,7 @@ stateRemote.OnClientEvent:Connect(function(packet)
         or "Match complete."
 
     guidance.Text = packet.Status == "Playing"
-        and "Stay in the conversation: respond to what the Guard actually said."
+        and ((packet.Mode == "Daily" and "Official Daily Trial • one scored attempt today") or (packet.Mode == "DailyPractice" and "Daily practice • official score already locked") or "Ranked • respond to what the opponent actually said.")
         or packet.Message
 
     if packet.Delta ~= nil then
@@ -650,21 +740,27 @@ task.spawn(function()
     local elo = leaderstats:WaitForChild("Elo")
     local wins = leaderstats:WaitForChild("Wins")
     local losses = leaderstats:WaitForChild("Losses")
+    local insight = leaderstats:WaitForChild("Insight")
 
     local function refresh()
         stats.Text = string.format(
-            "ELO %d  •  W %d  L %d%s",
+            "ELO %d  •  %s  •  INSIGHT %d  •  STREAK %d%s",
             elo.Value,
-            wins.Value,
-            losses.Value,
-            player:GetAttribute("SessionOnly") and "  •  TEST ONLY" or ""
+            player:GetAttribute("RankTitle") or "Outsider",
+            insight.Value,
+            player:GetAttribute("DailyStreak") or 0,
+            player:GetAttribute("SessionOnly") and "  •  TEST" or ""
         )
+        refreshProfileCard()
     end
 
     elo.Changed:Connect(refresh)
     wins.Changed:Connect(refresh)
     losses.Changed:Connect(refresh)
-    player:GetAttributeChangedSignal("SessionOnly"):Connect(refresh)
+    insight.Changed:Connect(refresh)
+    for _, attribute in ipairs({ "RankTitle", "ServerRank", "DailyStreak", "EquippedTitle", "VIP", "Founder", "SessionOnly" }) do
+        player:GetAttributeChangedSignal(attribute):Connect(refresh)
+    end
     refresh()
 end)
 

@@ -1,35 +1,25 @@
 local Rules = {}
 
 Rules.Intents = table.freeze({
-    requirements = true,
-    permit = true,
-    verify = true,
-    escort = true,
-    flattery = true,
-    authority = true,
-    urgency = true,
-    joke = true,
-    bribe = true,
-    threat = true,
-    irrelevant = true,
+    requirements = true, permit = true, verify = true, escort = true,
+    flattery = true, authority = true, urgency = true, joke = true,
+    bribe = true, threat = true, irrelevant = true,
 })
 
 Rules.Strengths = table.freeze({
-    weak = true,
-    normal = true,
-    strong = true,
+    weak = true, normal = true, strong = true,
 })
 
 Rules.Summaries = table.freeze({
-    requirements = "Asked about the entry rules.",
-    permit = "Claimed authorised courier credentials.",
-    verify = "Offered a verbal way to verify the story.",
-    escort = "Offered to enter under supervision.",
-    flattery = "Appealed to the Guard's pride.",
-    authority = "Appealed to royal authority.",
-    urgency = "Argued that the situation is urgent.",
-    joke = "Tried humor.",
-    bribe = "Offered a bribe.",
+    requirements = "Asked what standard had to be satisfied.",
+    permit = "Explained credentials or authorization.",
+    verify = "Offered a concrete way to verify the story.",
+    escort = "Offered a supervised, lower-risk compromise.",
+    flattery = "Appealed to the opponent's pride or reputation.",
+    authority = "Appealed to credible authority.",
+    urgency = "Argued that delay creates a real problem.",
+    joke = "Used humor to lower the tension.",
+    bribe = "Offered something improper.",
     threat = "Tried intimidation.",
     irrelevant = "Tried another argument.",
 })
@@ -59,58 +49,79 @@ function Rules.New()
     }
 end
 
-function Rules.Hint(state, guard)
-    if not state.PermitPresented then
-        return "Build a believable story. Credentials are claims you can explain in words."
+function Rules.Hint(state, opponent)
+    local objective = opponent and opponent.Objective
+    if objective then
+        for _, intent in ipairs(objective.SuggestedTactics or objective.RequiredTactics or {}) do
+            if not (state.Used or {})[intent] then
+                local hints = {
+                    requirements = "Ask what standard they are actually trying to satisfy.",
+                    permit = "Explain what your credentials mean and why the claim should be believed.",
+                    verify = "Offer a concrete detail, contact, code, or explanation they can check in conversation.",
+                    escort = "A supervised or reversible compromise can reduce the opponent's risk.",
+                    flattery = "Respect can help with proud opponents, but it still needs a credible argument behind it.",
+                    authority = "Authority works best when you explain why it is credible rather than merely naming it.",
+                    urgency = "Explain the cost of delay without demanding that the opponent ignore their responsibility.",
+                }
+                if hints[intent] then
+                    return hints[intent]
+                end
+            end
+        end
     end
-    if not state.SealVerified then
-        return "Offer a detail, code, contact, or check the Guard could use to test your story."
-    end
-    if guard and guard.RequiresEscort and not state.EscortOffered then
-        return "A compromise that lowers the Guard's risk may help."
-    end
-    return "Read the Guard's personality. The same tactic will not work equally well on everyone."
+    return "Respond to the opponent's latest concern and keep your account consistent."
 end
 
-function Rules.FallbackReply(guard, state, intent)
-    local name = guard and guard.Name or "The Guard"
+function Rules.FallbackReply(opponent, state, intent)
+    local objective = opponent and opponent.Objective
+
     if state.Status == "Won" then
-        return "All right. Your story holds together. The gate is open."
+        return objective and objective.SuccessReply or "All right. Your explanation holds together."
     end
     if state.Status == "Lost" and state.Suspicion >= 100 then
-        return "Enough. I do not trust this. The gate stays closed."
+        return "Enough. I do not trust this explanation."
     end
     if state.Status == "Lost" then
-        return "Your eight moves are over. The gate stays closed."
+        return objective and objective.FailureReply or "You are out of moves, and I am not convinced."
     end
 
     local replies = {
-        requirements = "Deliveries need a valid permit and a reason I can verify.",
-        permit = "Claiming royal authorisation helps, but I still need a reason to believe you.",
-        verify = "Good. A detail I can verify makes your story stronger.",
-        escort = "Letting me supervise you would reduce the risk.",
-        flattery = name .. " hears the compliment, but still watches you carefully.",
-        authority = "Names and titles matter only if the story holds together.",
-        urgency = "Urgency can be real, but rushing a guard is also suspicious.",
-        joke = "I will admit that was not terrible. The gate is still closed.",
-        bribe = "Trying to buy a royal guard is a bad idea.",
-        threat = "Threatening me makes this very simple: no.",
-        irrelevant = "That does not answer the problem in front of me.",
+        requirements = "Good. Start with the standard that actually has to be satisfied.",
+        permit = "Credentials are still a claim. Give me a reason I can verify.",
+        verify = "A concrete verification path makes the story stronger.",
+        escort = "A supervised compromise can reduce the risk.",
+        flattery = "Respect is noted, but I still expect a credible case.",
+        authority = "Authority matters only if the claim is specific and believable.",
+        urgency = "Urgency may be real, but pressure can also hide a weak story.",
+        joke = "That lowers the tension. It does not resolve the underlying question.",
+        bribe = "Offering me something improper makes your position worse.",
+        threat = "Threatening me ends any benefit of the doubt.",
+        irrelevant = "That does not answer the concern in front of you.",
     }
     return replies[intent] or "Convince me."
 end
 
-local function objectiveReady(state, guard)
+local function objectiveReady(state, opponent)
+    local objective = opponent and opponent.Objective
+    if objective then
+        for _, intent in ipairs(objective.RequiredTactics or {}) do
+            if not (state.Used or {})[intent] then
+                return false
+            end
+        end
+        return state.Trust >= (objective.TrustToWin or 80)
+    end
+
     if not state.PermitPresented or not state.SealVerified then
         return false
     end
-    if guard.RequiresEscort and not state.EscortOffered then
+    if opponent and opponent.RequiresEscort and not state.EscortOffered then
         return false
     end
-    return state.Trust >= guard.TrustToWin
+    return state.Trust >= ((opponent and opponent.TrustToWin) or 80)
 end
 
-function Rules.Advance(state, decision, guard, maxTurns)
+function Rules.Advance(state, decision, opponent, maxTurns)
     if state.Status ~= "Playing" then
         return nil, "This match has ended."
     end
@@ -122,8 +133,8 @@ function Rules.Advance(state, decision, guard, maxTurns)
     if type(decision) ~= "table" or not Rules.Intents[decision.Intent] or not Rules.Strengths[decision.Strength] then
         return nil, "Invalid opponent response."
     end
-    if not guard or not guard.Reactions or not guard.Reactions[decision.Intent] then
-        return nil, "Missing guard reaction."
+    if not opponent or not opponent.Reactions or not opponent.Reactions[decision.Intent] then
+        return nil, "Missing opponent reaction."
     end
 
     local nextState = table.clone(state)
@@ -135,42 +146,38 @@ function Rules.Advance(state, decision, guard, maxTurns)
         nextState.RequirementsKnown = true
     elseif decision.Intent == "permit" then
         nextState.PermitPresented = true
-    elseif decision.Intent == "verify" and state.PermitPresented then
+    elseif decision.Intent == "verify" then
         nextState.SealVerified = true
     elseif decision.Intent == "escort" then
         nextState.EscortOffered = true
     end
 
-    local reaction = guard.Reactions[decision.Intent]
-    local trustDelta = reaction.Trust or 0
+    local reaction = opponent.Reactions[decision.Intent]
+    local trustDelta = (reaction.Trust or 0) * strengthScale[decision.Strength]
     local suspicionDelta = reaction.Suspicion or 0
-    local scale = strengthScale[decision.Strength]
-
-    trustDelta *= scale
 
     if nextState.Used[decision.Intent] then
         trustDelta *= 0.35
         suspicionDelta += 4
     end
 
-    if decision.Intent == "verify" and not state.PermitPresented then
+    if decision.Intent == "verify" and not state.PermitPresented and not opponent.Objective then
         trustDelta *= 0.35
         suspicionDelta = math.max(0, suspicionDelta) + 5
+        nextState.SealVerified = false
     end
 
     nextState.Used[decision.Intent] = true
     nextState.Trust = math.clamp(state.Trust + clampRound(trustDelta), 0, 100)
     nextState.Suspicion = math.clamp(state.Suspicion + clampRound(suspicionDelta), 0, 100)
 
-    if objectiveReady(nextState, guard) then
+    if objectiveReady(nextState, opponent) then
         nextState.Status = "Won"
-    elseif nextState.Suspicion >= 100 then
-        nextState.Status = "Lost"
-    elseif nextState.Turns >= maxTurns then
+    elseif nextState.Suspicion >= 100 or nextState.Turns >= maxTurns then
         nextState.Status = "Lost"
     end
 
-    return nextState, Rules.FallbackReply(guard, nextState, decision.Intent), {
+    return nextState, Rules.FallbackReply(opponent, nextState, decision.Intent), {
         TrustDelta = nextState.Trust - state.Trust,
         SuspicionDelta = nextState.Suspicion - state.Suspicion,
     }
