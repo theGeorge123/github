@@ -718,11 +718,11 @@ function WorldService.Refresh(dataService)
 
     local lines = { "SERVER LEADERBOARD", "ELO  •  W/L  •  RANK" }
     for index, entry in ipairs(ranked) do
-        if index > 8 then
-            break
+        entry.Player:SetAttribute("ServerRank", index)
+        if index <= 8 then
+            local rank = require(script.Parent.Parent.Core.RankDefinitions).ForElo(entry.Profile.Elo)
+            table.insert(lines, string.format("%d. @%s  %d  %d/%d  %s", index, entry.Player.Name, entry.Profile.Elo, entry.Profile.Wins, entry.Profile.Losses, rank.Name))
         end
-        local rank = require(script.Parent.Parent.Core.RankDefinitions).ForElo(entry.Profile.Elo)
-        table.insert(lines, string.format("%d. @%s  %d  %d/%d  %s", index, entry.Player.Name, entry.Profile.Elo, entry.Profile.Wins, entry.Profile.Losses, rank.Name))
     end
     if #ranked == 0 then
         table.insert(lines, "No ranked players yet.")
