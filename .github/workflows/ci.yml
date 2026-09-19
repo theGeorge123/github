@@ -27,11 +27,18 @@ jobs:
       - name: Run pure Luau regression tests
         run: luau tests/run.luau
 
-      - name: Compile every Luau source
+      - name: Syntax-check every Luau source
         shell: bash
         run: |
+          tmp="$(mktemp --suffix=.luau)"
+          trap 'rm -f "$tmp"' EXIT
           while IFS= read -r -d '' file; do
-            luau-compile --null "$file"
+            {
+              echo 'local function __syntax_check__()'
+              cat "$file"
+              echo 'end'
+            } > "$tmp"
+            luau "$tmp" >/dev/null
           done < <(find src tests -name '*.lua' -print0)
 
       - name: Build production place
