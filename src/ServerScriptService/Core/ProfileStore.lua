@@ -106,6 +106,21 @@ local function masteryEntry(profile, opponentId)
     return entry
 end
 
+function ProfileStore.HasPlayed(profile)
+    if type(profile) ~= "table" then
+        return false
+    end
+    if (tonumber(profile.Wins) or 0) > 0 or (tonumber(profile.Losses) or 0) > 0 then
+        return true
+    end
+    for _, mastery in pairs(type(profile.Mastery) == "table" and profile.Mastery or {}) do
+        if type(mastery) == "table" and (tonumber(mastery.Attempts) or 0) > 0 then
+            return true
+        end
+    end
+    return type(profile.DailyTrial) == "table" and profile.DailyTrial.Result ~= nil
+end
+
 function ProfileStore.new(store, config, rules, clock)
     return setmetatable({ Store = store, Config = config, Rules = rules, Clock = clock }, ProfileStore)
 end
