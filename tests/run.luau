@@ -21,6 +21,16 @@ local function move(state, guard, intent, strength)
     return nextState
 end
 
+test("hidden concerns vary per guard without changing the public guard definition", function()
+    local aldric = GuardDefinitions.Get("aldric")
+    local first = GuardDefinitions.SelectConcern(aldric, 0)
+    local last = GuardDefinitions.SelectConcern(aldric, 0.999)
+
+    assert(first.Id ~= last.Id)
+    assert(type(first.Prompt) == "string" and #first.Prompt > 20)
+    assert(aldric.Concerns and #aldric.Concerns == 3)
+end)
+
 test("all three guard definitions are available with Elo unlocks", function()
     local atStart = GuardDefinitions.Eligible(1000)
     assert(#atStart == 2)

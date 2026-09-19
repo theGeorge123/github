@@ -193,7 +193,8 @@ function MatchService.Finish(match, won, reason)
     match.State.Status = won and "Won" or "Lost"
 
     show(match, reason)
-    send(match, "Saving result...")
+    match.Reply = reason
+    send(match, reason)
 
     local profile = dataService.Update(
         match.Player,

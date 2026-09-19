@@ -24,6 +24,7 @@ local lastProgress = 0
 local lastSuspicion = 0
 local suggestionIds = {}
 local suggestionTexts = {}
+local submit
 
 local colors = {
     Background = Color3.fromRGB(10, 15, 29),
@@ -369,7 +370,7 @@ inputPadding.PaddingLeft = UDim.new(0, 12)
 inputPadding.PaddingRight = UDim.new(0, 12)
 inputPadding.Parent = input
 
-function submit(kind, value, displayText)
+submit = function(kind, value, displayText)
     if not current or current.Status ~= "Playing" or pending then
         return
     end

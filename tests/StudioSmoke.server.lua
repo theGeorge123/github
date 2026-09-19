@@ -30,6 +30,8 @@ MatchService.Start(player, 1)
 local match = MatchService.Matches[player]
 assert(match and not match.Ended, "Match did not start")
 assert(match.Guard and match.Guard.Id, "No guard was selected")
+assert(match.Concern and match.Concern.Id, "No hidden concern was selected")
+assert(match.History and #match.History == 0, "Match history should start empty")
 assert(DataService.Get(player).ActiveMatch.Id == match.Id, "Active marker missing")
 
 MatchService.Submit(player, {
@@ -57,6 +59,8 @@ for _, intent in ipairs(sequences[match.Guard.Id]) do
 end
 
 assert(match.Ended and match.State.Status == "Won", "Guard-specific quick path did not win")
+assert(#match.History <= 3, "Private match history exceeded its three-turn bound")
+assert(match.LastPlayerMessage ~= nil, "Private player display message missing")
 
 local expectedElo = Rules.Rating(1000, match.Guard.Rating, true, Config.RatingK)
 local profile = DataService.Get(player)
