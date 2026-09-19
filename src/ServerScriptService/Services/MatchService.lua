@@ -18,6 +18,7 @@ local MatchService = {
     Matches = {},
     Slots = {},
     LastArena = {},
+    LastOpponent = {},
     Closing = false,
 }
 
@@ -191,7 +192,7 @@ local function releaseArena(match)
         local district = DistrictDefinitions.ForArena(match.ArenaId)
         worldService.ShowArena(
             match.ArenaId,
-            string.format("AVAILABLE\n%s\n8 messages | Ranked\nServer-enforced ELO gate: %d", district.Name, district.UnlockElo),
+            string.format("AVAILABLE\n%s\n8 turns | Ranked\nServer-enforced ELO gate: %d", district.Name, district.UnlockElo),
             false, 0, 0, "Available"
         )
     end
@@ -231,7 +232,7 @@ local function startMatch(player, arenaId, mode, opponent, plan, trustedRematch)
 
     local districtId = arena.DistrictId or "central_plaza"
 
-    if mode == "Ranked" and not ProgressionService.CanAccess(profile, districtId) then
+    if mode == "Ranked" and not ProgressionService.CanAccess(profile, districtId, player) then
         local district = DistrictDefinitions.Get(districtId)
         tell(player, string.format("%s unlocks at %d ELO.", district.Name, district.UnlockElo))
         return
@@ -257,7 +258,7 @@ local function startMatch(player, arenaId, mode, opponent, plan, trustedRematch)
             tell(player, "No ranked opponent is available for your current progression.")
             return
         end
-        opponent = OpponentDefinitions.Select(profile.Elo, rng:NextNumber(), districtId)
+        opponent = OpponentDefinitions.Select(profile.Elo, rng:NextNumber(), districtId, MatchService.LastOpponent[player])
     end
 
     local concern = OpponentDefinitions.SelectConcern(opponent, rng:NextNumber())
@@ -284,6 +285,7 @@ local function startMatch(player, arenaId, mode, opponent, plan, trustedRematch)
     }
 
     MatchService.Matches[player] = match
+    MatchService.LastOpponent[player] = opponent.Id
     MatchService.Slots[arenaId] = match
     if arena.Prompt then
         arena.Prompt.Enabled = false
@@ -319,7 +321,7 @@ local function startMatch(player, arenaId, mode, opponent, plan, trustedRematch)
     local intro
     if mode == "Daily" then
         intro = string.format(
-            "Official Daily Trial: %s. %s You have eight messages.",
+            "Official Daily Trial: %s. %s You have eight turns.",
             match.Scenario or "Today's challenge",
             match.Objective or "Make a coherent case."
         )
@@ -330,7 +332,7 @@ local function startMatch(player, arenaId, mode, opponent, plan, trustedRematch)
         )
     else
         intro = string.format(
-            "I am %s, %s of the %s. You have eight messages. %s",
+            "I am %s, %s of the %s. You have eight turns. %s",
             opponent.Name,
             string.lower(opponent.Title),
             DistrictDefinitions.Get(opponent.District).Name,
@@ -352,7 +354,7 @@ function MatchService.Start(player, arenaId, trustedRematch)
         tell(player, "Wait for your profile to load.")
         return
     end
-    if not ProgressionService.CanAccess(profile, district.Id) then
+    if not ProgressionService.CanAccess(profile, district.Id, player) then
         tell(player, string.format("%s unlocks at %d ELO.", district.Name, district.UnlockElo))
         return
     end
@@ -596,7 +598,7 @@ function MatchService.RequestRematch(player)
             local district = DistrictDefinitions.ForArena(candidate)
             if not MatchService.Slots[candidate]
                 and district
-                and ProgressionService.CanAccess(profile, district.Id)
+                and ProgressionService.CanAccess(profile, district.Id, player)
             then
                 arenaId = candidate
                 break
@@ -627,6 +629,7 @@ function MatchService.Leave(player)
     end
     lastRequest[player] = nil
     MatchService.LastArena[player] = nil
+    MatchService.LastOpponent[player] = nil
 end
 
 function MatchService.Init(data, world, stateRemote, submitRemote, rematchRemote)
