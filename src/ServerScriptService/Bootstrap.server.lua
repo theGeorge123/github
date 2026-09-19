@@ -164,7 +164,7 @@ game:BindToClose(function()
     end
 end)
 
-print("Beat the Bot v0.2 ready: polished Guard vertical slice, local opponent, server-owned rules.")
+print("Beat the Bot v0.3.2 ready: AI conversation build, full-match memory, server-owned scoring.")
 if worldOk then
     print("BEAT_THE_BOT_STARTUP_OK")
 end

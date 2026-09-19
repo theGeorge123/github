@@ -22,8 +22,8 @@ Rules.Strengths = table.freeze({
 
 Rules.Summaries = table.freeze({
     requirements = "Asked about the entry rules.",
-    permit = "Presented a delivery permit.",
-    verify = "Offered a way to verify the permit.",
+    permit = "Claimed authorised courier credentials.",
+    verify = "Offered a verbal way to verify the story.",
     escort = "Offered to enter under supervision.",
     flattery = "Appealed to the Guard's pride.",
     authority = "Appealed to royal authority.",
@@ -61,10 +61,10 @@ end
 
 function Rules.Hint(state, guard)
     if not state.PermitPresented then
-        return "You are carrying an official permit. Evidence matters."
+        return "Build a believable story. Credentials are claims you can explain in words."
     end
     if not state.SealVerified then
-        return "A claim becomes stronger when the Guard can verify it."
+        return "Offer a detail, code, contact, or check the Guard could use to test your story."
     end
     if guard and guard.RequiresEscort and not state.EscortOffered then
         return "A compromise that lowers the Guard's risk may help."
@@ -75,7 +75,7 @@ end
 function Rules.FallbackReply(guard, state, intent)
     local name = guard and guard.Name or "The Guard"
     if state.Status == "Won" then
-        return "All right. Your permit checks out. The gate is open."
+        return "All right. Your story holds together. The gate is open."
     end
     if state.Status == "Lost" and state.Suspicion >= 100 then
         return "Enough. I do not trust this. The gate stays closed."
@@ -86,8 +86,8 @@ function Rules.FallbackReply(guard, state, intent)
 
     local replies = {
         requirements = "Deliveries need a valid permit and a reason I can verify.",
-        permit = "A permit helps, but paper alone is not proof.",
-        verify = "Good. Give me something I can actually check.",
+        permit = "Claiming royal authorisation helps, but I still need a reason to believe you.",
+        verify = "Good. A detail I can verify makes your story stronger.",
         escort = "Letting me supervise you would reduce the risk.",
         flattery = name .. " hears the compliment, but still watches you carefully.",
         authority = "Names and titles matter only if the story holds together.",

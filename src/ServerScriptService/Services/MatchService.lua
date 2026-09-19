@@ -28,11 +28,11 @@ end
 
 local suggestionText = {
     requirements = "What would convince you to let me through?",
-    permit = "I have a royal delivery permit. Take a look.",
-    verify = "Check the royal seal yourself.",
+    permit = "I am an authorised royal courier. I can explain my credentials.",
+    verify = "Ask me for a detail you can use to verify my story.",
     escort = "Escort me personally if you still doubt me.",
     flattery = "A guard with your reputation can judge this fairly.",
-    authority = "The palace is expecting this delivery.",
+    authority = "The palace is expecting this delivery; question me if you doubt it.",
     urgency = "Every minute this waits creates a problem inside.",
     joke = "If I were smuggling something, I'd have picked a smaller box.",
 }
@@ -314,7 +314,7 @@ function MatchService.Start(player, arenaId, trustedRematch)
     match.StartedAt = workspace:GetServerTimeNow()
 
     local intro = string.format(
-        "I am %s, %s. You have eight moves. Convince me that your delivery belongs beyond this gate.",
+        "I am %s, %s. You have eight messages. Convince me with words that you have a legitimate reason to pass this gate.",
         guard.Name,
         string.lower(guard.Title)
     )
@@ -421,6 +421,10 @@ function MatchService.Submit(player, payload)
         end
 
         decision = result
+        if decision.Degraded then
+            TelemetryService.AIError(player)
+            warn("BEAT_THE_BOT_AI_DEGRADED: generated response was unusable; deterministic classification used for this turn")
+        end
     end
 
     TelemetryService.Move(player, payload.Kind)
