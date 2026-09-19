@@ -109,6 +109,7 @@ local function send(match, message, delta)
     end
 
     local profile = dataService.Get(match.Player)
+    local nextPlayable = profile and ProgressionService.NextPlayable(profile) or nil
     remote:FireClient(match.Player, {
         Kind = "Match",
         MatchId = match.Id,
@@ -145,6 +146,13 @@ local function send(match, message, delta)
         Rank = profile and ProgressionService.Rank(profile).Name or "Outsider",
         Insight = profile and profile.Insight or 0,
         DailyStreak = profile and profile.DailyTrial and profile.DailyTrial.Streak or 0,
+        NextUnlockName = nextPlayable and nextPlayable.Name or nil,
+        NextUnlockElo = nextPlayable and nextPlayable.UnlockElo or nil,
+        NextUnlockRemaining = nextPlayable and nextPlayable.RemainingElo or nil,
+        RewardInsight = match.RewardOutcome and match.RewardOutcome.Insight or nil,
+        RewardMasteryXP = match.RewardOutcome and match.RewardOutcome.MasteryXP or nil,
+        RewardMasteryLevel = match.RewardOutcome and match.RewardOutcome.MasteryLevel or nil,
+        RewardItems = match.RewardOutcome and match.RewardOutcome.Items or nil,
     })
 end
 
@@ -418,6 +426,22 @@ function MatchService.Finish(match, won, reason)
     match.Saving = false
 
     if profile then
+        local beforeMastery = before and before.Mastery and before.Mastery[match.Opponent.Id] or nil
+        local afterMastery = profile.Mastery and profile.Mastery[match.Opponent.Id] or nil
+        local newItems = {}
+        for _, itemId in ipairs(metadata.Reward and metadata.Reward.Items or {}) do
+            local ownedBefore = before and before.Inventory and before.Inventory.Owned and before.Inventory.Owned[itemId]
+            local ownedAfter = profile.Inventory and profile.Inventory.Owned and profile.Inventory.Owned[itemId]
+            if not ownedBefore and ownedAfter then
+                table.insert(newItems, itemId)
+            end
+        end
+        match.RewardOutcome = {
+            Insight = math.max(0, (profile.Insight or 0) - (before and before.Insight or 0)),
+            MasteryXP = math.max(0, (afterMastery and afterMastery.XP or 0) - (beforeMastery and beforeMastery.XP or 0)),
+            MasteryLevel = afterMastery and afterMastery.Level or 0,
+            Items = newItems,
+        }
         MatchService.LastArena[match.Player] = match.ArenaId
         if match.Mode == "Ranked" then
             worldService.Record(won)
