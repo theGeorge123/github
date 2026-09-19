@@ -14,7 +14,7 @@ The generation layer may only return:
 
 ## Safety and audience
 
-The current game intentionally keeps AI interaction bounded to eight moves / three minutes and does not persist raw conversation context across sessions. This preserves the product direction as limited AI interaction rather than an unlimited chatbot.
+The current game intentionally keeps AI interaction bounded to eight moves / three minutes. During a match, the Guard may receive the full prior match transcript (up to eight turns) for continuity and contradiction detection. That raw conversation context is discarded with the match and is not persisted across matches or sessions.
 
 The UI visibly discloses that the opponent is AI-powered and may make mistakes. Player input is filtered before generation. Model replies are filtered again before they are shown to the interacting player. Spectator boards receive only server-authored summaries/replies, not raw player text or generated free-form dialogue.
 
@@ -34,7 +34,6 @@ Before any public release:
 Every push to `main` runs GitHub Actions:
 
 - pure Luau regression tests;
-- compile checks for every source/test script;
 - production Rojo build;
 - exact-source verification of the built place;
 - smoke-place build;

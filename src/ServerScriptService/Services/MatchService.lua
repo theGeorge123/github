@@ -73,7 +73,7 @@ local function pushHistory(match, playerMessage, guardMessage)
         Guard = guardMessage,
     })
 
-    while #match.History > 3 do
+    while #match.History > Config.MaxTurns do
         table.remove(match.History, 1)
     end
 end

@@ -59,7 +59,7 @@ for _, intent in ipairs(sequences[match.Guard.Id]) do
 end
 
 assert(match.Ended and match.State.Status == "Won", "Guard-specific quick path did not win")
-assert(#match.History <= 3, "Private match history exceeded its three-turn bound")
+assert(#match.History <= Config.MaxTurns, "Private match history exceeded the full-match turn bound")
 assert(match.LastPlayerMessage ~= nil, "Private player display message missing")
 
 local expectedElo = Rules.Rating(1000, match.Guard.Rating, true, Config.RatingK)
