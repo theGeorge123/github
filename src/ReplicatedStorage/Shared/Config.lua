@@ -1,74 +1,25 @@
-local Config = {}
-
-Config.GameName = "Crystal Rush"
-Config.Intermission = 15
-Config.RoundDuration = 90
-Config.CrystalCount = 45
-Config.CrystalRespawnDelay = 2
-Config.CoinReward = 5
-Config.XPReward = 3
-Config.RoundSurvivalCoins = 40
-Config.RoundWinCoins = 100
-
-Config.ArenaSize = 160
-Config.ArenaY = 20
-Config.HazardStartY = -4
-Config.HazardEndY = 26
-
-Config.BaseWalkSpeed = 16
-Config.BaseJumpPower = 50
-
-Config.DailyReward = {
-    baseCoins = 50,
-    streakBonus = 25,
-    maxCoins = 250,
-}
-
-Config.Quests = {
-    Collect = {
-        label = "Collect 15 crystals",
-        target = 15,
-        reward = 100,
+return table.freeze({
+    GameName = "Beat the Bot",
+    OpponentName = "The Castle Guard",
+    OpponentRating = 1000,
+    InitialRating = 1000,
+    RatingK = 32,
+    MaxTurns = 8,
+    MatchSeconds = 180,
+    MaxMessageBytes = 240,
+    RequestCooldown = 1,
+    ArenaCount = 4,
+    LeaseSeconds = 180,
+    SaveInterval = 45,
+    StoreName = "BeatTheBot_Profiles_v1",
+    StudioPersistence = false,
+    AIProvider = "Local",
+    Choices = {
+        { Id = "requirements", Text = "What do I need to enter?" },
+        { Id = "permit", Text = "Here is my delivery permit." },
+        { Id = "verify", Text = "Please check the royal seal." },
+        { Id = "escort", Text = "You can escort me inside." },
+        { Id = "joke", Text = "Why did the knight bring a ladder?" },
+        { Id = "bribe", Text = "How about some gold?" },
     },
-    Rounds = {
-        label = "Play 3 rounds",
-        target = 3,
-        reward = 150,
-    },
-    Survive = {
-        label = "Survive a round",
-        target = 1,
-        reward = 125,
-    },
-}
-
-Config.Upgrades = {
-    Speed = {
-        maxLevel = 10,
-        baseCost = 100,
-        costGrowth = 1.55,
-        valuePerLevel = 1.5,
-    },
-    Jump = {
-        maxLevel = 10,
-        baseCost = 100,
-        costGrowth = 1.55,
-        valuePerLevel = 4,
-    },
-    Magnet = {
-        maxLevel = 10,
-        baseCost = 125,
-        costGrowth = 1.6,
-        valuePerLevel = 3,
-    },
-}
-
-function Config.getUpgradeCost(name, level)
-    local data = Config.Upgrades[name]
-    if not data then
-        return math.huge
-    end
-    return math.floor(data.baseCost * (data.costGrowth ^ level))
-end
-
-return Config
+})

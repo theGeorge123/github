@@ -1,48 +1,73 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local function getOrCreate(className, name, parent)
-    local object = parent:FindFirstChild(name)
-    if object then return object end
-    object = Instance.new(className)
-    object.Name = name
-    object.Parent = parent
-    return object
-end
-
-local remotes = getOrCreate("Folder", "Remotes", ReplicatedStorage)
-getOrCreate("RemoteEvent", "RoundState", remotes)
-getOrCreate("RemoteEvent", "DataUpdated", remotes)
-getOrCreate("RemoteFunction", "PurchaseUpgrade", remotes)
-getOrCreate("RemoteFunction", "GetProfile", remotes)
-getOrCreate("RemoteFunction", "ClaimDaily", remotes)
-getOrCreate("RemoteFunction", "ClaimQuest", remotes)
-
-local services = script.Parent:WaitForChild("Services")
-
+local services = script.Parent.Services
 local DataService = require(services.DataService)
 local WorldService = require(services.WorldService)
-local UpgradeService = require(services.UpgradeService)
-local CrystalService = require(services.CrystalService)
-local RoundService = require(services.RoundService)
-local RetentionService = require(services.RetentionService)
-local TelemetryService = require(services.TelemetryService)
+local MatchService = require(services.MatchService)
 
-WorldService.Init()
-DataService.Init(remotes)
-RetentionService.Init(DataService, TelemetryService, remotes)
-UpgradeService.Init(DataService, TelemetryService, remotes)
-CrystalService.Init(DataService, WorldService, TelemetryService)
-RoundService.Init(DataService, WorldService, CrystalService, TelemetryService, remotes)
-RoundService.Start()
+local remotes = Instance.new("Folder")
+remotes.Name = "BeatTheBotRemotes"
+remotes.Parent = ReplicatedStorage
+local state = Instance.new("RemoteEvent")
+state.Name = "State"
+state.Parent = remotes
+local submit = Instance.new("RemoteEvent")
+submit.Name = "Submit"
+submit.Parent = remotes
 
-local function logJoin(player)
-    TelemetryService.Log(player, "SessionStarted", 1)
+DataService.Init()
+MatchService.Init(DataService, WorldService, state, submit)
+WorldService.Init(MatchService.Start)
+
+local leaving = {}
+local function leave(player)
+    if leaving[player] then
+        return
+    end
+    leaving[player] = true
+    MatchService.Leave(player)
+    DataService.Release(player)
+    leaving[player] = nil
 end
 
-Players.PlayerAdded:Connect(logJoin)
+local function join(player)
+    player.RespawnLocation = WorldService.Spawn
+    player.CharacterRemoving:Connect(function()
+        MatchService.Forfeit(player)
+    end)
+    task.spawn(DataService.Load, player)
+end
+
+Players.PlayerAdded:Connect(join)
+Players.PlayerRemoving:Connect(leave)
 for _, player in ipairs(Players:GetPlayers()) do
-    logJoin(player)
+    join(player)
 end
 
-print("Crystal Rush server started")
+task.spawn(function()
+    while true do
+        WorldService.Refresh(DataService)
+        task.wait(5)
+    end
+end)
+
+game:BindToClose(function()
+    MatchService.Closing = true
+    local pending = 0
+    for player in pairs(DataService.Sessions) do
+        pending += 1
+        task.spawn(function()
+            while leaving[player] do
+                task.wait()
+            end
+            leave(player)
+            pending -= 1
+        end)
+    end
+    local deadline = os.clock() + 25
+    while pending > 0 and os.clock() < deadline do
+        task.wait(0.1)
+    end
+end)
+
+print("Beat the Bot ready: local opponent, server-owned rules, four arenas.")

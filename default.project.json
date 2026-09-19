@@ -1,7 +1,11 @@
 {
-  "name": "CrystalRush",
+  "name": "BeatTheBot",
   "tree": {
     "$className": "DataModel",
+    "Workspace": {
+      "$className": "Workspace",
+      "$properties": { "FilteringEnabled": true }
+    },
     "ReplicatedStorage": {
       "$className": "ReplicatedStorage",
       "$path": "src/ReplicatedStorage"
