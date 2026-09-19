@@ -14,10 +14,16 @@ local rematchRemote = remotes:WaitForChild("Rematch")
 local current
 local pending = false
 local lastSent = 0
-local history = {}
-local lastHistoryTurn = -1
+local lastRenderedTurn = -1
+local pendingTurn
+local pendingPlayerBubble
+local thinkingWrapper
+local thinkingSpeaker
+local thinkingBubble
 local lastProgress = 0
 local lastSuspicion = 0
+local suggestionIds = {}
+local suggestionTexts = {}
 
 local colors = {
     Background = Color3.fromRGB(10, 15, 29),
@@ -223,31 +229,124 @@ ordered(suspicionHolder)
 
 local statusLine = ordered(label(scroll, "MOVE 0 / 8  •  180s remaining", 28, 14, colors.Cyan, Enum.Font.GothamBold))
 
-local responseCard = Instance.new("Frame")
-responseCard.Size = UDim2.new(1, 0, 0, 0)
-responseCard.AutomaticSize = Enum.AutomaticSize.Y
-responseCard.BackgroundColor3 = colors.Panel
-responseCard.Parent = scroll
-corner(responseCard, 12)
-stroke(responseCard, colors.Gold, 1, 0.65)
-ordered(responseCard)
+local conversation = Instance.new("Frame")
+conversation.Size = UDim2.new(1, 0, 0, 0)
+conversation.AutomaticSize = Enum.AutomaticSize.Y
+conversation.BackgroundTransparency = 1
+conversation.Parent = scroll
+ordered(conversation)
 
-local responsePadding = Instance.new("UIPadding")
-responsePadding.PaddingLeft = UDim.new(0, 14)
-responsePadding.PaddingRight = UDim.new(0, 14)
-responsePadding.PaddingTop = UDim.new(0, 12)
-responsePadding.PaddingBottom = UDim.new(0, 12)
-responsePadding.Parent = responseCard
+local conversationLayout = Instance.new("UIListLayout")
+conversationLayout.Padding = UDim.new(0, 10)
+conversationLayout.SortOrder = Enum.SortOrder.LayoutOrder
+conversationLayout.Parent = conversation
 
-local responseLabel = label(responseCard, "The Guard is waiting.", 0, 17, colors.White, Enum.Font.GothamMedium)
-responseLabel.AutomaticSize = Enum.AutomaticSize.Y
-responseLabel.Size = UDim2.new(1, 0, 0, 0)
+local function addConversationBubble(speakerText, message, isPlayer, muted)
+    local wrapper = Instance.new("Frame")
+    wrapper.Size = UDim2.new(1, 0, 0, 0)
+    wrapper.AutomaticSize = Enum.AutomaticSize.Y
+    wrapper.BackgroundTransparency = 1
+    wrapper.Parent = conversation
 
-local transcript = ordered(label(scroll, "", 0, 14, colors.Muted))
-transcript.AutomaticSize = Enum.AutomaticSize.Y
+    local bubbleLayout = Instance.new("UIListLayout")
+    bubbleLayout.Padding = UDim.new(0, 4)
+    bubbleLayout.HorizontalAlignment = isPlayer and Enum.HorizontalAlignment.Right or Enum.HorizontalAlignment.Left
+    bubbleLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    bubbleLayout.Parent = wrapper
+
+    local speaker = label(wrapper, speakerText, 18, 11, isPlayer and colors.Cyan or colors.Gold, Enum.Font.GothamBold)
+    speaker.AutomaticSize = Enum.AutomaticSize.Y
+    speaker.Size = UDim2.new(0.88, 0, 0, 0)
+    speaker.TextXAlignment = isPlayer and Enum.TextXAlignment.Right or Enum.TextXAlignment.Left
+
+    local bubble = label(wrapper, message, 0, 16, muted and colors.Muted or colors.White, Enum.Font.GothamMedium)
+    bubble.AutomaticSize = Enum.AutomaticSize.Y
+    bubble.Size = UDim2.new(0.88, 0, 0, 0)
+    bubble.BackgroundTransparency = 0
+    bubble.BackgroundColor3 = isPlayer and Color3.fromRGB(26, 70, 86) or colors.Panel
+    bubble.TextXAlignment = Enum.TextXAlignment.Left
+
+    local bubblePadding = Instance.new("UIPadding")
+    bubblePadding.PaddingLeft = UDim.new(0, 12)
+    bubblePadding.PaddingRight = UDim.new(0, 12)
+    bubblePadding.PaddingTop = UDim.new(0, 10)
+    bubblePadding.PaddingBottom = UDim.new(0, 10)
+    bubblePadding.Parent = bubble
+
+    corner(bubble, 12)
+    stroke(bubble, isPlayer and colors.Cyan or colors.Gold, 1, 0.7)
+
+    return wrapper, speaker, bubble
+end
+
+local function clearConversation()
+    for _, child in ipairs(conversation:GetChildren()) do
+        if child ~= conversationLayout then
+            child:Destroy()
+        end
+    end
+    thinkingWrapper = nil
+    thinkingSpeaker = nil
+    thinkingBubble = nil
+    pendingPlayerBubble = nil
+    pendingTurn = nil
+    lastRenderedTurn = -1
+end
+
+local function scrollToLatest()
+    task.defer(function()
+        task.wait()
+        local maxY = math.max(0, scroll.AbsoluteCanvasSize.Y - scroll.AbsoluteWindowSize.Y)
+        scroll.CanvasPosition = Vector2.new(0, maxY)
+    end)
+end
+
+local function startThinking()
+    if thinkingWrapper then
+        thinkingWrapper:Destroy()
+    end
+    thinkingWrapper, thinkingSpeaker, thinkingBubble = addConversationBubble("GUARD", "Thinking…", false, true)
+    scrollToLatest()
+end
+
+local function resolveThinking(guardName, message)
+    if thinkingBubble and thinkingBubble.Parent then
+        thinkingSpeaker.Text = string.upper(guardName or "GUARD")
+        thinkingBubble.Text = message
+        thinkingBubble.TextColor3 = colors.White
+    else
+        addConversationBubble(string.upper(guardName or "GUARD"), message, false, false)
+    end
+    thinkingWrapper = nil
+    thinkingSpeaker = nil
+    thinkingBubble = nil
+    scrollToLatest()
+end
+
+local function cancelThinking()
+    if thinkingWrapper and thinkingWrapper.Parent then
+        thinkingWrapper:Destroy()
+    end
+    thinkingWrapper = nil
+    thinkingSpeaker = nil
+    thinkingBubble = nil
+end
 
 local hint = ordered(label(scroll, "", 50, 14, colors.Gold, Enum.Font.GothamMedium))
-ordered(label(scroll, "QUICK MOVES", 24, 13, colors.Muted, Enum.Font.GothamBold))
+ordered(label(scroll, "SUGGESTIONS  •  OR TYPE YOUR OWN ARGUMENT", 24, 13, colors.Muted, Enum.Font.GothamBold))
+
+local suggestionButtons = {}
+for index = 1, 3 do
+    local move = ordered(button(scroll, "Suggestion loading…", 44))
+    suggestionButtons[index] = move
+    move.Activated:Connect(function()
+        local id = suggestionIds[index]
+        local text = suggestionTexts[index]
+        if id and text then
+            submit("Choice", id, text)
+        end
+    end)
+end
 
 local input = Instance.new("TextBox")
 input.Size = UDim2.new(1, 0, 0, 52)
@@ -270,7 +369,7 @@ inputPadding.PaddingLeft = UDim.new(0, 12)
 inputPadding.PaddingRight = UDim.new(0, 12)
 inputPadding.Parent = input
 
-local function submit(kind, value)
+function submit(kind, value, displayText)
     if not current or current.Status ~= "Playing" or pending then
         return
     end
@@ -285,8 +384,15 @@ local function submit(kind, value)
     end
 
     pending = true
+    pendingTurn = current.Turns + 1
     lastSent = os.clock()
     guidance.Text = "The Guard is considering your move..."
+
+    local shown = displayText or value
+    local _, _, playerBubble = addConversationBubble("YOU", shown, true, false)
+    pendingPlayerBubble = playerBubble
+    startThinking()
+    scrollToLatest()
 
     submitRemote:FireServer({
         MatchId = current.MatchId,
@@ -296,25 +402,18 @@ local function submit(kind, value)
     })
 end
 
-for _, choice in ipairs(Config.Choices) do
-    local move = ordered(button(scroll, choice.Text, 44))
-    move.Activated:Connect(function()
-        submit("Choice", choice.Id)
-    end)
-end
-
 input.Parent = scroll
 ordered(input)
 
 local send = ordered(button(scroll, "SEND ARGUMENT", 48, Color3.fromRGB(22, 102, 112)))
 send.TextSize = 16
 send.Activated:Connect(function()
-    submit("Text", input.Text)
+    submit("Text", input.Text, input.Text)
 end)
 
 input.FocusLost:Connect(function(enterPressed)
     if enterPressed then
-        submit("Text", input.Text)
+        submit("Text", input.Text, input.Text)
     end
 end)
 
@@ -444,6 +543,10 @@ stateRemote.OnClientEvent:Connect(function(packet)
     pending = false
 
     if packet.Kind == "Notice" then
+        pending = false
+        cancelThinking()
+        pendingTurn = nil
+        pendingPlayerBubble = nil
         guidance.Text = packet.Message
         return
     end
@@ -453,8 +556,7 @@ stateRemote.OnClientEvent:Connect(function(packet)
     end
 
     if not current or current.MatchId ~= packet.MatchId then
-        history = {}
-        lastHistoryTurn = -1
+        clearConversation()
         lastProgress = 0
         lastSuspicion = 0
         resultOverlay.Visible = false
@@ -491,23 +593,38 @@ stateRemote.OnClientEvent:Connect(function(packet)
 
     rematchButton.Text = "REMATCH " .. string.upper(packet.GuardName or "THE GUARD")
 
-    if packet.Turns ~= lastHistoryTurn then
-        lastHistoryTurn = packet.Turns
-        if packet.Summary then
-            table.insert(history, "YOU  •  " .. packet.Summary)
+    if packet.Turns == 0 and lastRenderedTurn < 0 then
+        addConversationBubble(string.upper(packet.GuardName or "GUARD"), packet.Message, false, false)
+        lastRenderedTurn = 0
+        scrollToLatest()
+    elseif pendingTurn and packet.Turns == pendingTurn then
+        if pendingPlayerBubble and packet.PlayerMessage then
+            pendingPlayerBubble.Text = packet.PlayerMessage
         end
-        table.insert(history, "GUARD  •  " .. packet.Message)
-    elseif #history > 0 then
-        history[#history] = "GUARD  •  " .. packet.Message
-    else
-        table.insert(history, "GUARD  •  " .. packet.Message)
+        resolveThinking(packet.GuardName, packet.Message)
+        lastRenderedTurn = packet.Turns
+        pendingTurn = nil
+        pendingPlayerBubble = nil
+    elseif packet.Turns > lastRenderedTurn then
+        if packet.PlayerMessage then
+            addConversationBubble("YOU", packet.PlayerMessage, true, false)
+        end
+        addConversationBubble(string.upper(packet.GuardName or "GUARD"), packet.Message, false, false)
+        lastRenderedTurn = packet.Turns
+        scrollToLatest()
     end
 
-    responseLabel.Text = packet.Message
-    transcript.Text = table.concat(history, "\n\n")
+    for index = 1, 3 do
+        local suggestion = packet.Suggestions and packet.Suggestions[index]
+        suggestionIds[index] = suggestion and suggestion.Id or nil
+        suggestionTexts[index] = suggestion and suggestion.Text or nil
+        suggestionButtons[index].Text = suggestion and suggestion.Text or "No suggestion"
+        suggestionButtons[index].Visible = suggestion ~= nil and packet.Status == "Playing"
+    end
+
     hint.Text = packet.Status == "Playing" and ("TACTICAL HINT  •  " .. packet.Hint) or "Result locked. Rematch or return to the plaza."
     guidance.Text = packet.Status == "Playing"
-        and "Choose a move or write your own argument."
+        and "Read the Guard's reply, choose a suggestion, or write your own argument."
         or packet.Message
 
     if packet.Delta ~= nil then
@@ -521,6 +638,7 @@ stateRemote.OnClientEvent:Connect(function(packet)
     end
 
     input.Text = ""
+    scrollToLatest()
 end)
 
 task.spawn(function()
