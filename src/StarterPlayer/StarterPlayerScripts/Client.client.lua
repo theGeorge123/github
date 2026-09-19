@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
+local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local player = Players.LocalPlayer
@@ -72,7 +73,8 @@ local function button(parent, text, accent)
     object.AutoButtonColor = true
     object.TextColor3 = colors.White
     object.Text = text
-    object.TextSize = 13
+    object.TextSize = 14
+    object.Selectable = true
     object.TextWrapped = true
     object.Font = Enum.Font.GothamMedium
     object.Parent = parent
@@ -118,11 +120,11 @@ guidance.Position = UDim2.fromOffset(14, 32)
 guidance.Size = UDim2.new(1, -28, 0, 30)
 
 local profileButton = button(header, "PROFILE", colors.Panel2)
-profileButton.Size = UDim2.fromOffset(96, 32)
+profileButton.Size = UDim2.fromOffset(96, 44)
 profileButton.Position = UDim2.new(1, -214, 0, 5)
 
 local toggle = button(header, "MATCH", Color3.fromRGB(31, 74, 92))
-toggle.Size = UDim2.fromOffset(96, 32)
+toggle.Size = UDim2.fromOffset(96, 44)
 toggle.Position = UDim2.new(1, -110, 0, 5)
 
 local profileCard = Instance.new("Frame")
@@ -416,7 +418,7 @@ suggestionLabel.Size = UDim2.new(1, 0, 0, 14)
 
 local suggestionRow = Instance.new("Frame")
 suggestionRow.Position = UDim2.fromOffset(0, 40)
-suggestionRow.Size = UDim2.new(1, 0, 0, 42)
+suggestionRow.Size = UDim2.new(1, 0, 0, 48)
 suggestionRow.BackgroundTransparency = 1
 suggestionRow.Parent = composer
 
@@ -435,8 +437,8 @@ for index = 1, 2 do
 end
 
 local input = Instance.new("TextBox")
-input.Position = UDim2.fromOffset(0, 90)
-input.Size = UDim2.new(1, -118, 0, 46)
+input.Position = UDim2.fromOffset(0, 94)
+input.Size = UDim2.new(1, -118, 0, 48)
 input.BackgroundColor3 = colors.Panel2
 input.TextColor3 = colors.White
 input.PlaceholderColor3 = colors.Muted
@@ -457,9 +459,37 @@ inputPadding.PaddingRight = UDim.new(0, 12)
 inputPadding.Parent = input
 
 local send = button(composer, "SEND", Color3.fromRGB(22, 102, 112))
-send.Position = UDim2.new(1, -108, 0, 90)
-send.Size = UDim2.fromOffset(108, 46)
+send.Position = UDim2.new(1, -108, 0, 94)
+send.Size = UDim2.fromOffset(108, 48)
 send.TextSize = 15
+
+local compact = false
+local function refreshResponsiveLayout()
+    local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
+    compact = viewport.X < 600 or viewport.Y < 560 or UserInputService.TouchEnabled
+
+    header.Size = UDim2.new(compact and 0.96 or 0.98, 0, 0, compact and 88 or 70)
+    header.Position = UDim2.new(compact and 0.02 or 0.01, 0, 0, 6)
+    stats.TextSize = compact and 14 or 16
+    stats.Size = UDim2.new(1, compact and -28 or -232, 0, 34)
+    guidance.Position = UDim2.fromOffset(14, compact and 48 or 32)
+    guidance.Size = UDim2.new(1, -28, 0, compact and 34 or 30)
+    guidance.TextSize = compact and 13 or 12
+    profileButton.Visible = not compact
+    toggle.Visible = not compact
+
+    local top = compact and 100 or 82
+    panel.Position = UDim2.new(0.5, 0, 0, top)
+    panel.Size = UDim2.new(compact and 0.96 or 0.98, 0, 1, -(top + 10))
+    profileCard.Position = UDim2.new(0.5, 0, 0, top)
+    conversationScroll.ScrollBarThickness = compact and 8 or 4
+end
+
+local camera = workspace.CurrentCamera
+if camera then
+    camera:GetPropertyChangedSignal("ViewportSize"):Connect(refreshResponsiveLayout)
+end
+refreshResponsiveLayout()
 
 local function animateMeter(fill, valueLabel, value)
     valueLabel.Text = string.format("%d%%", value)
@@ -522,6 +552,13 @@ end
 
 send.Activated:Connect(function()
     submit("Text", input.Text, input.Text)
+end)
+
+input.Focused:Connect(function()
+    if compact then
+        conversationScroll.CanvasPosition = Vector2.new(0, math.max(0, conversationScroll.AbsoluteCanvasSize.Y - conversationScroll.AbsoluteSize.Y))
+        guidance.Text = "Keyboard open • send when your argument is ready."
+    end
 end)
 
 input.FocusLost:Connect(function(enterPressed)
