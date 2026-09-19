@@ -200,6 +200,50 @@ profileButton.Activated:Connect(function()
     end
 end)
 
+local tutorial = Instance.new("Frame")
+tutorial.AnchorPoint = Vector2.new(0.5, 0.5)
+tutorial.Position = UDim2.fromScale(0.5, 0.5)
+tutorial.Size = UDim2.new(0.88, 0, 0, 330)
+tutorial.BackgroundColor3 = colors.Background
+tutorial.ZIndex = 30
+tutorial.Parent = screen
+corner(tutorial, 18)
+stroke(tutorial, colors.Cyan, 2, 0.2)
+
+local tutorialConstraint = Instance.new("UISizeConstraint")
+tutorialConstraint.MaxSize = Vector2.new(480, 360)
+tutorialConstraint.Parent = tutorial
+
+local tutorialTitle = label(tutorial, "OUTSMART THE CITADEL", 24, colors.Gold, Enum.Font.GothamBlack)
+tutorialTitle.TextXAlignment = Enum.TextXAlignment.Center
+tutorialTitle.Position = UDim2.fromOffset(20, 20)
+tutorialTitle.Size = UDim2.new(1, -40, 0, 38)
+tutorialTitle.ZIndex = 31
+
+local tutorialBody = label(tutorial, [[1  Walk to a glowing challenge console.
+
+2  Persuade the opponent in eight messages.
+
+3  Raise TRUST and keep SUSPICION low.
+
+Win ranked matches to unlock deeper districts. The Daily Trial is in the plaza.]], 16, colors.White, Enum.Font.GothamMedium)
+tutorialBody.Position = UDim2.fromOffset(26, 66)
+tutorialBody.Size = UDim2.new(1, -52, 0, 190)
+tutorialBody.TextYAlignment = Enum.TextYAlignment.Top
+tutorialBody.ZIndex = 31
+
+local tutorialStart = button(tutorial, "START EXPLORING", Color3.fromRGB(22, 112, 95))
+tutorialStart.AnchorPoint = Vector2.new(0.5, 1)
+tutorialStart.Position = UDim2.new(0.5, 0, 1, -22)
+tutorialStart.Size = UDim2.new(0.82, 0, 0, 48)
+tutorialStart.TextSize = 16
+tutorialStart.ZIndex = 31
+
+tutorialStart.Activated:Connect(function()
+    tutorial.Visible = false
+    guidance.Text = "Find a glowing console. Build Trust, avoid Suspicion, and persuade in eight messages."
+end)
+
 local panel = Instance.new("Frame")
 panel.AnchorPoint = Vector2.new(0.5, 0)
 panel.Position = UDim2.new(0.5, 0, 0, 82)
@@ -638,6 +682,7 @@ stateRemote.OnClientEvent:Connect(function(packet)
         return
     end
 
+    tutorial.Visible = false
     pending = false
 
     if not current or current.MatchId ~= packet.MatchId then
@@ -656,10 +701,10 @@ stateRemote.OnClientEvent:Connect(function(packet)
     animateMeter(suspicionFill, suspicionValue, packet.Suspicion)
 
     if packet.Progress > lastProgress then
-        flashGuidance(string.format("+%d TRUST", packet.Progress - lastProgress), colors.Green)
+        flashGuidance(string.format("TRUST +%d • Good approach", packet.Progress - lastProgress), colors.Green)
         ping(1.12)
     elseif packet.Suspicion > lastSuspicion then
-        flashGuidance(string.format("+%d SUSPICION", packet.Suspicion - lastSuspicion), colors.Red)
+        flashGuidance(string.format("SUSPICION +%d • Change approach", packet.Suspicion - lastSuspicion), colors.Red)
         ping(0.86)
     end
 
