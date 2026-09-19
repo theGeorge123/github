@@ -3,6 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
+local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local player = Players.LocalPlayer
@@ -25,6 +27,10 @@ local lastProgress = 0
 local lastSuspicion = 0
 local suggestionIds = {}
 local suggestionTexts = {}
+local reducedMotion = GuiService.ReducedMotionEnabled
+GuiService:GetPropertyChangedSignal("ReducedMotionEnabled"):Connect(function()
+    reducedMotion = GuiService.ReducedMotionEnabled
+end)
 
 local colors = {
     Background = Color3.fromRGB(10, 15, 29),
@@ -72,7 +78,8 @@ local function button(parent, text, accent)
     object.AutoButtonColor = true
     object.TextColor3 = colors.White
     object.Text = text
-    object.TextSize = 13
+    object.TextSize = 14
+    object.Selectable = true
     object.TextWrapped = true
     object.Font = Enum.Font.GothamMedium
     object.Parent = parent
@@ -82,6 +89,9 @@ local function button(parent, text, accent)
 end
 
 local function ping(pitch)
+    if reducedMotion then
+        return
+    end
     local sound = Instance.new("Sound")
     sound.SoundId = "rbxasset://sounds/electronicpingshort.wav"
     sound.Volume = 0.2
@@ -118,11 +128,11 @@ guidance.Position = UDim2.fromOffset(14, 32)
 guidance.Size = UDim2.new(1, -28, 0, 30)
 
 local profileButton = button(header, "PROFILE", colors.Panel2)
-profileButton.Size = UDim2.fromOffset(96, 32)
+profileButton.Size = UDim2.fromOffset(96, 44)
 profileButton.Position = UDim2.new(1, -214, 0, 5)
 
 local toggle = button(header, "MATCH", Color3.fromRGB(31, 74, 92))
-toggle.Size = UDim2.fromOffset(96, 32)
+toggle.Size = UDim2.fromOffset(96, 44)
 toggle.Position = UDim2.new(1, -110, 0, 5)
 
 local profileCard = Instance.new("Frame")
@@ -198,6 +208,50 @@ profileButton.Activated:Connect(function()
     if profileCard.Visible then
         refreshProfileCard()
     end
+end)
+
+local tutorial = Instance.new("Frame")
+tutorial.AnchorPoint = Vector2.new(0.5, 0.5)
+tutorial.Position = UDim2.fromScale(0.5, 0.5)
+tutorial.Size = UDim2.new(0.88, 0, 0, 330)
+tutorial.BackgroundColor3 = colors.Background
+tutorial.ZIndex = 30
+tutorial.Parent = screen
+corner(tutorial, 18)
+stroke(tutorial, colors.Cyan, 2, 0.2)
+
+local tutorialConstraint = Instance.new("UISizeConstraint")
+tutorialConstraint.MaxSize = Vector2.new(480, 360)
+tutorialConstraint.Parent = tutorial
+
+local tutorialTitle = label(tutorial, "OUTSMART THE CITADEL", 24, colors.Gold, Enum.Font.GothamBlack)
+tutorialTitle.TextXAlignment = Enum.TextXAlignment.Center
+tutorialTitle.Position = UDim2.fromOffset(20, 20)
+tutorialTitle.Size = UDim2.new(1, -40, 0, 38)
+tutorialTitle.ZIndex = 31
+
+local tutorialBody = label(tutorial, [[1  Walk to a glowing challenge console.
+
+2  Persuade the opponent in eight turns.
+
+3  Raise TRUST and keep SUSPICION low.
+
+Win ranked matches to unlock deeper districts. The Daily Trial is in the plaza.]], 16, colors.White, Enum.Font.GothamMedium)
+tutorialBody.Position = UDim2.fromOffset(26, 66)
+tutorialBody.Size = UDim2.new(1, -52, 0, 190)
+tutorialBody.TextYAlignment = Enum.TextYAlignment.Top
+tutorialBody.ZIndex = 31
+
+local tutorialStart = button(tutorial, "START EXPLORING", Color3.fromRGB(22, 112, 95))
+tutorialStart.AnchorPoint = Vector2.new(0.5, 1)
+tutorialStart.Position = UDim2.new(0.5, 0, 1, -22)
+tutorialStart.Size = UDim2.new(0.82, 0, 0, 48)
+tutorialStart.TextSize = 16
+tutorialStart.ZIndex = 31
+
+tutorialStart.Activated:Connect(function()
+    tutorial.Visible = false
+    guidance.Text = "Find a glowing console. Build Trust, avoid Suspicion, and persuade in eight turns."
 end)
 
 local panel = Instance.new("Frame")
@@ -416,7 +470,7 @@ suggestionLabel.Size = UDim2.new(1, 0, 0, 14)
 
 local suggestionRow = Instance.new("Frame")
 suggestionRow.Position = UDim2.fromOffset(0, 40)
-suggestionRow.Size = UDim2.new(1, 0, 0, 42)
+suggestionRow.Size = UDim2.new(1, 0, 0, 48)
 suggestionRow.BackgroundTransparency = 1
 suggestionRow.Parent = composer
 
@@ -435,8 +489,8 @@ for index = 1, 2 do
 end
 
 local input = Instance.new("TextBox")
-input.Position = UDim2.fromOffset(0, 90)
-input.Size = UDim2.new(1, -118, 0, 46)
+input.Position = UDim2.fromOffset(0, 94)
+input.Size = UDim2.new(1, -118, 0, 48)
 input.BackgroundColor3 = colors.Panel2
 input.TextColor3 = colors.White
 input.PlaceholderColor3 = colors.Muted
@@ -457,17 +511,50 @@ inputPadding.PaddingRight = UDim.new(0, 12)
 inputPadding.Parent = input
 
 local send = button(composer, "SEND", Color3.fromRGB(22, 102, 112))
-send.Position = UDim2.new(1, -108, 0, 90)
-send.Size = UDim2.fromOffset(108, 46)
+send.Position = UDim2.new(1, -108, 0, 94)
+send.Size = UDim2.fromOffset(108, 48)
 send.TextSize = 15
+
+local compact = false
+local function refreshResponsiveLayout()
+    local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
+    compact = viewport.X < 600 or viewport.Y < 560 or UserInputService.TouchEnabled
+
+    header.Size = UDim2.new(compact and 0.96 or 0.98, 0, 0, compact and 88 or 70)
+    header.Position = UDim2.new(compact and 0.02 or 0.01, 0, 0, 6)
+    stats.TextSize = compact and 14 or 16
+    stats.Size = UDim2.new(1, compact and -28 or -232, 0, 34)
+    guidance.Position = UDim2.fromOffset(14, compact and 48 or 32)
+    guidance.Size = UDim2.new(1, -28, 0, compact and 34 or 30)
+    guidance.TextSize = compact and 13 or 12
+    profileButton.Visible = not compact
+    toggle.Visible = not compact
+
+    local top = compact and 100 or 82
+    panel.Position = UDim2.new(0.5, 0, 0, top)
+    panel.Size = UDim2.new(compact and 0.96 or 0.98, 0, 1, -(top + 10))
+    profileCard.Position = UDim2.new(0.5, 0, 0, top)
+    conversationScroll.ScrollBarThickness = compact and 8 or 4
+end
+
+local camera = workspace.CurrentCamera
+if camera then
+    camera:GetPropertyChangedSignal("ViewportSize"):Connect(refreshResponsiveLayout)
+end
+refreshResponsiveLayout()
 
 local function animateMeter(fill, valueLabel, value)
     valueLabel.Text = string.format("%d%%", value)
-    TweenService:Create(
-        fill,
-        TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-        { Size = UDim2.fromScale(math.clamp(value / 100, 0, 1), 1) }
-    ):Play()
+    local target = UDim2.fromScale(math.clamp(value / 100, 0, 1), 1)
+    if reducedMotion then
+        fill.Size = target
+    else
+        TweenService:Create(
+            fill,
+            TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+            { Size = target }
+        ):Play()
+    end
 end
 
 local function flashGuidance(text, color)
@@ -522,6 +609,13 @@ end
 
 send.Activated:Connect(function()
     submit("Text", input.Text, input.Text)
+end)
+
+input.Focused:Connect(function()
+    if compact then
+        conversationScroll.CanvasPosition = Vector2.new(0, math.max(0, conversationScroll.AbsoluteCanvasSize.Y - conversationScroll.AbsoluteSize.Y))
+        guidance.Text = "Keyboard open • send when your argument is ready."
+    end
 end)
 
 input.FocusLost:Connect(function(enterPressed)
@@ -601,11 +695,15 @@ local function showResult(packet)
     resultOverlay.Visible = true
     resultScale.Scale = 0.86
 
-    TweenService:Create(
-        resultScale,
-        TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-        { Scale = 1 }
-    ):Play()
+    if reducedMotion then
+        resultScale.Scale = 1
+    else
+        TweenService:Create(
+            resultScale,
+            TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            { Scale = 1 }
+        ):Play()
+    end
 
     ping(won and 1.25 or 0.72)
 end
@@ -638,6 +736,7 @@ stateRemote.OnClientEvent:Connect(function(packet)
         return
     end
 
+    tutorial.Visible = false
     pending = false
 
     if not current or current.MatchId ~= packet.MatchId then
@@ -656,10 +755,10 @@ stateRemote.OnClientEvent:Connect(function(packet)
     animateMeter(suspicionFill, suspicionValue, packet.Suspicion)
 
     if packet.Progress > lastProgress then
-        flashGuidance(string.format("+%d TRUST", packet.Progress - lastProgress), colors.Green)
+        flashGuidance(string.format("TRUST +%d • Good approach", packet.Progress - lastProgress), colors.Green)
         ping(1.12)
     elseif packet.Suspicion > lastSuspicion then
-        flashGuidance(string.format("+%d SUSPICION", packet.Suspicion - lastSuspicion), colors.Red)
+        flashGuidance(string.format("SUSPICION +%d • Change approach", packet.Suspicion - lastSuspicion), colors.Red)
         ping(0.86)
     end
 
