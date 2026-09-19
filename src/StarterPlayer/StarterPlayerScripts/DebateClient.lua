@@ -8,9 +8,9 @@ function DebateClient.Start()
     local function button(parent,text,color)local b=Instance.new("TextButton");b.Text=text;b.TextColor3=C.white;b.TextSize=14;b.Font=Enum.Font.GothamBold;b.BackgroundColor3=color or C.panel2;b.Parent=parent;corner(b,9);return b end
     local gui=Instance.new("ScreenGui");gui.Name="DebatePrototypeUI";gui.ResetOnSpawn=false;gui.IgnoreGuiInset=false;gui.Parent=p:WaitForChild("PlayerGui")
     local badge=label(gui,"PRIVATE • UNRANKED • SESSION ONLY",12,C.gold,true);badge.Position=UDim2.fromOffset(16,10);badge.Size=UDim2.fromOffset(285,24)
-    local menu=Instance.new("Frame");menu.AnchorPoint=Vector2.new(1,.5);menu.Position=UDim2.new(1,-14,.5,0);menu.Size=UDim2.fromOffset(132,208);menu.BackgroundColor3=C.bg;menu.BackgroundTransparency=.08;menu.Parent=gui;corner(menu,12)
+    local menu=Instance.new("Frame");menu.AnchorPoint=Vector2.new(1,.5);menu.Position=UDim2.new(1,-14,.5,0);menu.Size=UDim2.fromOffset(132,224);menu.BackgroundColor3=C.bg;menu.BackgroundTransparency=.08;menu.Parent=gui;corner(menu,12)
     local list=Instance.new("UIListLayout");list.Padding=UDim.new(0,7);list.HorizontalAlignment=Enum.HorizontalAlignment.Center;list.VerticalAlignment=Enum.VerticalAlignment.Center;list.Parent=menu
-    local play=button(menu,"▶ PLAY",C.cyan);play.Size=UDim2.new(1,-16,0,40);play.TextColor3=C.bg
+    local play=button(menu,"▶ PLAY",C.cyan);play.Size=UDim2.new(1,-16,0,44);play.TextColor3=C.bg
     local chairs=button(menu,"CHAIRS",C.panel2);chairs.Size=play.Size
     local titles=button(menu,"TITLES",C.panel2);titles.Size=play.Size
     local profile=button(menu,"PROFILE",C.panel2);profile.Size=play.Size
@@ -38,8 +38,8 @@ function DebateClient.Start()
     local function row(who,text,color)local x=label(log,who.."\n"..text,14,color,who~="YOU");x.Size=UDim2.new(1,-18,0,74);x.AutomaticSize=Enum.AutomaticSize.Y;x.Parent=log;x.TextYAlignment=Enum.TextYAlignment.Top;return x end
     play.Activated:Connect(function()select.Visible=true end)
     local function shell(titleText,body)local f=Instance.new("Frame");f.AnchorPoint=Vector2.new(1,.5);f.Position=UDim2.new(1,-158,.5,0);f.Size=UDim2.fromOffset(260,220);f.BackgroundColor3=C.bg;f.Parent=gui;corner(f,12);local h=label(f,titleText,19,C.gold,true);h.Position=UDim2.fromOffset(16,12);h.Size=UDim2.new(1,-32,0,30);local b=label(f,body,14,C.white);b.Position=UDim2.fromOffset(16,50);b.Size=UDim2.new(1,-32,1,-66);b.TextYAlignment=Enum.TextYAlignment.Top;task.delay(5,function()if f.Parent then f:Destroy()end end)end
-    chairs.Activated:Connect(function()shell("CHAIRS","Practice chair\nEquipped ✓\n\nMore chairs are visual-only in this prototype. No Robux or paid products.")end)
-    titles.Activated:Connect(function()shell("TITLES","Debater\nEquipped ✓\n\nClear Thinker\nComplete a future live debate to unlock.")end)
+    chairs.Activated:Connect(function()shell("CHAIRS","Practice chair preview\nNo item is equipped or saved\n\nMore chairs are visual-only in this prototype. No Robux or paid products.")end)
+    titles.Activated:Connect(function()shell("TITLES","Debater preview\nNo title is equipped or saved\n\nClear Thinker\nComplete a future live debate to unlock.")end)
     profile.Activated:Connect(function()shell("PROFILE","Private tester\nSession-only debate prototype\nNo ELO, rewards, persistence, or production writes.")end)
     send.Activated:Connect(function()if box.Text~="" and turn<4 then submit:FireServer("argument",box.Text);box.Text=""end end)
     state.OnClientEvent:Connect(function(m)
@@ -48,6 +48,6 @@ function DebateClient.Start()
      elseif m.Kind=="Complete" then row("RESULT",m.Message.."\n\nRubric for live mode: Relevance 20% • Reasoning 30% • Evidence 20% • Rebuttal 30%",C.gold)
      elseif m.Kind=="Error" then row("SYSTEM","Your message could not be filtered. Try different wording.",C.gold) end
     end)
-    if UIS.TouchEnabled then menu.Size=UDim2.fromOffset(112,184);select.Size=UDim2.new(.92,0,.76,0);debate.Size=UDim2.new(.94,0,.82,0) end
+    if UIS.TouchEnabled then menu.Size=UDim2.fromOffset(112,208);select.Size=UDim2.new(.92,0,.76,0);debate.Size=UDim2.new(.94,0,.82,0) end
 end
 return DebateClient
