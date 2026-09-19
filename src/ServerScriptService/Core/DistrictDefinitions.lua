@@ -26,6 +26,22 @@ function DistrictDefinitions.ForArena(arenaId)
     return districts[arenaDistrict[arenaId]]
 end
 
+function DistrictDefinitions.NextPlayable(elo)
+    elo = tonumber(elo) or 0
+    for _, id in ipairs(order) do
+        local district = districts[id]
+        if district.Playable and district.UnlockElo > elo then
+            return {
+                Id = district.Id,
+                Name = district.Name,
+                UnlockElo = district.UnlockElo,
+                RemainingElo = district.UnlockElo - elo,
+            }
+        end
+    end
+    return nil
+end
+
 function DistrictDefinitions.CanAccess(elo, districtId)
     local district = districts[districtId]
     return district ~= nil and (tonumber(elo) or 0) >= district.UnlockElo
