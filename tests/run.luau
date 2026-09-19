@@ -64,6 +64,14 @@ test("district ELO gates and arena mapping are authoritative definitions", funct
     assert(Districts.Get("oracle_spire").UnlockElo == 1800 and Districts.Get("oracle_spire").Teaser)
 end)
 
+test("next playable district progress is data driven", function()
+    local customs = Districts.NextPlayable(1000)
+    assert(customs and customs.Id == "customs" and customs.RemainingElo == 100)
+    local watch = Districts.NextPlayable(1100)
+    assert(watch and watch.Id == "watch" and watch.RemainingElo == 150)
+    assert(Districts.NextPlayable(1250) == nil)
+end)
+
 test("opponent selection avoids an immediate repeat when alternatives exist", function()
     local first = Opponents.Select(2000, 0, "great_gate")
     local nextOpponent = Opponents.Select(2000, 0, "great_gate", first.Id)

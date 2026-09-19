@@ -336,9 +336,13 @@ local statusLine = label(panel, "MOVE 0 / 8  •  180s", 12, colors.Cyan, Enum.F
 statusLine.Position = UDim2.fromOffset(14, 108)
 statusLine.Size = UDim2.new(1, -28, 0, 20)
 
+local unlockLine = label(panel, "NEXT DISTRICT  •  CALCULATING…", 11, colors.Muted, Enum.Font.GothamMedium)
+unlockLine.Position = UDim2.fromOffset(14, 126)
+unlockLine.Size = UDim2.new(1, -28, 0, 18)
+
 local conversationScroll = Instance.new("ScrollingFrame")
-conversationScroll.Position = UDim2.fromOffset(14, 130)
-conversationScroll.Size = UDim2.new(1, -28, 1, -302)
+conversationScroll.Position = UDim2.fromOffset(14, 148)
+conversationScroll.Size = UDim2.new(1, -28, 1, -320)
 conversationScroll.BackgroundColor3 = Color3.fromRGB(8, 12, 23)
 conversationScroll.BackgroundTransparency = 0.12
 conversationScroll.BorderSizePixel = 0
@@ -683,6 +687,12 @@ resultRating.ZIndex = 21
 resultRating.Position = UDim2.fromOffset(20, 158)
 resultRating.Size = UDim2.new(1, -40, 0, 34)
 
+local resultReward = label(resultOverlay, "", 13, colors.Cyan, Enum.Font.GothamBold)
+resultReward.TextXAlignment = Enum.TextXAlignment.Center
+resultReward.ZIndex = 21
+resultReward.Position = UDim2.fromOffset(20, 192)
+resultReward.Size = UDim2.new(1, -40, 0, 38)
+
 local rematchButton = button(resultOverlay, "REMATCH", Color3.fromRGB(22, 112, 95))
 rematchButton.Position = UDim2.new(0.08, 0, 1, -105)
 rematchButton.Size = UDim2.new(0.84, 0, 0, 44)
@@ -704,6 +714,22 @@ local function showResult(packet)
         resultRating.Text = "OFFICIAL DAILY SCORE LOCKED"
     else
         resultRating.Text = "PRACTICE • ELO UNCHANGED"
+    end
+
+    local rewardParts = {}
+    if (packet.RewardInsight or 0) > 0 then
+        table.insert(rewardParts, string.format("+%d INSIGHT", packet.RewardInsight))
+    end
+    if (packet.RewardMasteryXP or 0) > 0 then
+        table.insert(rewardParts, string.format("+%d MASTERY XP", packet.RewardMasteryXP))
+    end
+    if packet.RewardItems and #packet.RewardItems > 0 then
+        table.insert(rewardParts, "NEW COSMETIC")
+    end
+    resultReward.Text = #rewardParts > 0 and table.concat(rewardParts, "  •  ") or "MATCH REWARDS RECORDED"
+
+    if packet.NextUnlockName then
+        rematchButton.Text = string.format("ONE MORE CHALLENGE • %d ELO TO %s", packet.NextUnlockRemaining or 0, string.upper(packet.NextUnlockName))
     end
     resultOverlay.Visible = true
     resultScale.Scale = 0.86
@@ -763,6 +789,14 @@ stateRemote.OnClientEvent:Connect(function(packet)
 
     current = packet
     refreshProfileCard()
+
+    if packet.NextUnlockName then
+        unlockLine.Text = string.format("NEXT DISTRICT  •  %s  •  %d ELO TO GO", string.upper(packet.NextUnlockName), packet.NextUnlockRemaining or 0)
+        unlockLine.TextColor3 = colors.Gold
+    else
+        unlockLine.Text = "CITADEL ROUTE  •  ALL PLAYABLE DISTRICTS UNLOCKED"
+        unlockLine.TextColor3 = colors.Green
+    end
 
     animateMeter(trustFill, trustValue, packet.Progress)
     animateMeter(suspicionFill, suspicionValue, packet.Suspicion)
