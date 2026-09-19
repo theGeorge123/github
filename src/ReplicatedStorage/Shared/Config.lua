@@ -26,6 +26,8 @@ return table.freeze({
         { Id = "permit", Text = "Here is my delivery permit." },
         { Id = "verify", Text = "Please check the royal seal." },
         { Id = "escort", Text = "You can escort me inside." },
+        { Id = "flattery", Text = "Compliment the guard's reputation." },
+        { Id = "authority", Text = "Invoke credible royal authority." },
         { Id = "joke", Text = "Try to make the guard laugh." },
         { Id = "bribe", Text = "Offer the guard some gold." },
     },
