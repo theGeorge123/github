@@ -40,6 +40,8 @@ MatchService.Finish(match, true, "duplicate")
 assert(DataService.Get(player).Wins == 1, "Duplicate reward")
 assert(WorldService.HumanWins == 1 and WorldService.BotWins == 0, "Server totals wrong")
 
+task.wait(Config.ArenaResetSeconds + 0.2)
+assert(MatchService.Matches[player] == nil, "Completed match did not release")
 MatchService.RequestRematch(player)
 task.wait(0.2)
 local second = MatchService.Matches[player]

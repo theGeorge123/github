@@ -5,7 +5,7 @@ local Rules = require(script.Parent.Parent.Core.Rules)
 local Protocol = require(script.Parent.Parent.Core.Protocol)
 local Adapter = require(script.Parent.Parent.AI.Adapter)
 
-local MatchService = { Matches = {}, Slots = {}, Closing = false }
+local MatchService = { Matches = {}, Slots = {}, LastArena = {}, Closing = false }
 local dataService
 local worldService
 local remote
@@ -102,6 +102,7 @@ function MatchService.Finish(match, won, reason)
     match.Saving = false
 
     if profile then
+        MatchService.LastArena[match.Player] = match.ArenaId
         worldService.Record(won)
         worldService.Refresh(dataService)
         send(match, reason, profile.LastMatch.Delta)
@@ -292,16 +293,39 @@ end
 
 function MatchService.RequestRematch(player)
     local match = MatchService.Matches[player]
-    if not match or not match.Ended or match.Saving then
+    local arenaId
+
+    if match then
+        if not match.Ended or match.Saving then
+            return
+        end
+        arenaId = match.ArenaId
+        if MatchService.Slots[arenaId] == match then
+            releaseArena(match)
+        end
+    else
+        arenaId = MatchService.LastArena[player]
+    end
+
+    if not arenaId then
         return
     end
 
-    local arenaId = match.ArenaId
-    if MatchService.Slots[arenaId] ~= match then
+    if MatchService.Slots[arenaId] then
+        arenaId = nil
+        for candidate = 1, Config.ArenaCount do
+            if not MatchService.Slots[candidate] then
+                arenaId = candidate
+                break
+            end
+        end
+    end
+
+    if not arenaId then
+        tell(player, "Every arena is busy. Try again in a moment.")
         return
     end
 
-    releaseArena(match)
     lastRequest[player] = nil
     task.defer(MatchService.Start, player, arenaId, true)
 end
@@ -320,6 +344,7 @@ function MatchService.Leave(player)
         releaseArena(match)
     end
     lastRequest[player] = nil
+    MatchService.LastArena[player] = nil
 end
 
 function MatchService.Init(data, world, stateRemote, submitRemote, rematchRemote)
