@@ -3,16 +3,18 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
-local UserInputService = game:GetService("UserInputService")
 local GuiService = game:GetService("GuiService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+if Config.DebateEnabled then
+    require(script.Parent.DebateClient).Start()
+    return
+end
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("BeatTheBotRemotes")
 local stateRemote = remotes:WaitForChild("State")
 local submitRemote = remotes:WaitForChild("Submit")
 local rematchRemote = remotes:WaitForChild("Rematch")
-local exitRemote = remotes:WaitForChild("ExitChallenge")
 
 local current
 local pending = false
@@ -45,18 +47,6 @@ local colors = {
     Muted = Color3.fromRGB(166, 183, 206),
 }
 
-local opponentAccents = {
-    Gold = Color3.fromRGB(255, 199, 89),
-    Crimson = Color3.fromRGB(232, 91, 106),
-    Cyan = Color3.fromRGB(73, 220, 236),
-    Amber = Color3.fromRGB(244, 154, 65),
-    Ivory = Color3.fromRGB(230, 220, 194),
-    Emerald = Color3.fromRGB(83, 198, 139),
-    Blue = Color3.fromRGB(91, 154, 224),
-    Silver = Color3.fromRGB(180, 189, 204),
-    Violet = Color3.fromRGB(157, 122, 230),
-}
-
 local function corner(object, radius)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, radius or 10)
@@ -69,7 +59,6 @@ local function stroke(object, color, thickness, transparency)
     s.Thickness = thickness or 1
     s.Transparency = transparency or 0.3
     s.Parent = object
-    return s
 end
 
 local function label(parent, text, size, color, font)
@@ -92,8 +81,7 @@ local function button(parent, text, accent)
     object.AutoButtonColor = true
     object.TextColor3 = colors.White
     object.Text = text
-    object.TextSize = 14
-    object.Selectable = true
+    object.TextSize = 13
     object.TextWrapped = true
     object.Font = Enum.Font.GothamMedium
     object.Parent = parent
@@ -142,11 +130,11 @@ guidance.Position = UDim2.fromOffset(14, 32)
 guidance.Size = UDim2.new(1, -28, 0, 30)
 
 local profileButton = button(header, "PROFILE", colors.Panel2)
-profileButton.Size = UDim2.fromOffset(96, 44)
+profileButton.Size = UDim2.fromOffset(96, 32)
 profileButton.Position = UDim2.new(1, -214, 0, 5)
 
 local toggle = button(header, "MATCH", Color3.fromRGB(31, 74, 92))
-toggle.Size = UDim2.fromOffset(96, 44)
+toggle.Size = UDim2.fromOffset(96, 32)
 toggle.Position = UDim2.new(1, -110, 0, 5)
 
 local profileCard = Instance.new("Frame")
@@ -224,64 +212,6 @@ profileButton.Activated:Connect(function()
     end
 end)
 
-local tutorial = Instance.new("Frame")
-tutorial.AnchorPoint = Vector2.new(0.5, 0.5)
-tutorial.Position = UDim2.fromScale(0.5, 0.5)
-tutorial.Size = UDim2.new(0.88, 0, 0, 330)
-tutorial.BackgroundColor3 = colors.Background
-tutorial.ZIndex = 30
-tutorial.Visible = false
-tutorial.Parent = screen
-corner(tutorial, 18)
-stroke(tutorial, colors.Cyan, 2, 0.2)
-
-local tutorialConstraint = Instance.new("UISizeConstraint")
-tutorialConstraint.MaxSize = Vector2.new(480, 360)
-tutorialConstraint.Parent = tutorial
-
-local tutorialTitle = label(tutorial, "OUTSMART THE CITADEL", 24, colors.Gold, Enum.Font.GothamBlack)
-tutorialTitle.TextXAlignment = Enum.TextXAlignment.Center
-tutorialTitle.Position = UDim2.fromOffset(20, 20)
-tutorialTitle.Size = UDim2.new(1, -40, 0, 38)
-tutorialTitle.ZIndex = 31
-
-local tutorialBody = label(tutorial, [[1  Walk to a glowing challenge console.
-
-2  Persuade the opponent in eight turns.
-
-3  Raise TRUST and keep SUSPICION low.
-
-Win ranked matches to unlock deeper districts. The Daily Trial is in the plaza.]], 16, colors.White, Enum.Font.GothamMedium)
-tutorialBody.Position = UDim2.fromOffset(26, 66)
-tutorialBody.Size = UDim2.new(1, -52, 0, 190)
-tutorialBody.TextYAlignment = Enum.TextYAlignment.Top
-tutorialBody.ZIndex = 31
-
-local tutorialStart = button(tutorial, "START EXPLORING", Color3.fromRGB(22, 112, 95))
-tutorialStart.AnchorPoint = Vector2.new(0.5, 1)
-tutorialStart.Position = UDim2.new(0.5, 0, 1, -22)
-tutorialStart.Size = UDim2.new(0.82, 0, 0, 48)
-tutorialStart.TextSize = 16
-tutorialStart.ZIndex = 31
-
-local tutorialDismissed = false
-local function refreshTutorialVisibility()
-    tutorial.Visible = current == nil
-        and not tutorialDismissed
-        and player:GetAttribute("ProfileReady") == true
-        and player:GetAttribute("HasPlayedBefore") ~= true
-end
-
-player:GetAttributeChangedSignal("ProfileReady"):Connect(refreshTutorialVisibility)
-player:GetAttributeChangedSignal("HasPlayedBefore"):Connect(refreshTutorialVisibility)
-refreshTutorialVisibility()
-
-tutorialStart.Activated:Connect(function()
-    tutorialDismissed = true
-    tutorial.Visible = false
-    guidance.Text = "Find a glowing console. Build Trust, avoid Suspicion, and persuade in eight turns."
-end)
-
 local panel = Instance.new("Frame")
 panel.AnchorPoint = Vector2.new(0.5, 0)
 panel.Position = UDim2.new(0.5, 0, 0, 82)
@@ -303,21 +233,15 @@ opponentCard.Size = UDim2.new(1, -28, 0, 56)
 opponentCard.BackgroundColor3 = colors.Panel
 opponentCard.Parent = panel
 corner(opponentCard, 12)
-local opponentCardStroke = stroke(opponentCard, colors.Gold, 1.5, 0.35)
+stroke(opponentCard, colors.Gold, 1.5, 0.35)
 
 local title = label(opponentCard, "THE CASTLE GUARD", 20, colors.Gold, Enum.Font.GothamBold)
 title.Position = UDim2.fromOffset(14, 2)
 title.Size = UDim2.new(1, -28, 0, 27)
 
-local subtitle = label(opponentCard, "AI-POWERED  •  RANKED  •  8 TURNS", 11, colors.Muted, Enum.Font.GothamMedium)
+local subtitle = label(opponentCard, "AI-POWERED  •  RANKED  •  8 MESSAGES", 11, colors.Muted, Enum.Font.GothamMedium)
 subtitle.Position = UDim2.fromOffset(14, 28)
-subtitle.Size = UDim2.new(1, -112, 0, 22)
-
-local exitButton = button(opponentCard, "EXIT", Color3.fromRGB(104, 54, 64))
-exitButton.AnchorPoint = Vector2.new(1, 0.5)
-exitButton.Position = UDim2.new(1, -8, 0.5, 0)
-exitButton.Size = UDim2.fromOffset(82, 38)
-exitButton.TextSize = 12
+subtitle.Size = UDim2.new(1, -28, 0, 22)
 
 local function meter(parent, name, fillColor, xScale)
     local holder = Instance.new("Frame")
@@ -357,13 +281,9 @@ local statusLine = label(panel, "MOVE 0 / 8  •  180s", 12, colors.Cyan, Enum.F
 statusLine.Position = UDim2.fromOffset(14, 108)
 statusLine.Size = UDim2.new(1, -28, 0, 20)
 
-local unlockLine = label(panel, "NEXT DISTRICT  •  CALCULATING…", 11, colors.Muted, Enum.Font.GothamMedium)
-unlockLine.Position = UDim2.fromOffset(14, 126)
-unlockLine.Size = UDim2.new(1, -28, 0, 18)
-
 local conversationScroll = Instance.new("ScrollingFrame")
-conversationScroll.Position = UDim2.fromOffset(14, 148)
-conversationScroll.Size = UDim2.new(1, -28, 1, -320)
+conversationScroll.Position = UDim2.fromOffset(14, 130)
+conversationScroll.Size = UDim2.new(1, -28, 1, -302)
 conversationScroll.BackgroundColor3 = Color3.fromRGB(8, 12, 23)
 conversationScroll.BackgroundTransparency = 0.12
 conversationScroll.BorderSizePixel = 0
@@ -508,7 +428,7 @@ suggestionLabel.Size = UDim2.new(1, 0, 0, 14)
 
 local suggestionRow = Instance.new("Frame")
 suggestionRow.Position = UDim2.fromOffset(0, 40)
-suggestionRow.Size = UDim2.new(1, 0, 0, 48)
+suggestionRow.Size = UDim2.new(1, 0, 0, 42)
 suggestionRow.BackgroundTransparency = 1
 suggestionRow.Parent = composer
 
@@ -527,8 +447,8 @@ for index = 1, 2 do
 end
 
 local input = Instance.new("TextBox")
-input.Position = UDim2.fromOffset(0, 94)
-input.Size = UDim2.new(1, -118, 0, 48)
+input.Position = UDim2.fromOffset(0, 90)
+input.Size = UDim2.new(1, -118, 0, 46)
 input.BackgroundColor3 = colors.Panel2
 input.TextColor3 = colors.White
 input.PlaceholderColor3 = colors.Muted
@@ -549,37 +469,9 @@ inputPadding.PaddingRight = UDim.new(0, 12)
 inputPadding.Parent = input
 
 local send = button(composer, "SEND", Color3.fromRGB(22, 102, 112))
-send.Position = UDim2.new(1, -108, 0, 94)
-send.Size = UDim2.fromOffset(108, 48)
+send.Position = UDim2.new(1, -108, 0, 90)
+send.Size = UDim2.fromOffset(108, 46)
 send.TextSize = 15
-
-local compact = false
-local function refreshResponsiveLayout()
-    local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
-    compact = viewport.X < 600 or viewport.Y < 560 or UserInputService.TouchEnabled
-
-    header.Size = UDim2.new(compact and 0.96 or 0.98, 0, 0, compact and 88 or 70)
-    header.Position = UDim2.new(compact and 0.02 or 0.01, 0, 0, 6)
-    stats.TextSize = compact and 14 or 16
-    stats.Size = UDim2.new(1, compact and -28 or -232, 0, 34)
-    guidance.Position = UDim2.fromOffset(14, compact and 48 or 32)
-    guidance.Size = UDim2.new(1, -28, 0, compact and 34 or 30)
-    guidance.TextSize = compact and 13 or 12
-    profileButton.Visible = not compact
-    toggle.Visible = not compact
-
-    local top = compact and 100 or 82
-    panel.Position = UDim2.new(0.5, 0, 0, top)
-    panel.Size = UDim2.new(compact and 0.96 or 0.98, 0, 1, -(top + 10))
-    profileCard.Position = UDim2.new(0.5, 0, 0, top)
-    conversationScroll.ScrollBarThickness = compact and 8 or 4
-end
-
-local camera = workspace.CurrentCamera
-if camera then
-    camera:GetPropertyChangedSignal("ViewportSize"):Connect(refreshResponsiveLayout)
-end
-refreshResponsiveLayout()
 
 local function animateMeter(fill, valueLabel, value)
     valueLabel.Text = string.format("%d%%", value)
@@ -649,13 +541,6 @@ send.Activated:Connect(function()
     submit("Text", input.Text, input.Text)
 end)
 
-input.Focused:Connect(function()
-    if compact then
-        conversationScroll.CanvasPosition = Vector2.new(0, math.max(0, conversationScroll.AbsoluteCanvasSize.Y - conversationScroll.AbsoluteSize.Y))
-        guidance.Text = "Keyboard open • send when your argument is ready."
-    end
-end)
-
 input.FocusLost:Connect(function(enterPressed)
     if enterPressed then
         submit("Text", input.Text, input.Text)
@@ -708,12 +593,6 @@ resultRating.ZIndex = 21
 resultRating.Position = UDim2.fromOffset(20, 158)
 resultRating.Size = UDim2.new(1, -40, 0, 34)
 
-local resultReward = label(resultOverlay, "", 13, colors.Cyan, Enum.Font.GothamBold)
-resultReward.TextXAlignment = Enum.TextXAlignment.Center
-resultReward.ZIndex = 21
-resultReward.Position = UDim2.fromOffset(20, 192)
-resultReward.Size = UDim2.new(1, -40, 0, 38)
-
 local rematchButton = button(resultOverlay, "REMATCH", Color3.fromRGB(22, 112, 95))
 rematchButton.Position = UDim2.new(0.08, 0, 1, -105)
 rematchButton.Size = UDim2.new(0.84, 0, 0, 44)
@@ -736,22 +615,6 @@ local function showResult(packet)
     else
         resultRating.Text = "PRACTICE • ELO UNCHANGED"
     end
-
-    local rewardParts = {}
-    if (packet.RewardInsight or 0) > 0 then
-        table.insert(rewardParts, string.format("+%d INSIGHT", packet.RewardInsight))
-    end
-    if (packet.RewardMasteryXP or 0) > 0 then
-        table.insert(rewardParts, string.format("+%d MASTERY XP", packet.RewardMasteryXP))
-    end
-    if packet.RewardItems and #packet.RewardItems > 0 then
-        table.insert(rewardParts, "NEW COSMETIC")
-    end
-    resultReward.Text = #rewardParts > 0 and table.concat(rewardParts, "  •  ") or "MATCH REWARDS RECORDED"
-
-    if packet.NextUnlockName then
-        rematchButton.Text = string.format("ONE MORE CHALLENGE • %d ELO TO %s", packet.NextUnlockRemaining or 0, string.upper(packet.NextUnlockName))
-    end
     resultOverlay.Visible = true
     resultScale.Scale = 0.86
 
@@ -768,15 +631,6 @@ local function showResult(packet)
     ping(won and 1.25 or 0.72)
 end
 
-exitButton.Activated:Connect(function()
-    if not current then
-        return
-    end
-    exitButton.Active = false
-    guidance.Text = "Leaving challenge…"
-    exitRemote:FireServer()
-end)
-
 rematchButton.Activated:Connect(function()
     if not current or current.Status == "Playing" then
         return
@@ -790,8 +644,7 @@ end)
 plazaButton.Activated:Connect(function()
     resultOverlay.Visible = false
     panel.Visible = false
-    guidance.Text = "Returning to Central Plaza…"
-    exitRemote:FireServer()
+    guidance.Text = "Walk to a glowing console when you want another match."
 end)
 
 stateRemote.OnClientEvent:Connect(function(packet)
@@ -806,8 +659,6 @@ stateRemote.OnClientEvent:Connect(function(packet)
         return
     end
 
-    tutorialDismissed = true
-    tutorial.Visible = false
     pending = false
 
     if not current or current.MatchId ~= packet.MatchId then
@@ -820,26 +671,16 @@ stateRemote.OnClientEvent:Connect(function(packet)
     end
 
     current = packet
-    exitButton.Active = true
-    exitButton.AutoButtonColor = true
     refreshProfileCard()
-
-    if packet.NextUnlockName then
-        unlockLine.Text = string.format("NEXT DISTRICT  •  %s  •  %d ELO TO GO", string.upper(packet.NextUnlockName), packet.NextUnlockRemaining or 0)
-        unlockLine.TextColor3 = colors.Gold
-    else
-        unlockLine.Text = "CITADEL ROUTE  •  ALL PLAYABLE DISTRICTS UNLOCKED"
-        unlockLine.TextColor3 = colors.Green
-    end
 
     animateMeter(trustFill, trustValue, packet.Progress)
     animateMeter(suspicionFill, suspicionValue, packet.Suspicion)
 
     if packet.Progress > lastProgress then
-        flashGuidance(string.format("TRUST +%d • Good approach", packet.Progress - lastProgress), colors.Green)
+        flashGuidance(string.format("+%d TRUST", packet.Progress - lastProgress), colors.Green)
         ping(1.12)
     elseif packet.Suspicion > lastSuspicion then
-        flashGuidance(string.format("SUSPICION +%d • Change approach", packet.Suspicion - lastSuspicion), colors.Red)
+        flashGuidance(string.format("+%d SUSPICION", packet.Suspicion - lastSuspicion), colors.Red)
         ping(0.86)
     end
 
@@ -850,13 +691,8 @@ stateRemote.OnClientEvent:Connect(function(packet)
         and string.upper(packet.OpponentName or packet.GuardName or "AI OPPONENT")
         or (packet.Status == "Won" and "PERSUASION SUCCESS" or "CHALLENGE ENDED")
 
-    local opponentAccent = opponentAccents[packet.OpponentAccent] or colors.Gold
-    title.TextColor3 = opponentAccent
-    opponentCardStroke.Color = opponentAccent
-    opponentCard.BackgroundColor3 = opponentAccent:Lerp(colors.Panel, 0.88)
-
     subtitle.Text = string.format(
-        "%s  •  %s  •  %d ELO  •  MASTERY %d  •  %d TURNS",
+        "%s  •  %s  •  %d ELO  •  MASTERY %d  •  %d MESSAGES",
         string.upper(packet.Mode or "Ranked"),
         packet.OpponentTitle or packet.GuardTitle or "Opponent",
         packet.OpponentRating or packet.GuardRating or 1000,
