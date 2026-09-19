@@ -44,6 +44,18 @@ local colors = {
     Muted = Color3.fromRGB(166, 183, 206),
 }
 
+local opponentAccents = {
+    Gold = Color3.fromRGB(255, 199, 89),
+    Crimson = Color3.fromRGB(232, 91, 106),
+    Cyan = Color3.fromRGB(73, 220, 236),
+    Amber = Color3.fromRGB(244, 154, 65),
+    Ivory = Color3.fromRGB(230, 220, 194),
+    Emerald = Color3.fromRGB(83, 198, 139),
+    Blue = Color3.fromRGB(91, 154, 224),
+    Silver = Color3.fromRGB(180, 189, 204),
+    Violet = Color3.fromRGB(157, 122, 230),
+}
+
 local function corner(object, radius)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, radius or 10)
@@ -56,6 +68,7 @@ local function stroke(object, color, thickness, transparency)
     s.Thickness = thickness or 1
     s.Transparency = transparency or 0.3
     s.Parent = object
+    return s
 end
 
 local function label(parent, text, size, color, font)
@@ -275,13 +288,13 @@ opponentCard.Size = UDim2.new(1, -28, 0, 56)
 opponentCard.BackgroundColor3 = colors.Panel
 opponentCard.Parent = panel
 corner(opponentCard, 12)
-stroke(opponentCard, colors.Gold, 1.5, 0.35)
+local opponentCardStroke = stroke(opponentCard, colors.Gold, 1.5, 0.35)
 
 local title = label(opponentCard, "THE CASTLE GUARD", 20, colors.Gold, Enum.Font.GothamBold)
 title.Position = UDim2.fromOffset(14, 2)
 title.Size = UDim2.new(1, -28, 0, 27)
 
-local subtitle = label(opponentCard, "AI-POWERED  •  RANKED  •  8 MESSAGES", 11, colors.Muted, Enum.Font.GothamMedium)
+local subtitle = label(opponentCard, "AI-POWERED  •  RANKED  •  8 TURNS", 11, colors.Muted, Enum.Font.GothamMedium)
 subtitle.Position = UDim2.fromOffset(14, 28)
 subtitle.Size = UDim2.new(1, -28, 0, 22)
 
@@ -769,8 +782,13 @@ stateRemote.OnClientEvent:Connect(function(packet)
         and string.upper(packet.OpponentName or packet.GuardName or "AI OPPONENT")
         or (packet.Status == "Won" and "PERSUASION SUCCESS" or "CHALLENGE ENDED")
 
+    local opponentAccent = opponentAccents[packet.OpponentAccent] or colors.Gold
+    title.TextColor3 = opponentAccent
+    opponentCardStroke.Color = opponentAccent
+    opponentCard.BackgroundColor3 = opponentAccent:Lerp(colors.Panel, 0.88)
+
     subtitle.Text = string.format(
-        "%s  •  %s  •  %d ELO  •  MASTERY %d  •  %d MESSAGES",
+        "%s  •  %s  •  %d ELO  •  MASTERY %d  •  %d TURNS",
         string.upper(packet.Mode or "Ranked"),
         packet.OpponentTitle or packet.GuardTitle or "Opponent",
         packet.OpponentRating or packet.GuardRating or 1000,
