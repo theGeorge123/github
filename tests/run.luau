@@ -68,7 +68,7 @@ test("opponent selection avoids an immediate repeat when alternatives exist", fu
     local nextOpponent = Opponents.Select(2000, 0, "great_gate", first.Id)
     assert(nextOpponent and nextOpponent.Id ~= first.Id)
 
-    local onlyEligible = Opponents.Select(1000, 0, "great_gate", "aldric")
+    local onlyEligible = Opponents.Select(999, 0, "great_gate", "aldric")
     assert(onlyEligible and onlyEligible.Id == "aldric")
 end)
 
