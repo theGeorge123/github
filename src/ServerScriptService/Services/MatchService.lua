@@ -192,7 +192,7 @@ local function releaseArena(match)
         local district = DistrictDefinitions.ForArena(match.ArenaId)
         worldService.ShowArena(
             match.ArenaId,
-            string.format("AVAILABLE\n%s\n8 messages | Ranked\nServer-enforced ELO gate: %d", district.Name, district.UnlockElo),
+            string.format("AVAILABLE\n%s\n8 turns | Ranked\nServer-enforced ELO gate: %d", district.Name, district.UnlockElo),
             false, 0, 0, "Available"
         )
     end
@@ -321,7 +321,7 @@ local function startMatch(player, arenaId, mode, opponent, plan, trustedRematch)
     local intro
     if mode == "Daily" then
         intro = string.format(
-            "Official Daily Trial: %s. %s You have eight messages.",
+            "Official Daily Trial: %s. %s You have eight turns.",
             match.Scenario or "Today's challenge",
             match.Objective or "Make a coherent case."
         )
@@ -332,7 +332,7 @@ local function startMatch(player, arenaId, mode, opponent, plan, trustedRematch)
         )
     else
         intro = string.format(
-            "I am %s, %s of the %s. You have eight messages. %s",
+            "I am %s, %s of the %s. You have eight turns. %s",
             opponent.Name,
             string.lower(opponent.Title),
             DistrictDefinitions.Get(opponent.District).Name,
