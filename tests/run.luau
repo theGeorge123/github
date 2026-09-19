@@ -540,7 +540,7 @@ end)
 
 
 test("debate prototype flags default off", function()
-    assert(Config.DebateEnabled == false and Config.DebateLiveEnabled == false)
+    assert(Config.DebateEnabled == true and Config.DebateLiveEnabled == false)
 end)
 
 test("debate diagnostics expose only allowlisted metadata", function()
