@@ -51,6 +51,7 @@ local function publish(player, session)
     player:SetAttribute("DailyStreak", profile.DailyTrial and profile.DailyTrial.Streak or 0)
     player:SetAttribute("EquippedTitle", profile.Equipped and profile.Equipped.Titles or "")
     player:SetAttribute("SessionOnly", sessionOnly)
+    player:SetAttribute("HasPlayedBefore", ProfileStore.HasPlayed(profile))
     player:SetAttribute("ProfileReady", true)
 end
 
