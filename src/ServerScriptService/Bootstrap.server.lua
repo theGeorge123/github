@@ -9,7 +9,7 @@ local EntitlementService = require(services.EntitlementService)
 local FastTravelService = require(services.FastTravelService)
 local CosmeticService = require(services.CosmeticService)
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
-local DebateService = require(services.DebateService)
+local MultiplayerDebateService = require(services.MultiplayerDebateService)
 local DebateWorldService = require(services.DebateWorldService)
 
 local previousRemotes = ReplicatedStorage:FindFirstChild("BeatTheBotRemotes")
@@ -32,11 +32,11 @@ local state = remoteEvent("State")
 local submit = remoteEvent("Submit")
 local rematch = remoteEvent("Rematch")
 local equipCosmetic = remoteEvent("EquipCosmetic")
-local debateState = remoteEvent("DebateState")
-local debateSubmit = remoteEvent("DebateSubmit")
+local debateState = remoteEvent("MultiplayerDebateState")
+local debateSubmit = remoteEvent("MultiplayerDebateSubmit")
 
 if Config.DebateEnabled then
-    DebateService.Init(debateState, debateSubmit)
+    MultiplayerDebateService.Init(debateState, debateSubmit)
     DebateWorldService.Init()
     WorldService.Spawn = DebateWorldService.Spawn
 end
@@ -96,7 +96,7 @@ if worldOk then
     end
 
     if Config.DebateEnabled then
-        print("BEAT_THE_BOT_DEBATE_LAYOUT_READY", "scripted practice; live AI pending")
+        print("BEAT_THE_BOT_MULTIPLAYER_DEBATE_READY", "two-player scripted practice")
     else
         print("BEAT_THE_BOT_WORLD_BUILD_OK", #WorldService.Arenas, "ranked arenas plus Daily Trial")
     end
