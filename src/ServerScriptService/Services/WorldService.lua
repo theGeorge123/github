@@ -18,12 +18,12 @@ local humanVsAI
 local championLabel
 
 local palette = {
-    Night = Color3.fromRGB(12, 16, 26),
-    Deep = Color3.fromRGB(22, 27, 38),
-    Stone = Color3.fromRGB(94, 91, 87),
-    DarkStone = Color3.fromRGB(55, 58, 66),
-    WetStone = Color3.fromRGB(39, 47, 59),
-    WarmStone = Color3.fromRGB(122, 107, 88),
+    Night = Color3.fromRGB(32, 42, 58),
+    Deep = Color3.fromRGB(48, 58, 74),
+    Stone = Color3.fromRGB(142, 137, 127),
+    DarkStone = Color3.fromRGB(88, 94, 104),
+    WetStone = Color3.fromRGB(72, 87, 104),
+    WarmStone = Color3.fromRGB(158, 137, 108),
     Wood = Color3.fromRGB(88, 58, 39),
     Iron = Color3.fromRGB(49, 54, 62),
     Gold = Color3.fromRGB(220, 174, 75),
@@ -104,8 +104,32 @@ local function addTextSurface(target, face, text, textColor, backgroundColor)
 end
 
 local function board(name, position, size, text, accent, parent)
-    local panel = part(name, size, position, palette.Deep, parent or root, Enum.Material.Metal)
-    return panel, addTextSurface(panel, Enum.NormalId.Front, text, accent or palette.Gold, palette.Night)
+    parent = parent or root
+    accent = accent or palette.Gold
+
+    local assembly = Instance.new("Model")
+    assembly.Name = name .. "Assembly"
+    assembly.Parent = parent
+
+    local panel = part(name, size, position, palette.Deep, assembly, Enum.Material.WoodPlanks)
+    local trim = 0.55
+    for _, edge in ipairs({
+        { "TopFrame", Vector3.new(size.X + 1.2, trim, size.Z + 0.35), Vector3.new(0, size.Y / 2 + trim / 2, 0) },
+        { "BottomFrame", Vector3.new(size.X + 1.2, trim, size.Z + 0.35), Vector3.new(0, -size.Y / 2 - trim / 2, 0) },
+        { "LeftFrame", Vector3.new(trim, size.Y, size.Z + 0.35), Vector3.new(-size.X / 2 - trim / 2, 0, 0) },
+        { "RightFrame", Vector3.new(trim, size.Y, size.Z + 0.35), Vector3.new(size.X / 2 + trim / 2, 0, 0) },
+    }) do
+        local framePart = part(edge[1], edge[2], position + edge[3], accent, assembly, Enum.Material.Metal)
+        framePart.CanCollide = false
+    end
+
+    local groundY = position.Y - size.Y / 2
+    local postHeight = math.max(2, groundY)
+    for _, x in ipairs({ -size.X * 0.34, size.X * 0.34 }) do
+        part("BoardPost", Vector3.new(0.8, postHeight, 0.8), Vector3.new(position.X + x, groundY - postHeight / 2, position.Z + 0.35), palette.Wood, assembly, Enum.Material.WoodPlanks)
+    end
+
+    return panel, addTextSurface(panel, Enum.NormalId.Front, text, accent, palette.Night)
 end
 
 local function torch(position, parent)
@@ -179,12 +203,13 @@ local function districtSign(name, position, title, subtitle, accent, parent)
 end
 
 local function configureLighting()
-    Lighting.ClockTime = 19.1
-    Lighting.Brightness = 2.2
-    Lighting.Ambient = Color3.fromRGB(54, 59, 76)
-    Lighting.OutdoorAmbient = Color3.fromRGB(75, 81, 98)
-    Lighting.ColorShift_Top = Color3.fromRGB(255, 201, 167)
-    Lighting.ShadowSoftness = 0.28
+    Lighting.ClockTime = 13.5
+    Lighting.Brightness = 3
+    Lighting.Ambient = Color3.fromRGB(132, 139, 153)
+    Lighting.OutdoorAmbient = Color3.fromRGB(170, 176, 187)
+    Lighting.ColorShift_Top = Color3.fromRGB(255, 242, 218)
+    Lighting.ShadowSoftness = 0.42
+    Lighting.ExposureCompensation = 0.15
 
     pcall(function()
         Lighting.LightingStyle = Enum.LightingStyle.Realistic
@@ -198,27 +223,27 @@ local function configureLighting()
 
     local atmosphere = Instance.new("Atmosphere")
     atmosphere.Name = "BeatTheBot_Atmosphere"
-    atmosphere.Density = 0.31
-    atmosphere.Offset = 0.08
-    atmosphere.Haze = 1.7
-    atmosphere.Glare = 0.18
-    atmosphere.Color = Color3.fromRGB(174, 184, 207)
-    atmosphere.Decay = Color3.fromRGB(114, 91, 108)
+    atmosphere.Density = 0.2
+    atmosphere.Offset = 0.18
+    atmosphere.Haze = 0.8
+    atmosphere.Glare = 0.12
+    atmosphere.Color = Color3.fromRGB(205, 221, 238)
+    atmosphere.Decay = Color3.fromRGB(156, 176, 196)
     atmosphere.Parent = Lighting
 
     local bloom = Instance.new("BloomEffect")
     bloom.Name = "BeatTheBot_Bloom"
-    bloom.Intensity = 0.32
-    bloom.Size = 20
-    bloom.Threshold = 1.15
+    bloom.Intensity = 0.18
+    bloom.Size = 16
+    bloom.Threshold = 1.45
     bloom.Parent = Lighting
 
     local color = Instance.new("ColorCorrectionEffect")
     color.Name = "BeatTheBot_Color"
-    color.Brightness = -0.025
-    color.Contrast = 0.11
-    color.Saturation = -0.03
-    color.TintColor = Color3.fromRGB(235, 235, 248)
+    color.Brightness = 0.035
+    color.Contrast = 0.08
+    color.Saturation = 0.05
+    color.TintColor = Color3.fromRGB(255, 248, 232)
     color.Parent = Lighting
 end
 
@@ -228,19 +253,25 @@ local function createStylizedOpponent(center, parent)
     model.Parent = parent
 
     local legs = {
-        part("LeftLeg", Vector3.new(1.1, 3, 1.1), center + Vector3.new(-0.8, 1.7, -5), palette.DarkStone, model, Enum.Material.Metal),
-        part("RightLeg", Vector3.new(1.1, 3, 1.1), center + Vector3.new(0.8, 1.7, -5), palette.DarkStone, model, Enum.Material.Metal),
+        part("LeftLeg", Vector3.new(1.15, 3.2, 1.15), center + Vector3.new(-0.75, 1.8, -5), palette.DarkStone, model, Enum.Material.Metal),
+        part("RightLeg", Vector3.new(1.15, 3.2, 1.15), center + Vector3.new(0.75, 1.8, -5), palette.DarkStone, model, Enum.Material.Metal),
     }
-    local torso = part("Torso", Vector3.new(3.5, 4.3, 2), center + Vector3.new(0, 5, -5), palette.Blue, model, Enum.Material.Fabric)
-    local head = part("Head", Vector3.new(2.1, 2.1, 2.1), center + Vector3.new(0, 8.2, -5), Color3.fromRGB(197, 157, 124), model, Enum.Material.SmoothPlastic)
+    local torso = part("Torso", Vector3.new(3.5, 4.1, 2), center + Vector3.new(0, 5.2, -5), palette.Blue, model, Enum.Material.Fabric)
+    local head = part("Head", Vector3.new(2.05, 2.05, 2.05), center + Vector3.new(0, 8.15, -5), Color3.fromRGB(197, 157, 124), model, Enum.Material.SmoothPlastic)
     head.Shape = Enum.PartType.Ball
-    local mantle = part("Mantle", Vector3.new(3.9, 1.2, 2.2), center + Vector3.new(0, 6.6, -5), palette.Gold, model, Enum.Material.Fabric)
-    mantle.CanCollide = false
-    for _, leg in ipairs(legs) do
-        leg.CanCollide = false
+    local mantle = part("Mantle", Vector3.new(4.2, 1.1, 2.35), center + Vector3.new(0, 6.75, -5), palette.Gold, model, Enum.Material.Fabric)
+    local belt = part("Belt", Vector3.new(3.65, 0.35, 2.1), center + Vector3.new(0, 4.15, -5), palette.Iron, model, Enum.Material.Fabric)
+    local helmet = part("Helmet", Vector3.new(2.35, 0.8, 2.35), center + Vector3.new(0, 9.05, -5), palette.Iron, model, Enum.Material.Metal)
+    helmet.Shape = Enum.PartType.Cylinder
+    helmet.CFrame *= CFrame.Angles(0, 0, math.rad(90))
+    local plume = part("HelmetPlume", Vector3.new(0.4, 1.5, 1.3), center + Vector3.new(0, 9.75, -5), palette.Gold, model, Enum.Material.Fabric)
+    local arms = {
+        part("LeftArm", Vector3.new(0.9, 3.5, 0.9), center + Vector3.new(-2.05, 5.25, -5), palette.WarmStone, model, Enum.Material.Fabric),
+        part("RightArm", Vector3.new(0.9, 3.5, 0.9), center + Vector3.new(2.05, 5.25, -5), palette.WarmStone, model, Enum.Material.Fabric),
+    }
+    for _, bodyPart in ipairs({ legs[1], legs[2], arms[1], arms[2], torso, head, mantle, belt, helmet, plume }) do
+        bodyPart.CanCollide = false
     end
-    torso.CanCollide = false
-    head.CanCollide = false
 
     local highlight = Instance.new("Highlight")
     highlight.Name = "OpponentHighlight"
@@ -671,6 +702,10 @@ function WorldService.SetGuard(arenaId, opponent)
     local mantle = arena.Guard and arena.Guard:FindFirstChild("Mantle")
     if torso then
         torso.Color = accent:Lerp(palette.Deep, 0.45)
+    end
+    local plume = arena.Guard and arena.Guard:FindFirstChild("HelmetPlume")
+    if plume then
+        plume.Color = accent
     end
     if mantle then
         mantle.Color = accent
