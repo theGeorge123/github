@@ -12,6 +12,7 @@ local remotes = ReplicatedStorage:WaitForChild("BeatTheBotRemotes")
 local stateRemote = remotes:WaitForChild("State")
 local submitRemote = remotes:WaitForChild("Submit")
 local rematchRemote = remotes:WaitForChild("Rematch")
+local exitRemote = remotes:WaitForChild("ExitChallenge")
 
 local current
 local pending = false
@@ -310,7 +311,13 @@ title.Size = UDim2.new(1, -28, 0, 27)
 
 local subtitle = label(opponentCard, "AI-POWERED  •  RANKED  •  8 TURNS", 11, colors.Muted, Enum.Font.GothamMedium)
 subtitle.Position = UDim2.fromOffset(14, 28)
-subtitle.Size = UDim2.new(1, -28, 0, 22)
+subtitle.Size = UDim2.new(1, -112, 0, 22)
+
+local exitButton = button(opponentCard, "EXIT", Color3.fromRGB(104, 54, 64))
+exitButton.AnchorPoint = Vector2.new(1, 0.5)
+exitButton.Position = UDim2.new(1, -8, 0.5, 0)
+exitButton.Size = UDim2.fromOffset(82, 38)
+exitButton.TextSize = 12
 
 local function meter(parent, name, fillColor, xScale)
     local holder = Instance.new("Frame")
@@ -761,6 +768,15 @@ local function showResult(packet)
     ping(won and 1.25 or 0.72)
 end
 
+exitButton.Activated:Connect(function()
+    if not current then
+        return
+    end
+    exitButton.Active = false
+    guidance.Text = "Leaving challenge…"
+    exitRemote:FireServer()
+end)
+
 rematchButton.Activated:Connect(function()
     if not current or current.Status == "Playing" then
         return
@@ -774,7 +790,8 @@ end)
 plazaButton.Activated:Connect(function()
     resultOverlay.Visible = false
     panel.Visible = false
-    guidance.Text = "Walk to a glowing console when you want another match."
+    guidance.Text = "Returning to Central Plaza…"
+    exitRemote:FireServer()
 end)
 
 stateRemote.OnClientEvent:Connect(function(packet)
@@ -803,6 +820,8 @@ stateRemote.OnClientEvent:Connect(function(packet)
     end
 
     current = packet
+    exitButton.Active = true
+    exitButton.AutoButtonColor = true
     refreshProfileCard()
 
     if packet.NextUnlockName then
