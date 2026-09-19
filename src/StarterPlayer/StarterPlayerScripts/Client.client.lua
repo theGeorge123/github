@@ -229,6 +229,7 @@ tutorial.Position = UDim2.fromScale(0.5, 0.5)
 tutorial.Size = UDim2.new(0.88, 0, 0, 330)
 tutorial.BackgroundColor3 = colors.Background
 tutorial.ZIndex = 30
+tutorial.Visible = false
 tutorial.Parent = screen
 corner(tutorial, 18)
 stroke(tutorial, colors.Cyan, 2, 0.2)
@@ -262,7 +263,20 @@ tutorialStart.Size = UDim2.new(0.82, 0, 0, 48)
 tutorialStart.TextSize = 16
 tutorialStart.ZIndex = 31
 
+local tutorialDismissed = false
+local function refreshTutorialVisibility()
+    tutorial.Visible = current == nil
+        and not tutorialDismissed
+        and player:GetAttribute("ProfileReady") == true
+        and player:GetAttribute("HasPlayedBefore") ~= true
+end
+
+player:GetAttributeChangedSignal("ProfileReady"):Connect(refreshTutorialVisibility)
+player:GetAttributeChangedSignal("HasPlayedBefore"):Connect(refreshTutorialVisibility)
+refreshTutorialVisibility()
+
 tutorialStart.Activated:Connect(function()
+    tutorialDismissed = true
     tutorial.Visible = false
     guidance.Text = "Find a glowing console. Build Trust, avoid Suspicion, and persuade in eight turns."
 end)
@@ -775,6 +789,7 @@ stateRemote.OnClientEvent:Connect(function(packet)
         return
     end
 
+    tutorialDismissed = true
     tutorial.Visible = false
     pending = false
 
