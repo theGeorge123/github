@@ -63,6 +63,15 @@ test("district ELO gates and arena mapping are authoritative definitions", funct
     assert(Districts.Get("oracle_spire").UnlockElo == 1800 and Districts.Get("oracle_spire").Teaser)
 end)
 
+test("opponent selection avoids an immediate repeat when alternatives exist", function()
+    local first = Opponents.Select(2000, 0, "great_gate")
+    local nextOpponent = Opponents.Select(2000, 0, "great_gate", first.Id)
+    assert(nextOpponent and nextOpponent.Id ~= first.Id)
+
+    local onlyEligible = Opponents.Select(1000, 0, "great_gate", "aldric")
+    assert(onlyEligible and onlyEligible.Id == "aldric")
+end)
+
 test("all nine opponents define persona, concerns, objective and district", function()
     local all = Opponents.All()
     assert(#all == 9)
