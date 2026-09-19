@@ -26,6 +26,58 @@ for _, choice in ipairs(Config.Choices) do
     choices[choice.Id] = choice.Text
 end
 
+local suggestionText = {
+    requirements = "What would convince you to let me through?",
+    permit = "I have a royal delivery permit. Take a look.",
+    verify = "Check the royal seal yourself.",
+    escort = "Escort me personally if you still doubt me.",
+    flattery = "A guard with your reputation can judge this fairly.",
+    authority = "The palace is expecting this delivery.",
+    urgency = "Every minute this waits creates a problem inside.",
+    joke = "If I were smuggling something, I'd have picked a smaller box.",
+}
+
+local function suggestionsFor(match)
+    local state = match.State
+    local ids
+
+    if not state.PermitPresented then
+        ids = match.Guard.Id == "brann"
+            and { "requirements", "permit", "flattery" }
+            or { "requirements", "permit", "authority" }
+    elseif not state.SealVerified then
+        ids = { "verify", "authority", match.Guard.Id == "elowen" and "escort" or "flattery" }
+    elseif match.Guard.RequiresEscort and not state.EscortOffered then
+        ids = { "escort", "authority", "urgency" }
+    elseif match.Guard.Id == "brann" then
+        ids = { "flattery", "authority", "joke" }
+    elseif match.Guard.Id == "elowen" then
+        ids = { "escort", "verify", "requirements" }
+    else
+        ids = { "authority", "escort", "requirements" }
+    end
+
+    local result = {}
+    for _, id in ipairs(ids) do
+        table.insert(result, {
+            Id = id,
+            Text = suggestionText[id] or choices[id] or id,
+        })
+    end
+    return result
+end
+
+local function pushHistory(match, playerMessage, guardMessage)
+    table.insert(match.History, {
+        Player = playerMessage,
+        Guard = guardMessage,
+    })
+
+    while #match.History > 3 do
+        table.remove(match.History, 1)
+    end
+end
+
 local function tell(player, message)
     if player.Parent then
         remote:FireClient(player, {
@@ -56,6 +108,8 @@ local function send(match, message, delta)
             GuardTitle = match.Guard.Title,
             GuardRating = match.Guard.Rating,
             AIProvider = Config.AIProvider,
+            PlayerMessage = match.LastPlayerMessage,
+            Suggestions = suggestionsFor(match),
         })
     end
 end
@@ -210,12 +264,16 @@ function MatchService.Start(player, arenaId, trustedRematch)
     lastRequest[player] = os.clock()
 
     local guard = GuardDefinitions.Select(profile.Elo, rng:NextNumber())
+    local concern = GuardDefinitions.SelectConcern(guard, rng:NextNumber())
 
     local match = {
         Id = HttpService:GenerateGUID(false),
         Player = player,
         ArenaId = arenaId,
         Guard = guard,
+        Concern = concern,
+        History = {},
+        LastPlayerMessage = nil,
         State = Rules.New(),
         Busy = true,
         Ended = false,
@@ -271,6 +329,7 @@ function MatchService.Start(player, arenaId, trustedRematch)
 
     match.Reply = intro
     match.SpectatorReply = "The Guard is waiting for the first argument."
+    match.LastPlayerMessage = nil
 
     TelemetryService.MatchStarted(player, guard)
 
@@ -304,6 +363,7 @@ function MatchService.Submit(player, payload)
     match.Busy = true
 
     local decision
+    local playerMessage
 
     if payload.Kind == "Choice" then
         if not choices[payload.Value] then
@@ -311,6 +371,8 @@ function MatchService.Submit(player, payload)
             tell(player, "Choose one of the available moves.")
             return
         end
+
+        playerMessage = suggestionText[payload.Value] or choices[payload.Value]
 
         decision = {
             Intent = payload.Value,
@@ -333,11 +395,15 @@ function MatchService.Submit(player, payload)
             return
         end
 
+        playerMessage = filtered
+
         local success, result = pcall(function()
             return Adapter.Decide({
                 Message = filtered,
                 State = table.freeze(table.clone(match.State)),
                 Guard = match.Guard,
+                Concern = match.Concern,
+                History = match.History,
             })
         end)
 
@@ -382,6 +448,7 @@ function MatchService.Submit(player, payload)
 
     match.State = nextState
     match.Summary = Rules.Summaries[decision.Intent]
+    match.LastPlayerMessage = playerMessage
     match.SpectatorReply = fallbackReply
 
     local playerReply = fallbackReply
@@ -391,6 +458,7 @@ function MatchService.Submit(player, payload)
     end
 
     match.Reply = playerReply
+    pushHistory(match, playerMessage, playerReply)
     match.Busy = false
 
     if nextState.Status ~= "Playing" then

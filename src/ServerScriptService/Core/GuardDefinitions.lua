@@ -10,6 +10,12 @@ local guards = {
         TrustToWin = 82,
         RequiresEscort = true,
         Persona = "A disciplined royal gatekeeper. He values procedure, verifiable evidence, calm cooperation, and duty. He dislikes shortcuts, vague claims, bribes, and threats.",
+        Voice = "Precise, formal, restrained. He asks concrete follow-up questions and rarely wastes words.",
+        Concerns = {
+            { Id = "forged_permit", Prompt = "A courier used a forged royal permit yesterday, so Aldric is unusually focused on authenticity." },
+            { Id = "curfew", Prompt = "The gate is close to curfew and Aldric has strict orders not to create exceptions without a defensible reason." },
+            { Id = "inspection", Prompt = "A royal inspector may arrive tonight, so Aldric is thinking about whether every decision would survive scrutiny." },
+        },
         Reactions = {
             requirements = { Trust = 10, Suspicion = 0 },
             permit = { Trust = 22, Suspicion = 0 },
@@ -33,6 +39,12 @@ local guards = {
         TrustToWin = 84,
         RequiresEscort = false,
         Persona = "A proud veteran guard who cares deeply about status, respect, reputation, and being treated as an expert. He still requires a real permit and verification, but responds strongly to sincere respect and credible authority.",
+        Voice = "Confident, dry, competitive. He notices disrespect immediately and likes arguments that acknowledge his judgment.",
+        Concerns = {
+            { Id = "fake_noble", Prompt = "Earlier today someone falsely claimed to be a noble. Brann is irritated by people borrowing status they have not earned." },
+            { Id = "reputation", Prompt = "Brann recently heard another guard call him gullible. He is determined not to look easily fooled." },
+            { Id = "commendation", Prompt = "Brann expects a promotion review soon and wants to demonstrate that he can make difficult calls without asking for help." },
+        },
         Reactions = {
             requirements = { Trust = 8, Suspicion = 0 },
             permit = { Trust = 16, Suspicion = 0 },
@@ -56,6 +68,12 @@ local guards = {
         TrustToWin = 80,
         RequiresEscort = true,
         Persona = "A cautious gate warden who worries about making a costly mistake. She values evidence, verification, low-risk compromises, and calm reassurance. Pressure or reckless urgency makes her suspicious.",
+        Voice = "Calm, observant, skeptical. She asks what could go wrong and responds well to concrete ways of reducing risk.",
+        Concerns = {
+            { Id = "smuggling", Prompt = "A smuggling attempt was caught at another gate this week, so Elowen is thinking about concealed risks." },
+            { Id = "unknown_parcel", Prompt = "Elowen has been warned about dangerous parcels and wants to understand what she is taking responsibility for." },
+            { Id = "rush_order", Prompt = "Her commander specifically warned the wardens not to let urgency override verification tonight." },
+        },
         Reactions = {
             requirements = { Trust = 10, Suspicion = 0 },
             permit = { Trust = 18, Suspicion = 0 },
@@ -95,6 +113,13 @@ function GuardDefinitions.Select(playerElo, roll)
     local value = math.clamp(tonumber(roll) or 0, 0, 0.999999)
     local index = math.floor(value * #eligible) + 1
     return eligible[index]
+end
+
+function GuardDefinitions.SelectConcern(guard, roll)
+    assert(guard and guard.Concerns and #guard.Concerns > 0, "Guard has no concerns")
+    local value = math.clamp(tonumber(roll) or 0, 0, 0.999999)
+    local index = math.floor(value * #guard.Concerns) + 1
+    return guard.Concerns[index]
 end
 
 return GuardDefinitions
