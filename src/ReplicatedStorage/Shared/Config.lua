@@ -16,6 +16,10 @@ return table.freeze({
     StoreName = "BeatTheBot_Profiles_v1",
     StudioPersistence = false,
 
+    -- Private debate prototype gates. Both remain off until an authorized private test.
+    DebateEnabled = false,
+    DebateLiveEnabled = false,
+
     AIProvider = "Roblox",
     AIRequestMaxTokens = 90,
     AIReplyMaxBytes = 320,
