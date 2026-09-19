@@ -173,7 +173,7 @@ local title = label(opponentCard, "🛡 THE CASTLE GUARD", 32, 22, colors.Gold, 
 title.Position = UDim2.fromOffset(14, 8)
 title.Size = UDim2.new(1, -28, 0, 32)
 
-local subtitle = label(opponentCard, "RANKED OPPONENT  •  1,000 ELO  •  8 MOVES", 24, 12, colors.Muted, Enum.Font.GothamMedium)
+local subtitle = label(opponentCard, "AI-POWERED  •  RANKED OPPONENT  •  8 MOVES", 24, 12, colors.Muted, Enum.Font.GothamMedium)
 subtitle.Position = UDim2.fromOffset(14, 43)
 subtitle.Size = UDim2.new(1, -28, 0, 24)
 
@@ -325,7 +325,7 @@ end)
 
 ordered(label(
     scroll,
-    "Prototype opponent: rule-based local logic. The ranked server controls turns, results and ELO. Real AI will plug into the same adapter later.",
+    "AI-POWERED OPPONENT  •  You are interacting with generative AI. It can make mistakes. The server—not the model—controls Trust, Suspicion, wins, losses and ELO.",
     70,
     12,
     colors.Muted
@@ -479,8 +479,17 @@ stateRemote.OnClientEvent:Connect(function(packet)
     lastSuspicion = packet.Suspicion
 
     title.Text = packet.Status == "Playing"
-        and "🛡 THE CASTLE GUARD"
+        and ("🛡 " .. string.upper(packet.GuardName or "THE GUARD"))
         or string.upper(packet.Status == "Won" and "GATE OPEN" or "GATE CLOSED")
+
+    subtitle.Text = string.format(
+        "AI-POWERED  •  %s  •  %d ELO  •  %d MOVES",
+        packet.GuardTitle or "Guard",
+        packet.GuardRating or 1000,
+        Config.MaxTurns
+    )
+
+    rematchButton.Text = "REMATCH " .. string.upper(packet.GuardName or "THE GUARD")
 
     if packet.Turns ~= lastHistoryTurn then
         lastHistoryTurn = packet.Turns

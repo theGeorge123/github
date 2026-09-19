@@ -273,7 +273,7 @@ local function createGuard(center, parent)
         local text = Instance.new("TextLabel")
         text.Size = UDim2.fromScale(1, 1)
         text.BackgroundTransparency = 1
-        text.Text = "THE CASTLE GUARD\n1,000 ELO"
+        text.Text = "AI GUARD\nRANKED OPPONENT"
         text.TextColor3 = palette.White
         text.TextStrokeTransparency = 0.4
         text.Font = Enum.Font.GothamBold
@@ -443,7 +443,7 @@ function WorldService.Init(onStart)
     WorldService.Spawn = spawn
 
     local welcome = board("Welcome", Vector3.new(0, 11, 66), Vector3.new(30, 11, 1), palette.Cyan)
-    welcome.Text = "BEAT THE BOT\nOUTSMART THE GUARD IN 8 MOVES\nRank up. Become server champion.\nWalk to a glowing console."
+    welcome.Text = "BEAT THE BOT\n3 AI GUARD PERSONALITIES\n8 moves. Read them. Outsmart them.\nRank up. Become server champion."
 
     for arenaId = 1, Config.ArenaCount do
         local column = (arenaId - 1) % 2
@@ -459,7 +459,7 @@ function WorldService.Init(onStart)
             WorldService.Arenas[arenaId] = arena
             WorldService.ShowArena(
                 arenaId,
-                "AVAILABLE\nTHE CASTLE GUARD | 1,000 ELO\nConvince him to open the gate.\n8 moves | 3 minutes",
+                "AVAILABLE\nAI GUARD CHALLENGE\nDifferent guards react to different tactics.\n8 moves | 3 minutes | Ranked",
                 false,
                 0,
                 0,
@@ -488,6 +488,23 @@ function WorldService.Init(onStart)
     end
 
     print("BEAT_THE_BOT_WORLD_READY", #WorldService.Arenas, "arenas", WorldService.Spawn:GetFullName())
+end
+
+function WorldService.SetGuard(arenaId, guard)
+    local arena = WorldService.Arenas[arenaId]
+    if not arena or not guard then
+        return
+    end
+
+    arena.CurrentGuard = guard
+
+    if arena.Guard then
+        local billboard = arena.Guard:FindFirstChild("GuardName", true)
+        local text = billboard and billboard:FindFirstChildOfClass("TextLabel")
+        if text then
+            text.Text = string.format("%s\n%s | %d ELO", string.upper(guard.Name), guard.Title, guard.Rating)
+        end
+    end
 end
 
 function WorldService.ShowArena(arenaId, message, won, progress, suspicion, status)

@@ -1,16 +1,26 @@
 local TextService = game:GetService("TextService")
 local HttpService = game:GetService("HttpService")
+
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 local Rules = require(script.Parent.Parent.Core.Rules)
 local Protocol = require(script.Parent.Parent.Core.Protocol)
+local GuardDefinitions = require(script.Parent.Parent.Core.GuardDefinitions)
 local Adapter = require(script.Parent.Parent.AI.Adapter)
+local TelemetryService = require(script.Parent.TelemetryService)
 
-local MatchService = { Matches = {}, Slots = {}, LastArena = {}, Closing = false }
+local MatchService = {
+    Matches = {},
+    Slots = {},
+    LastArena = {},
+    Closing = false,
+}
+
 local dataService
 local worldService
 local remote
 local lastRequest = {}
 local choices = {}
+local rng = Random.new()
 
 for _, choice in ipairs(Config.Choices) do
     choices[choice.Id] = choice.Text
@@ -18,7 +28,10 @@ end
 
 local function tell(player, message)
     if player.Parent then
-        remote:FireClient(player, { Kind = "Notice", Message = message })
+        remote:FireClient(player, {
+            Kind = "Notice",
+            Message = message,
+        })
     end
 end
 
@@ -30,34 +43,42 @@ local function send(match, message, delta)
             ArenaId = match.ArenaId,
             Status = match.State.Status,
             Turns = match.State.Turns,
-            Progress = match.State.Progress * 25,
+            Progress = match.State.Trust,
+            Trust = match.State.Trust,
             Suspicion = match.State.Suspicion,
             Deadline = match.Deadline,
             Message = message,
-            Hint = Rules.Hint(match.State),
+            Hint = Rules.Hint(match.State, match.Guard),
             Summary = match.Summary,
             Delta = delta,
+            GuardId = match.Guard.Id,
+            GuardName = match.Guard.Name,
+            GuardTitle = match.Guard.Title,
+            GuardRating = match.Guard.Rating,
+            AIProvider = Config.AIProvider,
         })
     end
 end
 
-local function show(match, message)
+local function show(match, spectatorMessage)
     local remaining = math.max(0, math.ceil(match.Deadline - workspace:GetServerTimeNow()))
     worldService.ShowArena(
         match.ArenaId,
         string.format(
-            "@%s vs THE GUARD\n%s | Move %d/8 | %ds left\nTrust %d%% | Suspicion %d%%\n%s\nGUARD: %s",
+            "@%s vs %s\n%s | Move %d/%d | %ds left\nTrust %d%% | Suspicion %d%%\n%s\nGUARD: %s",
             match.Player.Name,
+            string.upper(match.Guard.Name),
             match.State.Status,
             match.State.Turns,
+            Config.MaxTurns,
             remaining,
-            match.State.Progress * 25,
+            match.State.Trust,
             match.State.Suspicion,
             match.Summary or "",
-            message
+            spectatorMessage
         ),
         match.State.Status == "Won",
-        match.State.Progress * 25,
+        match.State.Trust,
         match.State.Suspicion,
         match.State.Status
     )
@@ -69,19 +90,40 @@ local function releaseArena(match)
     end
 
     MatchService.Slots[match.ArenaId] = nil
+
     if MatchService.Matches[match.Player] == match then
         MatchService.Matches[match.Player] = nil
     end
 
-    worldService.Arenas[match.ArenaId].Prompt.Enabled = true
-    worldService.ShowArena(
-        match.ArenaId,
-        "AVAILABLE\nTHE CASTLE GUARD | 1,000 ELO\nConvince the guard to let your delivery through.\n8 moves | 3 minutes | Walk to the console",
-        false,
-        0,
-        0,
-        "Available"
-    )
+    local arena = worldService.Arenas[match.ArenaId]
+    if arena then
+        arena.Prompt.Enabled = true
+        worldService.ShowArena(
+            match.ArenaId,
+            "AVAILABLE\nAI GUARD CHALLENGE\nDifferent guards react to different tactics.\n8 moves | 3 minutes | Ranked",
+            false,
+            0,
+            0,
+            "Available"
+        )
+    end
+end
+
+local function filterGeneratedReply(player, reply)
+    if type(reply) ~= "string" or reply == "" then
+        return nil
+    end
+
+    local ok, filtered = pcall(function()
+        local result = TextService:FilterStringAsync(reply, player.UserId)
+        return result:GetNonChatStringForUserAsync(player.UserId)
+    end)
+
+    if not ok or not filtered or filtered == "" or string.find(filtered, "#", 1, true) then
+        return nil
+    end
+
+    return filtered
 end
 
 function MatchService.Finish(match, won, reason)
@@ -95,19 +137,37 @@ function MatchService.Finish(match, won, reason)
     match.Ended = true
     match.Saving = true
     match.State.Status = won and "Won" or "Lost"
+
     show(match, reason)
     send(match, "Saving result...")
 
-    local profile = dataService.Update(match.Player, "Finish", match.Id, won)
+    local profile = dataService.Update(
+        match.Player,
+        "Finish",
+        match.Id,
+        won,
+        match.Guard.Rating
+    )
+
     match.Saving = false
 
     if profile then
         MatchService.LastArena[match.Player] = match.ArenaId
         worldService.Record(won)
         worldService.Refresh(dataService)
+
+        TelemetryService.MatchFinished(
+            match.Player,
+            match.Guard,
+            won,
+            match.State.Turns,
+            workspace:GetServerTimeNow() - match.StartedAt
+        )
+
         send(match, reason, profile.LastMatch.Delta)
     else
         send(match, "Result could not be confirmed. Rejoin shortly; an unfinished match may count as a loss.")
+
         if match.Player.Parent then
             match.Player:Kick("Result save unavailable. Please rejoin shortly. Unfinished matches count as losses.")
         end
@@ -149,21 +209,36 @@ function MatchService.Start(player, arenaId, trustedRematch)
 
     lastRequest[player] = os.clock()
 
+    local guard = GuardDefinitions.Select(profile.Elo, rng:NextNumber())
+
     local match = {
         Id = HttpService:GenerateGUID(false),
         Player = player,
         ArenaId = arenaId,
+        Guard = guard,
         State = Rules.New(),
         Busy = true,
         Ended = false,
         Deadline = workspace:GetServerTimeNow() + Config.MatchSeconds,
+        StartedAt = workspace:GetServerTimeNow(),
     }
 
     MatchService.Matches[player] = match
     MatchService.Slots[arenaId] = match
     arena.Prompt.Enabled = false
 
-    local saved = dataService.Update(player, "Begin", match.Id)
+    if worldService.SetGuard then
+        worldService.SetGuard(arenaId, guard)
+    end
+
+    local saved = dataService.Update(
+        player,
+        "Begin",
+        match.Id,
+        nil,
+        guard.Rating
+    )
+
     if not saved then
         match.Ended = true
         releaseArena(match)
@@ -177,23 +252,35 @@ function MatchService.Start(player, arenaId, trustedRematch)
 
     match.Busy = false
     match.Deadline = workspace:GetServerTimeNow() + Config.MatchSeconds
+    match.StartedAt = workspace:GetServerTimeNow()
 
-    local intro = "You are a courier with a sealed delivery permit. Convince me to let you through. Ask about my rules first."
+    local intro = string.format(
+        "I am %s, %s. You have eight moves. Convince me that your delivery belongs beyond this gate.",
+        guard.Name,
+        string.lower(guard.Title)
+    )
+
     if saved.Wins + saved.Losses > 0 then
         intro = string.format(
-            "Back again? You have %d wins against me; I have %d. The same gate, the same rules. Impress me.",
+            "%s. You have %d wins and %d losses against the gate. I will judge this attempt on its own merits.",
+            guard.Name,
             saved.Wins,
             saved.Losses
         )
     end
 
     match.Reply = intro
+    match.SpectatorReply = "The Guard is waiting for the first argument."
+
+    TelemetryService.MatchStarted(player, guard)
+
     send(match, intro)
-    show(match, intro)
+    show(match, match.SpectatorReply)
 end
 
 function MatchService.Submit(player, payload)
     local match = MatchService.Matches[player]
+
     if not match or match.Ended or match.Busy then
         return
     end
@@ -215,7 +302,8 @@ function MatchService.Submit(player, payload)
     end
 
     match.Busy = true
-    local intent
+
+    local decision
 
     if payload.Kind == "Choice" then
         if not choices[payload.Value] then
@@ -223,7 +311,12 @@ function MatchService.Submit(player, payload)
             tell(player, "Choose one of the available moves.")
             return
         end
-        intent = payload.Value
+
+        decision = {
+            Intent = payload.Value,
+            Strength = "normal",
+            Provider = "Quick",
+        }
     else
         local ok, filtered = pcall(function()
             local result = TextService:FilterStringAsync(payload.Value, player.UserId)
@@ -236,16 +329,15 @@ function MatchService.Submit(player, payload)
 
         if not ok or filtered == "" or string.find(filtered, "#", 1, true) then
             match.Busy = false
-            tell(player, "That message could not be processed safely. Try a different message or a quick move; no turn was used.")
+            tell(player, "That message could not be processed safely. Try different wording; no turn was used.")
             return
         end
 
         local success, result = pcall(function()
-            local profile = dataService.Get(player)
             return Adapter.Decide({
                 Message = filtered,
                 State = table.freeze(table.clone(match.State)),
-                Memory = table.freeze({ Wins = profile.Wins, Losses = profile.Losses }),
+                Guard = match.Guard,
             })
         end)
 
@@ -255,12 +347,16 @@ function MatchService.Submit(player, payload)
 
         if not success then
             match.Busy = false
-            tell(player, "The opponent could not respond. Try a quick move; no turn was used.")
+            TelemetryService.AIError(player)
+            warn("BEAT_THE_BOT_AI_ERROR:", result)
+            tell(player, "The AI could not answer that turn. No move was used; try again or use a quick move.")
             return
         end
 
-        intent = result
+        decision = result
     end
+
+    TelemetryService.Move(player, payload.Kind)
 
     if match.Ended then
         return
@@ -271,23 +367,37 @@ function MatchService.Submit(player, payload)
         return
     end
 
-    local state, reply = Rules.Advance(match.State, intent, Config.MaxTurns)
-    if not state then
+    local nextState, fallbackReply = Rules.Advance(
+        match.State,
+        decision,
+        match.Guard,
+        Config.MaxTurns
+    )
+
+    if not nextState then
         match.Busy = false
         tell(player, "The opponent returned an invalid move. No turn was used.")
         return
     end
 
-    match.State = state
-    match.Reply = reply
-    match.Summary = Rules.Summaries[intent]
+    match.State = nextState
+    match.Summary = Rules.Summaries[decision.Intent]
+    match.SpectatorReply = fallbackReply
+
+    local playerReply = fallbackReply
+
+    if nextState.Status == "Playing" and decision.Provider == "Roblox" then
+        playerReply = filterGeneratedReply(player, decision.Reply) or fallbackReply
+    end
+
+    match.Reply = playerReply
     match.Busy = false
 
-    if state.Status ~= "Playing" then
-        MatchService.Finish(match, state.Status == "Won", reply)
+    if nextState.Status ~= "Playing" then
+        MatchService.Finish(match, nextState.Status == "Won", fallbackReply)
     else
-        send(match, reply)
-        show(match, reply)
+        send(match, playerReply)
+        show(match, fallbackReply)
     end
 end
 
@@ -299,7 +409,9 @@ function MatchService.RequestRematch(player)
         if not match.Ended or match.Saving then
             return
         end
+
         arenaId = match.ArenaId
+
         if MatchService.Slots[arenaId] == match then
             releaseArena(match)
         end
@@ -313,6 +425,7 @@ function MatchService.RequestRematch(player)
 
     if MatchService.Slots[arenaId] then
         arenaId = nil
+
         for candidate = 1, Config.ArenaCount do
             if not MatchService.Slots[candidate] then
                 arenaId = candidate
@@ -326,12 +439,15 @@ function MatchService.RequestRematch(player)
         return
     end
 
+    TelemetryService.Rematch(player)
+
     lastRequest[player] = nil
     task.defer(MatchService.Start, player, arenaId, true)
 end
 
 function MatchService.Forfeit(player)
     local match = MatchService.Matches[player]
+
     if match then
         MatchService.Finish(match, false, "Match forfeited. The Guard wins!")
     end
@@ -339,28 +455,35 @@ end
 
 function MatchService.Leave(player)
     MatchService.Forfeit(player)
+
     local match = MatchService.Matches[player]
+
     if match then
         releaseArena(match)
     end
+
     lastRequest[player] = nil
     MatchService.LastArena[player] = nil
 end
 
 function MatchService.Init(data, world, stateRemote, submitRemote, rematchRemote)
-    dataService, worldService, remote = data, world, stateRemote
+    dataService = data
+    worldService = world
+    remote = stateRemote
+
     submitRemote.OnServerEvent:Connect(MatchService.Submit)
     rematchRemote.OnServerEvent:Connect(MatchService.RequestRematch)
 
     task.spawn(function()
         while true do
             task.wait(1)
+
             for _, match in pairs(MatchService.Matches) do
                 if not match.Ended then
                     if workspace:GetServerTimeNow() >= match.Deadline then
                         task.spawn(MatchService.Finish, match, false, "Time is up. The Guard wins!")
                     elseif not match.Busy then
-                        show(match, match.Reply or "Preparing the match...")
+                        show(match, match.SpectatorReply or "The Guard is considering the argument.")
                     end
                 end
             end
