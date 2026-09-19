@@ -1,28 +1,51 @@
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
-local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
+local DistrictDefinitions = require(script.Parent.Parent.Core.DistrictDefinitions)
 
-local WorldService = { Arenas = {}, HumanWins = 0, BotWins = 0 }
+local WorldService = {
+    Arenas = {},
+    DailyArena = nil,
+    FastTravelPrompts = {},
+    HumanWins = 0,
+    BotWins = 0,
+    Destinations = {},
+}
+
 local root
 local leaderboard
+local humanVsAI
 local championLabel
-local championId
-local championVersion = 0
-local championModel
 
 local palette = {
-    Night = Color3.fromRGB(11, 16, 30),
-    Navy = Color3.fromRGB(18, 25, 45),
-    Slate = Color3.fromRGB(43, 50, 65),
-    Stone = Color3.fromRGB(92, 96, 105),
-    StoneDark = Color3.fromRGB(59, 63, 73),
-    Cyan = Color3.fromRGB(73, 220, 236),
-    Gold = Color3.fromRGB(255, 199, 89),
-    Warm = Color3.fromRGB(255, 132, 64),
-    Red = Color3.fromRGB(236, 78, 89),
-    Green = Color3.fromRGB(74, 222, 128),
-    White = Color3.fromRGB(238, 244, 255),
+    Night = Color3.fromRGB(12, 16, 26),
+    Deep = Color3.fromRGB(22, 27, 38),
+    Stone = Color3.fromRGB(94, 91, 87),
+    DarkStone = Color3.fromRGB(55, 58, 66),
+    WetStone = Color3.fromRGB(39, 47, 59),
+    WarmStone = Color3.fromRGB(122, 107, 88),
+    Wood = Color3.fromRGB(88, 58, 39),
+    Iron = Color3.fromRGB(49, 54, 62),
+    Gold = Color3.fromRGB(220, 174, 75),
+    Amber = Color3.fromRGB(244, 154, 65),
+    Cyan = Color3.fromRGB(79, 202, 220),
+    Blue = Color3.fromRGB(91, 130, 181),
+    Violet = Color3.fromRGB(126, 102, 177),
+    Green = Color3.fromRGB(83, 163, 111),
+    Red = Color3.fromRGB(186, 67, 71),
+    White = Color3.fromRGB(235, 239, 244),
+}
+
+local accentByName = {
+    Gold = palette.Gold,
+    Crimson = palette.Red,
+    Cyan = palette.Cyan,
+    Amber = palette.Amber,
+    Ivory = palette.White,
+    Emerald = palette.Green,
+    Blue = palette.Blue,
+    Silver = Color3.fromRGB(180, 189, 204),
+    Violet = palette.Violet,
 }
 
 local function part(name, size, position, color, parent, material)
@@ -39,483 +62,630 @@ local function part(name, size, position, color, parent, material)
     return object
 end
 
-local function board(name, position, size, accent)
-    local panel = part(name, size, position, palette.Navy, root, Enum.Material.Metal)
-    panel.CFrame *= CFrame.Angles(0, math.pi, 0)
+local function invisibleMarker(name, position, parent)
+    local marker = part(name, Vector3.new(2, 1, 2), position, palette.Cyan, parent, Enum.Material.SmoothPlastic)
+    marker.Transparency = 1
+    marker.CanCollide = false
+    return marker
+end
 
+local function addTextSurface(target, face, text, textColor, backgroundColor)
     local surface = Instance.new("SurfaceGui")
-    surface.Face = Enum.NormalId.Front
-    surface.CanvasSize = Vector2.new(1000, 600)
+    surface.Face = face or Enum.NormalId.Front
+    surface.CanvasSize = Vector2.new(1000, 500)
     surface.LightInfluence = 0
-    surface.Parent = panel
+    surface.Parent = target
 
-    local backing = Instance.new("Frame")
-    backing.Size = UDim2.fromScale(1, 1)
-    backing.BackgroundColor3 = palette.Night
-    backing.BackgroundTransparency = 0.08
-    backing.BorderSizePixel = 0
-    backing.Parent = surface
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.fromScale(1, 1)
+    frame.BorderSizePixel = 0
+    frame.BackgroundColor3 = backgroundColor or palette.Night
+    frame.BackgroundTransparency = 0.08
+    frame.Parent = surface
 
     local stroke = Instance.new("UIStroke")
-    stroke.Thickness = 8
-    stroke.Color = accent or palette.Cyan
-    stroke.Transparency = 0.25
-    stroke.Parent = backing
+    stroke.Thickness = 7
+    stroke.Color = textColor or palette.Gold
+    stroke.Transparency = 0.3
+    stroke.Parent = frame
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.fromScale(0.92, 0.9)
-    label.Position = UDim2.fromScale(0.04, 0.05)
+    label.Size = UDim2.fromScale(0.92, 0.88)
+    label.Position = UDim2.fromScale(0.04, 0.06)
     label.BackgroundTransparency = 1
-    label.TextColor3 = accent or palette.Cyan
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 38
+    label.Text = text
+    label.TextColor3 = textColor or palette.White
     label.TextWrapped = true
-    label.RichText = false
+    label.TextScaled = true
+    label.Font = Enum.Font.GothamBold
     label.TextStrokeTransparency = 0.8
-    label.Parent = backing
+    label.Parent = frame
+    return label
+end
+
+local function board(name, position, size, text, accent, parent)
+    local panel = part(name, size, position, palette.Deep, parent or root, Enum.Material.Metal)
+    return panel, addTextSurface(panel, Enum.NormalId.Front, text, accent or palette.Gold, palette.Night)
+end
+
+local function torch(position, parent)
+    local pole = part("TorchPole", Vector3.new(0.45, 4.8, 0.45), position, palette.Iron, parent, Enum.Material.Metal)
+    local flame = part("TorchFlame", Vector3.new(0.55, 0.7, 0.55), position + Vector3.new(0, 2.7, 0), palette.Amber, parent, Enum.Material.Neon)
+    pole.CanCollide = false
+    flame.CanCollide = false
+
+    local fire = Instance.new("Fire")
+    fire.Size = 3.5
+    fire.Heat = 4
+    fire.Color = Color3.fromRGB(255, 170, 75)
+    fire.SecondaryColor = Color3.fromRGB(255, 78, 30)
+    fire.Parent = flame
+
+    local light = Instance.new("PointLight")
+    light.Color = Color3.fromRGB(255, 178, 103)
+    light.Brightness = 1.7
+    light.Range = 17
+    light.Shadows = true
+    light.Parent = flame
+end
+
+local function lantern(position, parent, color)
+    local housing = part("Lantern", Vector3.new(1.1, 1.5, 1.1), position, palette.Iron, parent, Enum.Material.Metal)
+    housing.CanCollide = false
+    local glow = part("LanternGlow", Vector3.new(0.65, 0.9, 0.65), position, color or palette.Amber, parent, Enum.Material.Neon)
+    glow.CanCollide = false
+    local light = Instance.new("PointLight")
+    light.Color = color or palette.Amber
+    light.Brightness = 1.4
+    light.Range = 15
+    light.Parent = glow
+end
+
+local function banner(position, symbol, color, parent)
+    local cloth = part("Banner", Vector3.new(5, 8, 0.25), position, color, parent, Enum.Material.Fabric)
+    cloth.CanCollide = false
+    local label = addTextSurface(cloth, Enum.NormalId.Front, symbol, palette.Gold, color)
+    label.TextScaled = true
+end
+
+local function tower(position, height, parent, accent)
+    part("Tower", Vector3.new(16, height, 16), position + Vector3.new(0, height / 2, 0), palette.Stone, parent, Enum.Material.Slate)
+    part("TowerCrown", Vector3.new(19, 2, 19), position + Vector3.new(0, height + 1, 0), palette.DarkStone, parent, Enum.Material.Slate)
+
+    for _, dx in ipairs({ -6, 0, 6 }) do
+        part("Battlement", Vector3.new(3, 4, 3), position + Vector3.new(dx, height + 3, -6), palette.DarkStone, parent, Enum.Material.Slate)
+    end
+
+    if accent then
+        local beacon = part("TowerBeacon", Vector3.new(1.2, 1.2, 1.2), position + Vector3.new(0, height + 5, 0), accent, parent, Enum.Material.Neon)
+        beacon.Shape = Enum.PartType.Ball
+        beacon.CanCollide = false
+    end
+end
+
+local function wall(position, size, parent, color)
+    return part("CitadelWall", size, position, color or palette.Stone, parent, Enum.Material.Slate)
+end
+
+local function path(position, size, parent, material, color)
+    local p = part("CitadelPath", size, position, color or palette.DarkStone, parent, material or Enum.Material.Cobblestone)
+    p.CanCollide = true
+    return p
+end
+
+local function districtSign(name, position, title, subtitle, accent, parent)
+    local _, label = board(name, position, Vector3.new(30, 9, 1), title .. "\n" .. subtitle, accent, parent)
     return label
 end
 
 local function configureLighting()
-    Lighting.ClockTime = 18.4
-    Lighting.Brightness = 2.4
-    Lighting.Ambient = Color3.fromRGB(58, 66, 91)
-    Lighting.OutdoorAmbient = Color3.fromRGB(88, 96, 122)
-    Lighting.ColorShift_Top = Color3.fromRGB(255, 196, 156)
-    Lighting.ShadowSoftness = 0.22
+    Lighting.ClockTime = 19.1
+    Lighting.Brightness = 2.2
+    Lighting.Ambient = Color3.fromRGB(54, 59, 76)
+    Lighting.OutdoorAmbient = Color3.fromRGB(75, 81, 98)
+    Lighting.ColorShift_Top = Color3.fromRGB(255, 201, 167)
+    Lighting.ShadowSoftness = 0.28
+
     pcall(function()
         Lighting.LightingStyle = Enum.LightingStyle.Realistic
     end)
 
     for _, child in ipairs(Lighting:GetChildren()) do
-        if child.Name == "BeatTheBotAtmosphere" or child.Name == "BeatTheBotBloom" or child.Name == "BeatTheBotColor" then
+        if string.sub(child.Name, 1, 11) == "BeatTheBot_" then
             child:Destroy()
         end
     end
 
     local atmosphere = Instance.new("Atmosphere")
-    atmosphere.Name = "BeatTheBotAtmosphere"
-    atmosphere.Density = 0.28
+    atmosphere.Name = "BeatTheBot_Atmosphere"
+    atmosphere.Density = 0.31
     atmosphere.Offset = 0.08
-    atmosphere.Haze = 1.2
-    atmosphere.Glare = 0.2
-    atmosphere.Color = Color3.fromRGB(184, 194, 222)
-    atmosphere.Decay = Color3.fromRGB(255, 151, 102)
+    atmosphere.Haze = 1.7
+    atmosphere.Glare = 0.18
+    atmosphere.Color = Color3.fromRGB(174, 184, 207)
+    atmosphere.Decay = Color3.fromRGB(114, 91, 108)
     atmosphere.Parent = Lighting
 
     local bloom = Instance.new("BloomEffect")
-    bloom.Name = "BeatTheBotBloom"
-    bloom.Intensity = 0.45
+    bloom.Name = "BeatTheBot_Bloom"
+    bloom.Intensity = 0.32
     bloom.Size = 20
-    bloom.Threshold = 1.1
+    bloom.Threshold = 1.15
     bloom.Parent = Lighting
 
     local color = Instance.new("ColorCorrectionEffect")
-    color.Name = "BeatTheBotColor"
-    color.Brightness = -0.02
-    color.Contrast = 0.08
-    color.Saturation = 0.05
-    color.TintColor = Color3.fromRGB(242, 239, 255)
+    color.Name = "BeatTheBot_Color"
+    color.Brightness = -0.025
+    color.Contrast = 0.11
+    color.Saturation = -0.03
+    color.TintColor = Color3.fromRGB(235, 235, 248)
     color.Parent = Lighting
 end
 
-local function torch(position, parent)
-    local pole = part("TorchPole", Vector3.new(0.5, 5, 0.5), position, palette.StoneDark, parent, Enum.Material.Metal)
-    local bowl = part("TorchBowl", Vector3.new(1.4, 0.5, 1.4), position + Vector3.new(0, 2.7, 0), palette.Gold, parent, Enum.Material.Metal)
-
-    local flamePart = part("TorchFlame", Vector3.new(0.6, 0.7, 0.6), position + Vector3.new(0, 3.4, 0), palette.Warm, parent, Enum.Material.Neon)
-    flamePart.CanCollide = false
-
-    local fire = Instance.new("Fire")
-    fire.Size = 4
-    fire.Heat = 5
-    fire.Color = Color3.fromRGB(255, 170, 70)
-    fire.SecondaryColor = Color3.fromRGB(255, 75, 25)
-    fire.Parent = flamePart
-
-    local light = Instance.new("PointLight")
-    light.Color = Color3.fromRGB(255, 176, 92)
-    light.Brightness = 2.2
-    light.Range = 18
-    light.Shadows = true
-    light.Parent = flamePart
-
-    return pole, bowl, flamePart
-end
-
-local function tower(center, side, parent)
-    local x = center.X + side * 12
-    local base = part("Tower", Vector3.new(13, 22, 13), Vector3.new(x, 11, center.Z - 14), palette.Stone, parent, Enum.Material.Slate)
-
-    for y = 4, 20, 4 do
-        local band = part("StoneBand", Vector3.new(13.5, 0.35, 13.5), Vector3.new(x, y, center.Z - 14), palette.StoneDark, parent, Enum.Material.Slate)
-        band.CanCollide = false
-    end
-
-    for _, dx in ipairs({ -4.5, 0, 4.5 }) do
-        part("Battlement", Vector3.new(2.5, 3, 2.5), Vector3.new(x + dx, 23.5, center.Z - 14), palette.StoneDark, parent, Enum.Material.Slate)
-    end
-
-    torch(Vector3.new(x - side * 4.2, 8, center.Z - 6.5), parent)
-    return base
-end
-
-local function banner(position, text, parent)
-    local bannerPart = part("Banner", Vector3.new(5, 8, 0.35), position, Color3.fromRGB(39, 62, 103), parent, Enum.Material.Fabric)
-    bannerPart.CanCollide = false
-
-    local surface = Instance.new("SurfaceGui")
-    surface.Face = Enum.NormalId.Front
-    surface.CanvasSize = Vector2.new(300, 450)
-    surface.LightInfluence = 0
-    surface.Parent = bannerPart
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.fromScale(1, 1)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = palette.Gold
-    label.TextScaled = true
-    label.Font = Enum.Font.GothamBlack
-    label.Parent = surface
-end
-
-local function fallbackGuard(center, parent)
+local function createStylizedOpponent(center, parent)
     local model = Instance.new("Model")
-    model.Name = "CastleGuard"
+    model.Name = "Opponent"
     model.Parent = parent
 
-    local torso = part("Torso", Vector3.new(3.4, 4.6, 2.1), center + Vector3.new(0, 4.7, -7), Color3.fromRGB(69, 82, 108), model, Enum.Material.Metal)
-    local head = part("Head", Vector3.new(2.2, 2.2, 2.2), center + Vector3.new(0, 8.1, -7), Color3.fromRGB(202, 167, 132), model)
+    local legs = {
+        part("LeftLeg", Vector3.new(1.1, 3, 1.1), center + Vector3.new(-0.8, 1.7, -5), palette.DarkStone, model, Enum.Material.Metal),
+        part("RightLeg", Vector3.new(1.1, 3, 1.1), center + Vector3.new(0.8, 1.7, -5), palette.DarkStone, model, Enum.Material.Metal),
+    }
+    local torso = part("Torso", Vector3.new(3.5, 4.3, 2), center + Vector3.new(0, 5, -5), palette.Blue, model, Enum.Material.Fabric)
+    local head = part("Head", Vector3.new(2.1, 2.1, 2.1), center + Vector3.new(0, 8.2, -5), Color3.fromRGB(197, 157, 124), model, Enum.Material.SmoothPlastic)
     head.Shape = Enum.PartType.Ball
-    part("Helmet", Vector3.new(2.8, 1.2, 2.8), center + Vector3.new(0, 9.1, -7), palette.StoneDark, model, Enum.Material.Metal)
-    part("Chestplate", Vector3.new(3.7, 3.1, 2.35), center + Vector3.new(0, 5, -7), palette.Stone, model, Enum.Material.Metal)
-    part("Belt", Vector3.new(3.6, 0.45, 2.3), center + Vector3.new(0, 3.7, -7), palette.Gold, model, Enum.Material.Metal)
-
-    for _, offset in ipairs({ -1, 1 }) do
-        local leg = part("Leg", Vector3.new(1.15, 3.1, 1.2), center + Vector3.new(offset * 0.85, 1.9, -7), palette.StoneDark, model, Enum.Material.Metal)
-        local arm = part("Arm", Vector3.new(1.05, 3.8, 1.05), center + Vector3.new(offset * 2.1, 5, -7), palette.Stone, model, Enum.Material.Metal)
-        arm.CFrame *= CFrame.Angles(0, 0, math.rad(offset * 7))
+    local mantle = part("Mantle", Vector3.new(3.9, 1.2, 2.2), center + Vector3.new(0, 6.6, -5), palette.Gold, model, Enum.Material.Fabric)
+    mantle.CanCollide = false
+    for _, leg in ipairs(legs) do
         leg.CanCollide = false
     end
-
-    local spear = part("Spear", Vector3.new(0.25, 9, 0.25), center + Vector3.new(3.2, 5.2, -6.7), palette.Gold, model, Enum.Material.Metal)
-    spear.CanCollide = false
-    return model, torso
-end
-
-local function createGuard(center, parent)
-    local ok, model = pcall(function()
-        local description = Instance.new("HumanoidDescription")
-        description.HeadColor = Color3.fromRGB(202, 167, 132)
-        description.LeftArmColor = Color3.fromRGB(86, 94, 108)
-        description.RightArmColor = Color3.fromRGB(86, 94, 108)
-        description.LeftLegColor = Color3.fromRGB(46, 52, 66)
-        description.RightLegColor = Color3.fromRGB(46, 52, 66)
-        description.TorsoColor = Color3.fromRGB(67, 78, 101)
-        description.HeightScale = 1.06
-        description.WidthScale = 1.05
-        description.DepthScale = 1.02
-        return Players:CreateHumanoidModelFromDescriptionAsync(description, Enum.HumanoidRigType.R15)
-    end)
-
-    local anchor
-    if not ok or not model then
-        model, anchor = fallbackGuard(center, parent)
-    else
-        model.Name = "CastleGuard"
-        model.Parent = parent
-        for _, object in ipairs(model:GetDescendants()) do
-            if object:IsA("BasePart") then
-                object.Anchored = true
-                object.CanCollide = false
-                object.Material = Enum.Material.SmoothPlastic
-            elseif object:IsA("Script") or object:IsA("LocalScript") then
-                object:Destroy()
-            end
-        end
-        model:PivotTo(CFrame.new(center + Vector3.new(0, 3.1, -7)) * CFrame.Angles(0, math.pi, 0))
-        anchor = model:FindFirstChild("UpperTorso") or model:FindFirstChild("Torso") or model:FindFirstChild("HumanoidRootPart")
-
-        if anchor then
-            local chest = part("KnightChest", Vector3.new(3.4, 2.7, 1.6), anchor.Position + Vector3.new(0, 0.15, -0.15), palette.Stone, model, Enum.Material.Metal)
-            chest.CanCollide = false
-            local belt = part("KnightBelt", Vector3.new(3.35, 0.38, 1.7), anchor.Position + Vector3.new(0, -1.35, -0.15), palette.Gold, model, Enum.Material.Metal)
-            belt.CanCollide = false
-        end
-
-        local head = model:FindFirstChild("Head")
-        if head then
-            local helmet = part("KnightHelmet", Vector3.new(2.25, 1.15, 2.25), head.Position + Vector3.new(0, 0.55, 0), palette.StoneDark, model, Enum.Material.Metal)
-            helmet.CanCollide = false
-            local crest = part("KnightCrest", Vector3.new(0.35, 1.5, 2.0), head.Position + Vector3.new(0, 1.55, 0), Color3.fromRGB(51, 84, 145), model, Enum.Material.Fabric)
-            crest.CanCollide = false
-        end
-    end
+    torso.CanCollide = false
+    head.CanCollide = false
 
     local highlight = Instance.new("Highlight")
-    highlight.Name = "GuardHighlight"
-    highlight.FillTransparency = 0.9
-    highlight.OutlineTransparency = 0.25
+    highlight.Name = "OpponentHighlight"
+    highlight.FillTransparency = 0.92
+    highlight.OutlineTransparency = 0.22
     highlight.OutlineColor = palette.Cyan
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = model
 
-    local head = model:FindFirstChild("Head") or anchor
-    if head then
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "GuardName"
-        billboard.Size = UDim2.fromOffset(300, 70)
-        billboard.StudsOffset = Vector3.new(0, 3.6, 0)
-        billboard.AlwaysOnTop = true
-        billboard.Parent = head
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "OpponentName"
+    billboard.Size = UDim2.fromOffset(320, 70)
+    billboard.StudsOffset = Vector3.new(0, 3.1, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = head
 
-        local text = Instance.new("TextLabel")
-        text.Size = UDim2.fromScale(1, 1)
-        text.BackgroundTransparency = 1
-        text.Text = "AI GUARD\nRANKED OPPONENT"
-        text.TextColor3 = palette.White
-        text.TextStrokeTransparency = 0.4
-        text.Font = Enum.Font.GothamBold
-        text.TextSize = 18
-        text.Parent = billboard
-    end
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.fromScale(1, 1)
+    text.BackgroundTransparency = 1
+    text.Text = "AI OPPONENT\nRANKED"
+    text.TextColor3 = palette.White
+    text.TextStrokeTransparency = 0.35
+    text.Font = Enum.Font.GothamBold
+    text.TextSize = 18
+    text.Parent = billboard
 
     return model
 end
 
-local function createArena(arenaId, center)
-    local arenaFolder = Instance.new("Folder")
-    arenaFolder.Name = "Arena" .. arenaId
-    arenaFolder.Parent = root
-
-    local stage = part("Stage", Vector3.new(48, 1.2, 44), center, palette.StoneDark, arenaFolder, Enum.Material.Slate)
-    stage.Position = center
-
-    part("Carpet", Vector3.new(10, 0.12, 34), center + Vector3.new(0, 0.68, 1), Color3.fromRGB(48, 70, 112), arenaFolder, Enum.Material.Fabric)
-
-    for _, side in ipairs({ -1, 1 }) do
-        tower(center, side, arenaFolder)
-        part("Wall", Vector3.new(11, 12, 3), center + Vector3.new(side * 19, 6, -14), palette.Stone, arenaFolder, Enum.Material.Slate)
+local function gateAssembly(center, parent, accent)
+    local parts = {}
+    for x = -4, 4, 2 do
+        local bar = part("PortcullisBar", Vector3.new(0.45, 11, 0.55), center + Vector3.new(x, 6, -9), palette.Iron, parent, Enum.Material.Metal)
+        table.insert(parts, { Part = bar, Closed = bar.CFrame })
     end
-
-    local gate = part("Portcullis", Vector3.new(9, 11, 0.8), center + Vector3.new(0, 5.5, -14), palette.Gold, arenaFolder, Enum.Material.Metal)
-    local closedCFrame = gate.CFrame
-    local gateParts = {
-        { Part = gate, ClosedCFrame = gate.CFrame },
-    }
-
-    for x = -3, 3, 1.5 do
-        local bar = part("GateBar", Vector3.new(0.35, 10, 0.45), center + Vector3.new(x, 5.5, -13.45), palette.StoneDark, arenaFolder, Enum.Material.Metal)
-        bar.CanCollide = false
-        table.insert(gateParts, { Part = bar, ClosedCFrame = bar.CFrame })
+    for y = 3, 9, 3 do
+        local cross = part("PortcullisCross", Vector3.new(9, 0.45, 0.55), center + Vector3.new(0, y, -9), palette.Iron, parent, Enum.Material.Metal)
+        table.insert(parts, { Part = cross, Closed = cross.CFrame })
     end
-    for y = 2.5, 8.5, 3 do
-        local bar = part("GateCrossbar", Vector3.new(8.5, 0.35, 0.45), center + Vector3.new(0, y, -13.45), palette.StoneDark, arenaFolder, Enum.Material.Metal)
-        bar.CanCollide = false
-        table.insert(gateParts, { Part = bar, ClosedCFrame = bar.CFrame })
-    end
+    local crest = part("GateCrest", Vector3.new(10, 1.2, 0.7), center + Vector3.new(0, 12, -9), accent, parent, Enum.Material.Metal)
+    crest.CanCollide = false
+    return parts
+end
 
-    banner(center + Vector3.new(-6, 13, -13.35), "I", arenaFolder)
-    banner(center + Vector3.new(6, 13, -13.35), "AI", arenaFolder)
+local function createArena(arenaId, center, districtId, accent, daily)
+    local folder = Instance.new("Folder")
+    folder.Name = daily and "DailyArena" or ("Arena" .. tostring(arenaId))
+    folder.Parent = root
 
-    local guardModel = createGuard(center, arenaFolder)
+    path(center, Vector3.new(42, 1.2, 36), folder, Enum.Material.Slate, districtId == "watch" and palette.WetStone or palette.DarkStone)
+    wall(center + Vector3.new(-20, 5, -8), Vector3.new(2, 10, 24), folder)
+    wall(center + Vector3.new(20, 5, -8), Vector3.new(2, 10, 24), folder)
+    torch(center + Vector3.new(-15, 3, 5), folder)
+    torch(center + Vector3.new(15, 3, 5), folder)
 
-    local label = board("ArenaBoard" .. arenaId, center + Vector3.new(0, 17, -14.7), Vector3.new(36, 11, 1), palette.Gold)
+    local gateParts = gateAssembly(center, folder, accent)
+    local opponent = createStylizedOpponent(center, folder)
 
-    local console = part("JoinConsole", Vector3.new(6, 2.6, 4), center + Vector3.new(0, 2, 15), palette.Cyan, arenaFolder, Enum.Material.Metal)
-    local consoleGlow = part("ConsoleGlow", Vector3.new(5.3, 0.2, 3.3), center + Vector3.new(0, 3.36, 15), palette.Cyan, arenaFolder, Enum.Material.Neon)
-    consoleGlow.CanCollide = false
+    local _, label = board(
+        "ArenaBoard",
+        center + Vector3.new(0, 16, -10),
+        Vector3.new(34, 10, 1),
+        daily and "DAILY TRIAL\nOne official attempt each UTC day." or "AVAILABLE\nRANKED AI CHALLENGE",
+        accent,
+        folder
+    )
 
-    local consoleLight = Instance.new("PointLight")
-    consoleLight.Color = palette.Cyan
-    consoleLight.Brightness = 1.6
-    consoleLight.Range = 12
-    consoleLight.Parent = consoleGlow
+    local console = part("ChallengeConsole", Vector3.new(6, 2.7, 4), center + Vector3.new(0, 1.8, 12), palette.Iron, folder, Enum.Material.Metal)
+    local glow = part("ConsoleGlow", Vector3.new(5.2, 0.22, 3.2), center + Vector3.new(0, 3.25, 12), accent, folder, Enum.Material.Neon)
+    glow.CanCollide = false
 
     local prompt = Instance.new("ProximityPrompt")
-    prompt.ActionText = "Challenge Guard"
-    prompt.ObjectText = "Arena " .. arenaId .. " | Ranked"
+    prompt.ActionText = daily and "Enter Daily Trial" or "Challenge Opponent"
+    prompt.ObjectText = daily and "Daily Trial" or (DistrictDefinitions.Get(districtId).Name .. " | Ranked")
     prompt.MaxActivationDistance = 12
     prompt.RequiresLineOfSight = false
     prompt.HoldDuration = 0
     prompt.Parent = console
 
-    for _, side in ipairs({ -1, 1 }) do
-        local bench = part("SpectatorBench", Vector3.new(3, 2, 14), center + Vector3.new(side * 27, 1, 4), palette.Navy, arenaFolder, Enum.Material.WoodPlanks)
-        bench.CFrame *= CFrame.Angles(0, math.rad(side * 8), 0)
-        torch(center + Vector3.new(side * 21, 3, -2), arenaFolder)
-    end
-
     return {
         Center = center,
+        DistrictId = districtId,
         Label = label,
         Prompt = prompt,
         Console = console,
-        Gate = gate,
-        GateClosedCFrame = closedCFrame,
         GateParts = gateParts,
         GateOpen = false,
-        Guard = guardModel,
+        Guard = opponent,
     }
 end
 
 local function setGate(arena, open)
-    if arena.GateOpen == open then
+    if not arena or arena.GateOpen == open then
         return
     end
-
     arena.GateOpen = open
-    arena.Gate.CanCollide = not open
 
-    for index, entry in ipairs(arena.GateParts or {}) do
-        local target = open and (entry.ClosedCFrame + Vector3.new(0, 13, 0)) or entry.ClosedCFrame
+    for _, entry in ipairs(arena.GateParts or {}) do
+        entry.Part.CanCollide = not open
+        local target = open and (entry.Closed + Vector3.new(0, 13, 0)) or entry.Closed
         TweenService:Create(
             entry.Part,
-            TweenInfo.new(open and 1.1 or 0.7, Enum.EasingStyle.Quart, open and Enum.EasingDirection.Out or Enum.EasingDirection.InOut),
-            {
-                CFrame = target,
-                Transparency = index == 1 and (open and 0.2 or 0) or 0,
-            }
+            TweenInfo.new(open and 0.9 or 0.65, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+            { CFrame = target }
         ):Play()
     end
+end
 
-    if open then
-        local sparkle = Instance.new("Sparkles")
-        sparkle.Name = "VictorySparkles"
-        sparkle.SparkleColor = palette.Gold
-        sparkle.Parent = (arena.GateParts and arena.GateParts[2] and arena.GateParts[2].Part) or arena.Gate
-        task.delay(2.5, function()
-            if sparkle.Parent then
-                sparkle:Destroy()
-            end
+local function createCentralPlaza(onDaily)
+    local folder = Instance.new("Folder")
+    folder.Name = "CentralPlaza"
+    folder.Parent = root
+
+    path(Vector3.new(0, 0, 210), Vector3.new(180, 2, 115), folder, Enum.Material.Slate, Color3.fromRGB(68, 70, 76))
+    path(Vector3.new(0, 0.6, 138), Vector3.new(22, 0.35, 55), folder, Enum.Material.Cobblestone, palette.WarmStone)
+
+    local spawn = Instance.new("SpawnLocation")
+    spawn.Name = "CitadelSpawn"
+    spawn.Size = Vector3.new(14, 1, 14)
+    spawn.Position = Vector3.new(0, 1.5, 245)
+    spawn.Anchored = true
+    spawn.Neutral = true
+    spawn.Duration = 0
+    spawn.Material = Enum.Material.Slate
+    spawn.Color = palette.Cyan
+    spawn.Parent = folder
+    WorldService.Spawn = spawn
+
+    WorldService.Destinations.central_plaza = CFrame.new(0, 5, 228)
+    WorldService.Destinations.great_gate = CFrame.new(0, 5, 118)
+    WorldService.Destinations.customs = CFrame.new(0, 5, -20)
+    WorldService.Destinations.watch = CFrame.new(0, 5, -170)
+
+    tower(Vector3.new(-72, 0, 184), 29, folder, palette.Cyan)
+    tower(Vector3.new(72, 0, 184), 29, folder, palette.Cyan)
+    banner(Vector3.new(-64, 15, 174), "BTB", palette.Blue, folder)
+    banner(Vector3.new(64, 15, 174), "AI", palette.Blue, folder)
+
+    local _, welcome = board("CitadelWelcome", Vector3.new(0, 15, 258), Vector3.new(44, 16, 1), "BEAT THE BOT\nAI CITADEL\nPersuade. Rank up. Go deeper.", palette.Cyan, folder)
+    welcome.TextScaled = true
+
+    local _, dailySign = board("DailyLandmark", Vector3.new(0, 15, 181), Vector3.new(36, 13, 1), "DAILY TRIAL\nONE OFFICIAL SCORE\nPractice after completion", palette.Gold, folder)
+    dailySign.TextScaled = true
+
+    WorldService.DailyArena = createArena("daily", Vector3.new(0, 0.6, 158), "central_plaza", palette.Gold, true)
+    if onDaily then
+        WorldService.DailyArena.Prompt.Triggered:Connect(onDaily)
+    end
+
+    leaderboard = select(2, board("Leaderboard", Vector3.new(-56, 13, 232), Vector3.new(32, 18, 1), "SERVER LEADERBOARD", palette.Gold, folder))
+    humanVsAI = select(2, board("HumanVsAI", Vector3.new(56, 13, 232), Vector3.new(30, 15, 1), "HUMANS VS AI", palette.Cyan, folder))
+    championLabel = select(2, board("Champion", Vector3.new(56, 9, 201), Vector3.new(26, 10, 1), "SERVER CHAMPION\nWaiting for challengers", palette.Gold, folder))
+
+    local travelBoard = part("TravelBoard", Vector3.new(30, 8, 1), Vector3.new(-55, 8, 201), palette.Deep, folder, Enum.Material.Metal)
+    addTextSurface(travelBoard, Enum.NormalId.Front, "VIP FAST TRAVEL\nOnly to ELO-unlocked districts", palette.Cyan, palette.Night)
+
+    local travel = {
+        { Id = "central_plaza", X = -68 },
+        { Id = "great_gate", X = -59 },
+        { Id = "customs", X = -50 },
+        { Id = "watch", X = -41 },
+    }
+    for _, entry in ipairs(travel) do
+        local pad = part("FastTravel_" .. entry.Id, Vector3.new(7, 1, 7), Vector3.new(entry.X, 1, 188), palette.Cyan, folder, Enum.Material.Neon)
+        local prompt = Instance.new("ProximityPrompt")
+        prompt.ActionText = "Fast Travel"
+        prompt.ObjectText = DistrictDefinitions.Get(entry.Id).Name
+        prompt.MaxActivationDistance = 10
+        prompt.RequiresLineOfSight = false
+        prompt.Parent = pad
+        WorldService.FastTravelPrompts[entry.Id] = prompt
+    end
+
+    local vipConsole = part("VIPObservatoryConsole", Vector3.new(9, 2, 6), Vector3.new(82, 1.2, 207), palette.Violet, folder, Enum.Material.Metal)
+    local vipPrompt = Instance.new("ProximityPrompt")
+    vipPrompt.ActionText = "Enter Observatory"
+    vipPrompt.ObjectText = "VIP Observatory"
+    vipPrompt.MaxActivationDistance = 12
+    vipPrompt.RequiresLineOfSight = false
+    vipPrompt.Parent = vipConsole
+    WorldService.VIPPrompt = vipPrompt
+end
+
+local function createGreatGate(onStart)
+    local folder = Instance.new("Folder")
+    folder.Name = "GreatGate"
+    folder.Parent = root
+
+    path(Vector3.new(0, 0, 88), Vector3.new(190, 2, 115), folder, Enum.Material.Cobblestone, palette.DarkStone)
+    wall(Vector3.new(-71, 11, 100), Vector3.new(48, 22, 8), folder)
+    wall(Vector3.new(71, 11, 100), Vector3.new(48, 22, 8), folder)
+    tower(Vector3.new(-35, 0, 100), 34, folder, palette.Gold)
+    tower(Vector3.new(35, 0, 100), 34, folder, palette.Gold)
+    banner(Vector3.new(-25, 17, 95), "I", palette.Blue, folder)
+    banner(Vector3.new(25, 17, 95), "AI", palette.Blue, folder)
+
+    for _, z in ipairs({ 55, 75, 95, 115 }) do
+        torch(Vector3.new(-78, 3, z), folder)
+        torch(Vector3.new(78, 3, z), folder)
+    end
+
+    districtSign("GreatGateSign", Vector3.new(0, 24, 119), "GREAT GATE", "RANKED ACCESS • OPEN", palette.Gold, folder)
+
+    local centers = {
+        Vector3.new(-45, 0.6, 72),
+        Vector3.new(45, 0.6, 72),
+    }
+    for id, center in ipairs(centers) do
+        local arena = createArena(id, center, "great_gate", palette.Gold, false)
+        arena.Prompt.Triggered:Connect(function(player)
+            onStart(player, id)
         end)
+        WorldService.Arenas[id] = arena
+    end
+
+    for x = -62, 62, 31 do
+        local cart = part("InspectionCart", Vector3.new(9, 3, 5), Vector3.new(x, 2, 125), palette.Wood, folder, Enum.Material.WoodPlanks)
+        cart.CFrame *= CFrame.Angles(0, math.rad(8), 0)
+        part("Cargo", Vector3.new(4, 3, 4), Vector3.new(x, 4.5, 125), palette.WarmStone, folder, Enum.Material.WoodPlanks)
     end
 end
 
-local function setGuardMood(arena, progress, suspicion, status)
-    local highlight = arena.Guard and arena.Guard:FindFirstChild("GuardHighlight")
-    if not highlight then
-        return
+local function createCustoms(onStart)
+    local folder = Instance.new("Folder")
+    folder.Name = "CustomsQuarter"
+    folder.Parent = root
+
+    path(Vector3.new(0, 0, -52), Vector3.new(190, 2, 145), folder, Enum.Material.Cobblestone, Color3.fromRGB(91, 82, 70))
+    districtSign("CustomsSign", Vector3.new(0, 19, 10), "CUSTOMS QUARTER", "UNLOCKS AT 1100 ELO", palette.Amber, folder)
+
+    local canal = part("Canal", Vector3.new(34, 0.5, 130), Vector3.new(62, 0.1, -53), Color3.fromRGB(36, 83, 102), folder, Enum.Material.Glass)
+    canal.CanCollide = false
+    part("CanalBridge", Vector3.new(44, 1, 18), Vector3.new(62, 1, -45), palette.WarmStone, folder, Enum.Material.Cobblestone)
+
+    for _, z in ipairs({ -5, -32, -60, -88, -115 }) do
+        local stall = part("MarketStall", Vector3.new(18, 8, 11), Vector3.new(-67, 4, z), palette.Wood, folder, Enum.Material.WoodPlanks)
+        stall.CanCollide = true
+        part("Awning", Vector3.new(20, 0.5, 13), Vector3.new(-67, 8.3, z), (z % 2 == 0) and palette.Amber or palette.Green, folder, Enum.Material.Fabric)
+        lantern(Vector3.new(-55, 6, z), folder, palette.Amber)
+        for crate = 1, 3 do
+            part("CargoCrate", Vector3.new(3, 3, 3), Vector3.new(-82 + crate * 4, 1.8, z + 8), palette.Wood, folder, Enum.Material.WoodPlanks)
+        end
     end
 
-    if status == "Won" then
-        highlight.OutlineColor = palette.Green
-    elseif status == "Lost" or suspicion >= 75 then
-        highlight.OutlineColor = palette.Red
-    elseif progress >= 50 then
-        highlight.OutlineColor = palette.Gold
-    else
-        highlight.OutlineColor = palette.Cyan
+    local office = part("CustomsOffice", Vector3.new(42, 18, 28), Vector3.new(25, 9, -108), palette.WarmStone, folder, Enum.Material.Brick)
+    banner(office.Position + Vector3.new(-12, 2, -14.2), "C", palette.Red, folder)
+    local guild = part("GuildHall", Vector3.new(44, 24, 34), Vector3.new(-23, 12, -115), Color3.fromRGB(108, 91, 68), folder, Enum.Material.Brick)
+    banner(guild.Position + Vector3.new(12, 3, -17.2), "G", palette.Green, folder)
+
+    local arena = createArena(3, Vector3.new(0, 0.6, -53), "customs", palette.Amber, false)
+    arena.Prompt.Triggered:Connect(function(player)
+        onStart(player, 3)
+    end)
+    WorldService.Arenas[3] = arena
+end
+
+local function createWatch(onStart)
+    local folder = Instance.new("Folder")
+    folder.Name = "WatchDistrict"
+    folder.Parent = root
+
+    path(Vector3.new(0, 0, -202), Vector3.new(190, 2, 145), folder, Enum.Material.Slate, palette.WetStone)
+    districtSign("WatchSign", Vector3.new(0, 19, -140), "WATCH DISTRICT", "UNLOCKS AT 1250 ELO", palette.Blue, folder)
+
+    for _, x in ipairs({ -75, 75 }) do
+        tower(Vector3.new(x, 0, -190), 41, folder, palette.Blue)
+        tower(Vector3.new(x, 0, -260), 35, folder, palette.Violet)
+    end
+
+    for _, z in ipairs({ -160, -190, -220, -250 }) do
+        lantern(Vector3.new(-50, 8, z), folder, Color3.fromRGB(135, 171, 220))
+        lantern(Vector3.new(50, 8, z), folder, Color3.fromRGB(135, 171, 220))
+    end
+
+    local evidence = part("EvidenceHall", Vector3.new(38, 18, 30), Vector3.new(-54, 9, -231), palette.Deep, folder, Enum.Material.Brick)
+    local notice = part("NoticeBoard", Vector3.new(18, 11, 1), Vector3.new(-54, 10, -214), palette.Wood, folder, Enum.Material.WoodPlanks)
+    addTextSurface(notice, Enum.NormalId.Front, "WATCH NOTICES\nCONTRADICTIONS • EVIDENCE • REPORTS", palette.White, palette.Wood)
+
+    local cells = part("HoldingCells", Vector3.new(38, 18, 30), Vector3.new(54, 9, -231), palette.DarkStone, folder, Enum.Material.Slate)
+    for x = 42, 66, 8 do
+        part("CellBars", Vector3.new(0.45, 11, 24), Vector3.new(x, 6, -216), palette.Iron, folder, Enum.Material.Metal)
+    end
+
+    local rainHooks = Instance.new("Folder")
+    rainHooks.Name = "RainVFXHooks"
+    rainHooks:SetAttribute("EnabledByDefault", false)
+    rainHooks.Parent = folder
+
+    local arena = createArena(4, Vector3.new(0, 0.6, -202), "watch", palette.Blue, false)
+    arena.Prompt.Triggered:Connect(function(player)
+        onStart(player, 4)
+    end)
+    WorldService.Arenas[4] = arena
+
+    evidence:SetAttribute("EnvironmentalStory", "Investigation staging")
+    cells:SetAttribute("EnvironmentalStory", "Interrogation and holding")
+end
+
+local function createFutureLandmarks()
+    local folder = Instance.new("Folder")
+    folder.Name = "FutureCitadel"
+    folder.Parent = root
+
+    path(Vector3.new(0, 0, -345), Vector3.new(190, 2, 105), folder, Enum.Material.Marble, Color3.fromRGB(103, 99, 104))
+    districtSign("RoyalCourtSign", Vector3.new(0, 26, -300), "ROYAL COURT", "VISIBLE TEASER • 1500 ELO", palette.Gold, folder)
+    tower(Vector3.new(-55, 0, -365), 58, folder, palette.Gold)
+    tower(Vector3.new(55, 0, -365), 58, folder, palette.Gold)
+    local court = part("RoyalCourt", Vector3.new(86, 38, 44), Vector3.new(0, 19, -390), Color3.fromRGB(124, 117, 111), folder, Enum.Material.Marble)
+    part("CourtRoof", Vector3.new(94, 5, 52), court.Position + Vector3.new(0, 21, 0), palette.Gold, folder, Enum.Material.Metal)
+
+    path(Vector3.new(0, 0, -475), Vector3.new(170, 2, 120), folder, Enum.Material.Slate, palette.Deep)
+    districtSign("OracleSign", Vector3.new(0, 32, -430), "ORACLE SPIRE", "VISIBLE TEASER • 1800 ELO", palette.Violet, folder)
+    local spire = part("OracleSpire", Vector3.new(28, 105, 28), Vector3.new(0, 52.5, -500), Color3.fromRGB(69, 62, 88), folder, Enum.Material.Slate)
+    local crystal = part("OracleBeacon", Vector3.new(9, 15, 9), spire.Position + Vector3.new(0, 61, 0), palette.Violet, folder, Enum.Material.Neon)
+    crystal.Shape = Enum.PartType.Ball
+    crystal.CanCollide = false
+    local light = Instance.new("PointLight")
+    light.Color = palette.Violet
+    light.Brightness = 3
+    light.Range = 70
+    light.Parent = crystal
+end
+
+local function createObservatory()
+    local folder = Instance.new("Folder")
+    folder.Name = "VIPObservatory"
+    folder.Parent = root
+
+    local base = part("ObservatoryDeck", Vector3.new(58, 3, 58), Vector3.new(102, 45, -20), palette.Deep, folder, Enum.Material.Metal)
+    part("ObservatoryDome", Vector3.new(34, 16, 34), Vector3.new(102, 54, -20), Color3.fromRGB(55, 47, 78), folder, Enum.Material.Glass).Transparency = 0.25
+    for _, offset in ipairs({
+        Vector3.new(-25, 5, -25), Vector3.new(25, 5, -25),
+        Vector3.new(-25, 5, 25), Vector3.new(25, 5, 25),
+    }) do
+        local column = part("ObservatoryColumn", Vector3.new(3, 12, 3), base.Position + offset, palette.Violet, folder, Enum.Material.Marble)
+        column.CanCollide = true
+    end
+
+    local _, label = board("VIPTitle", Vector3.new(102, 65, -49), Vector3.new(38, 11, 1), "VIP OBSERVATORY\nCOSMETIC • PRACTICE • CONVENIENCE", palette.Violet, folder)
+    label.TextScaled = true
+
+    local returnPad = part("ReturnPad", Vector3.new(9, 1, 9), Vector3.new(102, 47, 0), palette.Cyan, folder, Enum.Material.Neon)
+    local returnPrompt = Instance.new("ProximityPrompt")
+    returnPrompt.ActionText = "Return"
+    returnPrompt.ObjectText = "Central Plaza"
+    returnPrompt.MaxActivationDistance = 11
+    returnPrompt.RequiresLineOfSight = false
+    returnPrompt.Parent = returnPad
+
+    WorldService.VIPReturnPrompt = returnPrompt
+    WorldService.VIPCFrame = CFrame.new(102, 51, -20)
+end
+
+local function addHooks()
+    local hooks = Instance.new("Folder")
+    hooks.Name = "EnvironmentHooks"
+    hooks.Parent = root
+
+    for _, name in ipairs({ "GreatGateAmbient", "CustomsAmbient", "WatchAmbient", "CitadelVFX" }) do
+        local hook = Instance.new("Folder")
+        hook.Name = name
+        hook.Parent = hooks
     end
 end
 
-function WorldService.Init(onStart)
+function WorldService.Init(onStart, onDaily)
     local previous = workspace:FindFirstChild("BeatTheBotWorld")
     if previous then
         previous:Destroy()
     end
+
+    WorldService.Arenas = {}
+    WorldService.FastTravelPrompts = {}
+    WorldService.Destinations = {}
+    WorldService.DailyArena = nil
 
     root = Instance.new("Folder")
     root.Name = "BeatTheBotWorld"
     root.Parent = workspace
 
     configureLighting()
-    part("SafetyFoundation", Vector3.new(260, 4, 260), Vector3.new(0, -4, 0), palette.Night, root, Enum.Material.Slate)
-    part("Plaza", Vector3.new(205, 2, 205), Vector3.new(0, -1, 0), Color3.fromRGB(31, 38, 56), root, Enum.Material.Slate)
-    part("CentralWalkway", Vector3.new(18, 0.18, 180), Vector3.new(0, 0.1, 0), palette.Navy, root, Enum.Material.Metal)
+    part("SafetyFoundation", Vector3.new(240, 4, 820), Vector3.new(0, -4, -120), palette.Night, root, Enum.Material.Slate)
+    path(Vector3.new(0, -0.8, -115), Vector3.new(22, 1, 720), root, Enum.Material.Cobblestone, palette.DarkStone)
 
-    for x = -80, 80, 20 do
-        local strip = part("PlazaLight", Vector3.new(10, 0.06, 0.35), Vector3.new(x, 0.05, 82), palette.Cyan, root, Enum.Material.Neon)
-        strip.CanCollide = false
+    createCentralPlaza(onDaily)
+    createGreatGate(onStart)
+    createCustoms(onStart)
+    createWatch(onStart)
+    createFutureLandmarks()
+    createObservatory()
+    addHooks()
+
+    if #WorldService.Arenas ~= 4 or not WorldService.DailyArena then
+        error("AI Citadel world did not build all required challenge spaces")
     end
 
-    local spawn = Instance.new("SpawnLocation")
-    spawn.Name = "BeatTheBotSpawn"
-    spawn.Size = Vector3.new(12, 1, 12)
-    spawn.Position = Vector3.new(0, 1, 84)
-    spawn.Anchored = true
-    spawn.Neutral = true
-    spawn.Duration = 0
-    spawn.Color = palette.Cyan
-    spawn.Material = Enum.Material.Neon
-    spawn.Parent = root
-    WorldService.Spawn = spawn
-
-    local welcome = board("Welcome", Vector3.new(0, 11, 66), Vector3.new(30, 11, 1), palette.Cyan)
-    welcome.Text = "BEAT THE BOT\n3 AI GUARD PERSONALITIES\n8 moves. Read them. Outsmart them.\nRank up. Become server champion."
-
-    for arenaId = 1, Config.ArenaCount do
-        local column = (arenaId - 1) % 2
-        local row = math.floor((arenaId - 1) / 2)
-        local center = Vector3.new(column == 0 and -43 or 43, 0.6, -34 + row * 72)
-
-        local ok, arenaOrError = pcall(createArena, arenaId, center)
-        if ok then
-            local arena = arenaOrError
-            arena.Prompt.Triggered:Connect(function(player)
-                onStart(player, arenaId)
-            end)
-            WorldService.Arenas[arenaId] = arena
-            WorldService.ShowArena(
-                arenaId,
-                "AVAILABLE\nAI GUARD CHALLENGE\nDifferent guards react to different tactics.\n8 moves | 3 minutes | Ranked",
-                false,
-                0,
-                0,
-                "Available"
-            )
-        else
-            warn("BEAT_THE_BOT_ARENA_BUILD_FAILED", arenaId, arenaOrError)
-        end
-    end
-
-    leaderboard = board("Leaderboard", Vector3.new(0, 15, -88), Vector3.new(38, 24, 1), palette.Gold)
-
-    local championBase = part("ChampionPedestal", Vector3.new(13, 3, 13), Vector3.new(0, 1.5, -28), palette.Gold, root, Enum.Material.Metal)
-    local ring = part("ChampionRing", Vector3.new(11, 0.25, 11), Vector3.new(0, 3.15, -28), palette.Cyan, root, Enum.Material.Neon)
-    ring.CanCollide = false
-
-    championLabel = board("ChampionTitle", Vector3.new(0, 16, -33), Vector3.new(26, 8, 1), palette.Gold)
-    championLabel.Text = "SERVER CHAMPION\nWaiting for challengers"
-
-    local humanVsAI = board("HumanVsAI", Vector3.new(0, 10, 28), Vector3.new(28, 10, 1), palette.Cyan)
-    humanVsAI.Name = "HumanVsAI"
-    WorldService.HumanVsAI = humanVsAI
-
-    if #WorldService.Arenas == 0 then
-        error("No arenas were created. Check BEAT_THE_BOT_ARENA_BUILD_FAILED warnings above.")
-    end
-
-    print("BEAT_THE_BOT_WORLD_READY", #WorldService.Arenas, "arenas", WorldService.Spawn:GetFullName())
+    print("BEAT_THE_BOT_WORLD_READY", #WorldService.Arenas, "ranked arenas plus Daily Trial")
 end
 
-function WorldService.SetGuard(arenaId, guard)
-    local arena = WorldService.Arenas[arenaId]
-    if not arena or not guard then
+function WorldService.GetDestinationCFrame(id)
+    return WorldService.Destinations[id]
+end
+
+function WorldService.GetVIPCFrame()
+    return WorldService.VIPCFrame
+end
+
+function WorldService.SetGuard(arenaId, opponent)
+    local arena = arenaId == "daily" and WorldService.DailyArena or WorldService.Arenas[arenaId]
+    if not arena or not opponent then
         return
     end
 
-    arena.CurrentGuard = guard
+    arena.CurrentGuard = opponent
+    local billboard = arena.Guard and arena.Guard:FindFirstChild("OpponentName", true)
+    local text = billboard and billboard:FindFirstChildOfClass("TextLabel")
+    if text then
+        text.Text = string.format("%s\n%s | %d ELO", string.upper(opponent.Name), opponent.Title, opponent.Rating)
+    end
 
-    if arena.Guard then
-        local billboard = arena.Guard:FindFirstChild("GuardName", true)
-        local text = billboard and billboard:FindFirstChildOfClass("TextLabel")
-        if text then
-            text.Text = string.format("%s\n%s | %d ELO", string.upper(guard.Name), guard.Title, guard.Rating)
-        end
+    local highlight = arena.Guard and arena.Guard:FindFirstChild("OpponentHighlight")
+    if highlight then
+        highlight.OutlineColor = accentByName[opponent.Visual and opponent.Visual.Accent] or palette.Cyan
     end
 end
 
 function WorldService.ShowArena(arenaId, message, won, progress, suspicion, status)
-    local arena = WorldService.Arenas[arenaId]
+    local arena = arenaId == "daily" and WorldService.DailyArena or WorldService.Arenas[arenaId]
     if not arena then
         return
     end
 
     arena.Label.Text = message
     setGate(arena, won == true)
-    setGuardMood(arena, progress or 0, suspicion or 0, status or "Available")
+
+    local highlight = arena.Guard and arena.Guard:FindFirstChild("OpponentHighlight")
+    if highlight then
+        if status == "Won" then
+            highlight.OutlineColor = palette.Green
+        elseif status == "Lost" or (suspicion or 0) >= 75 then
+            highlight.OutlineColor = palette.Red
+        elseif (progress or 0) >= 50 then
+            highlight.OutlineColor = palette.Gold
+        end
+    end
 end
 
 function WorldService.Record(won)
@@ -546,91 +716,33 @@ function WorldService.Refresh(dataService)
         return left.Player.UserId < right.Player.UserId
     end)
 
-    local lines = { "SERVER LEADERBOARD", "RATING  |  WINS / LOSSES" }
-    for rank, entry in ipairs(ranked) do
-        if rank > 8 then
+    local lines = { "SERVER LEADERBOARD", "ELO  •  W/L  •  RANK" }
+    for index, entry in ipairs(ranked) do
+        if index > 8 then
             break
         end
-        table.insert(lines, string.format("%d. @%s   %d   %d/%d", rank, entry.Player.Name, entry.Profile.Elo, entry.Profile.Wins, entry.Profile.Losses))
+        local rank = require(script.Parent.Parent.Core.RankDefinitions).ForElo(entry.Profile.Elo)
+        table.insert(lines, string.format("%d. @%s  %d  %d/%d  %s", index, entry.Player.Name, entry.Profile.Elo, entry.Profile.Wins, entry.Profile.Losses, rank.Name))
     end
-
     if #ranked == 0 then
         table.insert(lines, "No ranked players yet.")
     end
-
     if leaderboard then
         leaderboard.Text = table.concat(lines, "\n")
     end
 
     local total = WorldService.HumanWins + WorldService.BotWins
-    local aiRate = total > 0 and math.floor((WorldService.BotWins / total) * 100 + 0.5) or 0
-    if WorldService.HumanVsAI then
-        WorldService.HumanVsAI.Text = string.format(
-            "HUMANS VS AI\nHumans %d   |   Guard %d\nAI win rate: %d%%",
-            WorldService.HumanWins,
-            WorldService.BotWins,
-            aiRate
-        )
+    local botRate = total > 0 and math.floor((WorldService.BotWins / total) * 100 + 0.5) or 0
+    if humanVsAI then
+        humanVsAI.Text = string.format("HUMANS VS AI\nHumans %d  •  AI %d\nAI win rate %d%%", WorldService.HumanWins, WorldService.BotWins, botRate)
     end
 
     local best = ranked[1]
     if championLabel then
         championLabel.Text = best
-            and string.format("SERVER CHAMPION\n@%s | %d ELO", best.Player.Name, best.Profile.Elo)
+            and string.format("SERVER CHAMPION\n@%s\n%d ELO", best.Player.Name, best.Profile.Elo)
             or "SERVER CHAMPION\nWaiting for challengers"
     end
-
-    local nextId = best and best.Player.UserId or nil
-    if nextId == championId then
-        return
-    end
-
-    championId = nextId
-    championVersion += 1
-    local version = championVersion
-
-    if championModel then
-        championModel:Destroy()
-        championModel = nil
-    end
-
-    if not nextId then
-        return
-    end
-
-    task.spawn(function()
-        local ok, model = pcall(function()
-            return Players:CreateHumanoidModelFromUserIdAsync(nextId)
-        end)
-        if not ok then
-            return
-        end
-
-        if version ~= championVersion then
-            model:Destroy()
-            return
-        end
-
-        model.Name = "ChampionAvatar"
-        for _, object in ipairs(model:GetDescendants()) do
-            if object:IsA("BasePart") then
-                object.Anchored = true
-                object.CanCollide = false
-            elseif object:IsA("Script") or object:IsA("LocalScript") then
-                object:Destroy()
-            end
-        end
-
-        local highlight = Instance.new("Highlight")
-        highlight.FillTransparency = 0.88
-        highlight.OutlineTransparency = 0.1
-        highlight.OutlineColor = palette.Gold
-        highlight.Parent = model
-
-        model:PivotTo(CFrame.new(0, 6, -28) * CFrame.Angles(0, math.pi, 0))
-        model.Parent = root
-        championModel = model
-    end)
 end
 
 return WorldService
