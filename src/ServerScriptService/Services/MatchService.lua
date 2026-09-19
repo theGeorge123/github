@@ -231,7 +231,7 @@ local function startMatch(player, arenaId, mode, opponent, plan, trustedRematch)
 
     local districtId = arena.DistrictId or "central_plaza"
 
-    if mode == "Ranked" and not ProgressionService.CanAccess(profile, districtId) then
+    if mode == "Ranked" and not ProgressionService.CanAccess(profile, districtId, player) then
         local district = DistrictDefinitions.Get(districtId)
         tell(player, string.format("%s unlocks at %d ELO.", district.Name, district.UnlockElo))
         return
@@ -352,7 +352,7 @@ function MatchService.Start(player, arenaId, trustedRematch)
         tell(player, "Wait for your profile to load.")
         return
     end
-    if not ProgressionService.CanAccess(profile, district.Id) then
+    if not ProgressionService.CanAccess(profile, district.Id, player) then
         tell(player, string.format("%s unlocks at %d ELO.", district.Name, district.UnlockElo))
         return
     end
@@ -596,7 +596,7 @@ function MatchService.RequestRematch(player)
             local district = DistrictDefinitions.ForArena(candidate)
             if not MatchService.Slots[candidate]
                 and district
-                and ProgressionService.CanAccess(profile, district.Id)
+                and ProgressionService.CanAccess(profile, district.Id, player)
             then
                 arenaId = candidate
                 break
