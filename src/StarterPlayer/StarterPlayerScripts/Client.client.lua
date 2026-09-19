@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
+local GuiService = game:GetService("GuiService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local player = Players.LocalPlayer
@@ -25,6 +26,10 @@ local lastProgress = 0
 local lastSuspicion = 0
 local suggestionIds = {}
 local suggestionTexts = {}
+local reducedMotion = GuiService.ReducedMotionEnabled
+GuiService:GetPropertyChangedSignal("ReducedMotionEnabled"):Connect(function()
+    reducedMotion = GuiService.ReducedMotionEnabled
+end)
 
 local colors = {
     Background = Color3.fromRGB(10, 15, 29),
@@ -82,6 +87,9 @@ local function button(parent, text, accent)
 end
 
 local function ping(pitch)
+    if reducedMotion then
+        return
+    end
     local sound = Instance.new("Sound")
     sound.SoundId = "rbxasset://sounds/electronicpingshort.wav"
     sound.Volume = 0.2
@@ -463,11 +471,16 @@ send.TextSize = 15
 
 local function animateMeter(fill, valueLabel, value)
     valueLabel.Text = string.format("%d%%", value)
-    TweenService:Create(
-        fill,
-        TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-        { Size = UDim2.fromScale(math.clamp(value / 100, 0, 1), 1) }
-    ):Play()
+    local target = UDim2.fromScale(math.clamp(value / 100, 0, 1), 1)
+    if reducedMotion then
+        fill.Size = target
+    else
+        TweenService:Create(
+            fill,
+            TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+            { Size = target }
+        ):Play()
+    end
 end
 
 local function flashGuidance(text, color)
@@ -601,11 +614,15 @@ local function showResult(packet)
     resultOverlay.Visible = true
     resultScale.Scale = 0.86
 
-    TweenService:Create(
-        resultScale,
-        TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-        { Scale = 1 }
-    ):Play()
+    if reducedMotion then
+        resultScale.Scale = 1
+    else
+        TweenService:Create(
+            resultScale,
+            TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            { Scale = 1 }
+        ):Play()
+    end
 
     ping(won and 1.25 or 0.72)
 end
