@@ -7,6 +7,7 @@ local Protocol = require(script.Parent.Parent.Core.Protocol)
 local OpponentDefinitions = require(script.Parent.Parent.Core.OpponentDefinitions)
 local DistrictDefinitions = require(script.Parent.Parent.Core.DistrictDefinitions)
 local History = require(script.Parent.Parent.Core.History)
+local ProfileStore = require(script.Parent.Parent.Core.ProfileStore)
 local Adapter = require(script.Parent.Parent.AI.Adapter)
 local TelemetryService = require(script.Parent.TelemetryService)
 local ProgressionService = require(script.Parent.ProgressionService)
@@ -352,7 +353,7 @@ local function startMatch(player, arenaId, mode, opponent, plan, trustedRematch)
 
     match.Reply = intro
     match.SpectatorReply = "The opponent is waiting for the first argument."
-    TelemetryService.MatchStarted(player, opponent)
+    TelemetryService.MatchStarted(player, opponent, not ProfileStore.HasPlayed(profile))
     send(match, intro)
     show(match, match.SpectatorReply)
 end
