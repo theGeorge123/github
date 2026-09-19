@@ -165,3 +165,6 @@ game:BindToClose(function()
 end)
 
 print("Beat the Bot v0.2 ready: polished Guard vertical slice, local opponent, server-owned rules.")
+if worldOk then
+    print("BEAT_THE_BOT_STARTUP_OK")
+end

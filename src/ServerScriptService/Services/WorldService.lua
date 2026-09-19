@@ -421,8 +421,6 @@ function WorldService.Init(onStart)
     root.Parent = workspace
 
     configureLighting()
-    workspace.FallenPartsDestroyHeight = -100
-
     part("SafetyFoundation", Vector3.new(260, 4, 260), Vector3.new(0, -4, 0), palette.Night, root, Enum.Material.Slate)
     part("Plaza", Vector3.new(205, 2, 205), Vector3.new(0, -1, 0), Color3.fromRGB(31, 38, 56), root, Enum.Material.Slate)
     part("CentralWalkway", Vector3.new(18, 0.18, 180), Vector3.new(0, 0.1, 0), palette.Navy, root, Enum.Material.Metal)
@@ -543,21 +541,27 @@ function WorldService.Refresh(dataService)
         table.insert(lines, "No ranked players yet.")
     end
 
-    leaderboard.Text = table.concat(lines, "\n")
+    if leaderboard then
+        leaderboard.Text = table.concat(lines, "\n")
+    end
 
     local total = WorldService.HumanWins + WorldService.BotWins
     local aiRate = total > 0 and math.floor((WorldService.BotWins / total) * 100 + 0.5) or 0
-    WorldService.HumanVsAI.Text = string.format(
-        "HUMANS VS AI\nHumans %d   |   Guard %d\nAI win rate: %d%%",
-        WorldService.HumanWins,
-        WorldService.BotWins,
-        aiRate
-    )
+    if WorldService.HumanVsAI then
+        WorldService.HumanVsAI.Text = string.format(
+            "HUMANS VS AI\nHumans %d   |   Guard %d\nAI win rate: %d%%",
+            WorldService.HumanWins,
+            WorldService.BotWins,
+            aiRate
+        )
+    end
 
     local best = ranked[1]
-    championLabel.Text = best
-        and string.format("SERVER CHAMPION\n@%s | %d ELO", best.Player.Name, best.Profile.Elo)
-        or "SERVER CHAMPION\nWaiting for challengers"
+    if championLabel then
+        championLabel.Text = best
+            and string.format("SERVER CHAMPION\n@%s | %d ELO", best.Player.Name, best.Profile.Elo)
+            or "SERVER CHAMPION\nWaiting for challengers"
+    end
 
     local nextId = best and best.Player.UserId or nil
     if nextId == championId then
