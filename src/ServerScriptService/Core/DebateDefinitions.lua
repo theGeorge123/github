@@ -3,35 +3,35 @@ local Definitions = {}
 Definitions.Turns = 4
 Definitions.Characters = table.freeze({
     Rivet = table.freeze({
-        Id = "Rivet", Topic = "Should hints be optional in building games?", Position = "Hints should stay available but optional.",
+        Id = "Rivet", Topic = "Should hints be optional in building games?", Position = "Hints should stay available but optional.", PlayerPosition = "Hints should be off unless a player asks for them.",
         Voice = "Precise and practical", Accent = "CYAN", Silhouette = "antenna",
         Opening = "Optional hints protect new builders without slowing experts.",
         Replies = table.freeze({
-            "You say choice prevents frustration. How would you stop players from missing tools they need?",
-            "That example supports flexibility, but it does not show whether beginners recognize when to ask for help.",
-            "Your claim is that control improves learning. I concede control matters; I still think discoverability matters too.",
+            "Practice prompt: explain how players would discover tools they do not know exist.",
+            "Practice prompt: compare player control with the needs of a first-time builder.",
+            "Practice prompt: address the trade-off between control and discoverability.",
             "My position remains: keep hints available and optional, with a clear way to request them.",
         }),
     }),
     Pip = table.freeze({
-        Id = "Pip", Topic = "Should build challenges limit the number of pieces?", Position = "Challenges should use a clear piece limit.",
+        Id = "Pip", Topic = "Should build challenges limit the number of pieces?", Position = "Challenges should use a clear piece limit.", PlayerPosition = "Build challenges should allow unlimited pieces.",
         Voice = "Fast, playful, constraint-driven", Accent = "GOLD", Silhouette = "square",
         Opening = "A piece limit makes every choice count and keeps judging fair.",
         Replies = table.freeze({
-            "You value creative freedom. What makes an unlimited build comparable to a compact one?",
-            "Your example shows scale can be fun, but the challenge still needs a shared constraint.",
-            "I accept that limits can block one idea. My rebuttal is that constraints can create different ideas.",
+            "Practice prompt: explain how unlimited and compact builds could be judged fairly.",
+            "Practice prompt: compare creative scale with a shared challenge constraint.",
+            "Practice prompt: address whether constraints block ideas or create different ideas.",
             "I keep the piece limit because it makes the challenge readable, fair, and replayable.",
         }),
     }),
     Moss = table.freeze({
-        Id = "Moss", Topic = "Should team games show individual contribution scores?", Position = "Show contribution privately, not as a public leaderboard.",
+        Id = "Moss", Topic = "Should team games show individual contribution scores?", Position = "Show contribution privately, not as a public leaderboard.", PlayerPosition = "Team games should show individual contribution publicly.",
         Voice = "Calm and reflective", Accent = "GREEN", Silhouette = "round",
         Opening = "Private contribution feedback helps players improve without turning teammates against each other.",
         Replies = table.freeze({
-            "You want recognition for effort. How would a public score account for quiet support work?",
-            "That example rewards visible actions, but it may miss planning, teaching, or recovery.",
-            "I concede public praise can motivate. My claim is that private detail protects cooperation better.",
+            "Practice prompt: explain how a public score could account for quiet support work.",
+            "Practice prompt: compare visible actions with planning, teaching, and recovery.",
+            "Practice prompt: address the trade-off between public motivation and cooperation.",
             "My position remains private feedback: useful evidence for the player without a public blame board.",
         }),
     }),
