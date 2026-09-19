@@ -661,9 +661,22 @@ function WorldService.SetGuard(arenaId, opponent)
         text.Text = string.format("%s\n%s | %d ELO", string.upper(opponent.Name), opponent.Title, opponent.Rating)
     end
 
+    local accent = accentByName[opponent.Visual and opponent.Visual.Accent] or palette.Cyan
     local highlight = arena.Guard and arena.Guard:FindFirstChild("OpponentHighlight")
     if highlight then
-        highlight.OutlineColor = accentByName[opponent.Visual and opponent.Visual.Accent] or palette.Cyan
+        highlight.OutlineColor = accent
+    end
+
+    local torso = arena.Guard and arena.Guard:FindFirstChild("Torso")
+    local mantle = arena.Guard and arena.Guard:FindFirstChild("Mantle")
+    if torso then
+        torso.Color = accent:Lerp(palette.Deep, 0.45)
+    end
+    if mantle then
+        mantle.Color = accent
+        mantle.Material = opponent.Visual and opponent.Visual.Archetype == "Merchant"
+            and Enum.Material.SmoothPlastic
+            or Enum.Material.Fabric
     end
 end
 

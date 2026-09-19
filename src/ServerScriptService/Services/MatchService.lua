@@ -130,6 +130,8 @@ local function send(match, message, delta)
         OpponentName = match.Opponent.Name,
         OpponentTitle = match.Opponent.Title,
         OpponentRating = match.Opponent.Rating,
+        OpponentAccent = match.Opponent.Visual and match.Opponent.Visual.Accent or "Cyan",
+        OpponentArchetype = match.Opponent.Visual and match.Opponent.Visual.Archetype or "Opponent",
         GuardId = match.Opponent.Id,
         GuardName = match.Opponent.Name,
         GuardTitle = match.Opponent.Title,

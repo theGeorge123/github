@@ -82,6 +82,8 @@ test("all nine opponents define persona, concerns, objective and district", func
         assert(type(opponent.SpeakingStyle) == "string")
         assert(opponent.Concerns and #opponent.Concerns >= 3)
         assert(opponent.Objective and #opponent.Objective.RequiredTactics > 0)
+        assert(opponent.Visual and type(opponent.Visual.Accent) == "string")
+        assert(type(opponent.Visual.Archetype) == "string")
         assert(Districts.Get(opponent.District))
     end
 end)
