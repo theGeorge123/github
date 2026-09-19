@@ -3,6 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
+local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local player = Players.LocalPlayer
@@ -25,6 +27,14 @@ local lastProgress = 0
 local lastSuspicion = 0
 local suggestionIds = {}
 local suggestionTexts = {}
+local compact = false
+local tutorialPresented = false
+local tutorialDismissed = false
+local reducedMotion = GuiService.ReducedMotionEnabled
+
+GuiService:GetPropertyChangedSignal("ReducedMotionEnabled"):Connect(function()
+    reducedMotion = GuiService.ReducedMotionEnabled
+end)
 
 local colors = {
     Background = Color3.fromRGB(10, 15, 29),
@@ -50,6 +60,18 @@ local function stroke(object, color, thickness, transparency)
     s.Thickness = thickness or 1
     s.Transparency = transparency or 0.3
     s.Parent = object
+    return s
+end
+
+local function gradient(object, topColor, bottomColor)
+    local g = Instance.new("UIGradient")
+    g.Rotation = 90
+    g.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, topColor),
+        ColorSequenceKeypoint.new(1, bottomColor),
+    })
+    g.Parent = object
+    return g
 end
 
 local function label(parent, text, size, color, font)
@@ -72,7 +94,8 @@ local function button(parent, text, accent)
     object.AutoButtonColor = true
     object.TextColor3 = colors.White
     object.Text = text
-    object.TextSize = 13
+    object.TextSize = 14
+    object.Selectable = true
     object.TextWrapped = true
     object.Font = Enum.Font.GothamMedium
     object.Parent = parent
@@ -97,6 +120,7 @@ local screen = Instance.new("ScreenGui")
 screen.Name = "BeatTheBotHUD"
 screen.ResetOnSpawn = false
 screen.IgnoreGuiInset = false
+screen.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
 screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screen.Parent = player:WaitForChild("PlayerGui")
 
@@ -107,7 +131,8 @@ header.BackgroundColor3 = colors.Panel
 header.BackgroundTransparency = 0.05
 header.Parent = screen
 corner(header, 14)
-stroke(header, colors.Cyan, 1.5, 0.45)
+local headerStroke = stroke(header, colors.Cyan, 1.5, 0.45)
+gradient(header, Color3.fromRGB(22, 31, 54), Color3.fromRGB(13, 19, 35))
 
 local stats = label(header, "BEAT THE BOT  |  Loading profile...", 16, colors.Cyan, Enum.Font.GothamBold)
 stats.Position = UDim2.fromOffset(14, 2)
@@ -118,11 +143,11 @@ guidance.Position = UDim2.fromOffset(14, 32)
 guidance.Size = UDim2.new(1, -28, 0, 30)
 
 local profileButton = button(header, "PROFILE", colors.Panel2)
-profileButton.Size = UDim2.fromOffset(96, 32)
+profileButton.Size = UDim2.fromOffset(96, 44)
 profileButton.Position = UDim2.new(1, -214, 0, 5)
 
 local toggle = button(header, "MATCH", Color3.fromRGB(31, 74, 92))
-toggle.Size = UDim2.fromOffset(96, 32)
+toggle.Size = UDim2.fromOffset(96, 44)
 toggle.Position = UDim2.new(1, -110, 0, 5)
 
 local profileCard = Instance.new("Frame")
@@ -136,6 +161,7 @@ profileCard.ZIndex = 15
 profileCard.Parent = screen
 corner(profileCard, 16)
 stroke(profileCard, colors.Gold, 1.5, 0.3)
+gradient(profileCard, Color3.fromRGB(20, 29, 51), Color3.fromRGB(11, 16, 29))
 
 local profileConstraint = Instance.new("UISizeConstraint")
 profileConstraint.MaxSize = Vector2.new(560, 250)
@@ -200,6 +226,53 @@ profileButton.Activated:Connect(function()
     end
 end)
 
+local tutorial = Instance.new("Frame")
+tutorial.AnchorPoint = Vector2.new(0.5, 0.5)
+tutorial.Position = UDim2.fromScale(0.5, 0.5)
+tutorial.Size = UDim2.new(0.9, 0, 0, 300)
+tutorial.BackgroundColor3 = colors.Background
+tutorial.Visible = false
+tutorial.ZIndex = 30
+tutorial.Parent = screen
+corner(tutorial, 18)
+stroke(tutorial, colors.Cyan, 2, 0.18)
+gradient(tutorial, Color3.fromRGB(21, 31, 55), Color3.fromRGB(10, 15, 29))
+
+local tutorialConstraint = Instance.new("UISizeConstraint")
+tutorialConstraint.MaxSize = Vector2.new(470, 330)
+tutorialConstraint.Parent = tutorial
+
+local tutorialTitle = label(tutorial, "OUTSMART THE CITADEL", 23, colors.Gold, Enum.Font.GothamBlack)
+tutorialTitle.TextXAlignment = Enum.TextXAlignment.Center
+tutorialTitle.Position = UDim2.fromOffset(18, 18)
+tutorialTitle.Size = UDim2.new(1, -36, 0, 36)
+tutorialTitle.ZIndex = 31
+
+local tutorialBody = label(
+    tutorial,
+    "1  Tap a glowing challenge console.\n\n2  Persuade the AI in eight messages.\n\n3  Build TRUST. Keep SUSPICION low.\n\nRanked wins unlock deeper Citadel districts. The Daily Trial is in the plaza.",
+    15,
+    colors.White,
+    Enum.Font.GothamMedium
+)
+tutorialBody.Position = UDim2.fromOffset(24, 64)
+tutorialBody.Size = UDim2.new(1, -48, 1, -136)
+tutorialBody.TextYAlignment = Enum.TextYAlignment.Top
+tutorialBody.ZIndex = 31
+
+local tutorialStart = button(tutorial, "START EXPLORING", Color3.fromRGB(22, 112, 95))
+tutorialStart.AnchorPoint = Vector2.new(0.5, 1)
+tutorialStart.Position = UDim2.new(0.5, 0, 1, -18)
+tutorialStart.Size = UDim2.new(0.82, 0, 0, 48)
+tutorialStart.TextSize = 16
+tutorialStart.ZIndex = 31
+
+tutorialStart.Activated:Connect(function()
+    tutorialDismissed = true
+    tutorial.Visible = false
+    guidance.Text = "Find a glowing console. Build Trust, avoid Suspicion, and persuade in eight messages."
+end)
+
 local panel = Instance.new("Frame")
 panel.AnchorPoint = Vector2.new(0.5, 0)
 panel.Position = UDim2.new(0.5, 0, 0, 82)
@@ -209,7 +282,8 @@ panel.BackgroundTransparency = 0.025
 panel.Visible = false
 panel.Parent = screen
 corner(panel, 16)
-stroke(panel, colors.Cyan, 1.5, 0.35)
+local panelStroke = stroke(panel, colors.Cyan, 1.5, 0.35)
+gradient(panel, Color3.fromRGB(13, 20, 38), Color3.fromRGB(8, 12, 24))
 
 local constraint = Instance.new("UISizeConstraint")
 constraint.MaxSize = Vector2.new(760, 860)
@@ -221,7 +295,8 @@ opponentCard.Size = UDim2.new(1, -28, 0, 56)
 opponentCard.BackgroundColor3 = colors.Panel
 opponentCard.Parent = panel
 corner(opponentCard, 12)
-stroke(opponentCard, colors.Gold, 1.5, 0.35)
+local opponentStroke = stroke(opponentCard, colors.Gold, 1.5, 0.35)
+gradient(opponentCard, Color3.fromRGB(31, 39, 61), Color3.fromRGB(18, 25, 45))
 
 local title = label(opponentCard, "THE CASTLE GUARD", 20, colors.Gold, Enum.Font.GothamBold)
 title.Position = UDim2.fromOffset(14, 2)
@@ -416,7 +491,7 @@ suggestionLabel.Size = UDim2.new(1, 0, 0, 14)
 
 local suggestionRow = Instance.new("Frame")
 suggestionRow.Position = UDim2.fromOffset(0, 40)
-suggestionRow.Size = UDim2.new(1, 0, 0, 42)
+suggestionRow.Size = UDim2.new(1, 0, 0, 48)
 suggestionRow.BackgroundTransparency = 1
 suggestionRow.Parent = composer
 
@@ -435,8 +510,8 @@ for index = 1, 2 do
 end
 
 local input = Instance.new("TextBox")
-input.Position = UDim2.fromOffset(0, 90)
-input.Size = UDim2.new(1, -118, 0, 46)
+input.Position = UDim2.fromOffset(0, 94)
+input.Size = UDim2.new(1, -118, 0, 48)
 input.BackgroundColor3 = colors.Panel2
 input.TextColor3 = colors.White
 input.PlaceholderColor3 = colors.Muted
@@ -457,16 +532,89 @@ inputPadding.PaddingRight = UDim.new(0, 12)
 inputPadding.Parent = input
 
 local send = button(composer, "SEND", Color3.fromRGB(22, 102, 112))
-send.Position = UDim2.new(1, -108, 0, 90)
-send.Size = UDim2.fromOffset(108, 46)
+send.Position = UDim2.new(1, -108, 0, 94)
+send.Size = UDim2.fromOffset(108, 48)
 send.TextSize = 15
+
+local districtAccents = {
+    central_plaza = colors.Cyan,
+    great_gate = colors.Gold,
+    customs = Color3.fromRGB(244, 154, 65),
+    watch = Color3.fromRGB(105, 151, 218),
+}
+
+local function applyDistrictAccent(districtId)
+    local accent = districtAccents[districtId] or colors.Cyan
+    headerStroke.Color = accent
+    panelStroke.Color = accent
+    opponentStroke.Color = accent
+    title.TextColor3 = accent
+    statusLine.TextColor3 = accent
+    conversationScroll.ScrollBarImageColor3 = accent
+end
+
+local function refreshResponsiveLayout()
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local phonePortrait = viewport.X < 700 and viewport.Y >= viewport.X
+    local phoneLandscape = viewport.Y < 580
+    compact = phonePortrait or phoneLandscape
+
+    header.Size = UDim2.new(compact and 0.96 or 0.98, 0, 0, compact and 92 or 70)
+    header.Position = UDim2.new(compact and 0.02 or 0.01, 0, 0, 6)
+    stats.TextSize = compact and 14 or 16
+    stats.Size = UDim2.new(1, compact and -190 or -232, 0, 40)
+    guidance.Position = UDim2.fromOffset(14, compact and 48 or 32)
+    guidance.Size = UDim2.new(1, -28, 0, compact and 38 or 30)
+    guidance.TextSize = compact and 13 or 12
+
+    profileButton.Size = UDim2.fromOffset(compact and 78 or 96, 44)
+    profileButton.Position = UDim2.new(1, compact and -170 or -214, 0, 5)
+    profileButton.Text = compact and "PROFILE" or "PROFILE"
+    toggle.Size = UDim2.fromOffset(compact and 78 or 96, 44)
+    toggle.Position = UDim2.new(1, compact and -86 or -110, 0, 5)
+
+    local top = compact and 106 or 82
+    panel.Position = UDim2.new(0.5, 0, 0, top)
+    panel.Size = UDim2.new(compact and 0.96 or 0.98, 0, 1, -(top + 10))
+    panel.BackgroundTransparency = compact and 0.08 or 0.025
+
+    profileCard.Position = UDim2.new(0.5, 0, 0, top)
+    profileCard.Size = UDim2.new(compact and 0.94 or 0.92, 0, 0, compact and 230 or 250)
+
+    conversationScroll.ScrollBarThickness = compact and 7 or 4
+    for _, suggestionButton in ipairs(suggestionButtons) do
+        suggestionButton.TextSize = compact and 12 or 14
+    end
+
+    if compact then
+        tutorial.Size = UDim2.new(0.92, 0, phoneLandscape and 0.86 or 0, phoneLandscape and 0 or 300)
+        tutorialTitle.TextSize = phoneLandscape and 20 or 23
+        tutorialBody.TextSize = phoneLandscape and 13 or 15
+    else
+        tutorial.Size = UDim2.new(0.9, 0, 0, 300)
+        tutorialTitle.TextSize = 23
+        tutorialBody.TextSize = 15
+    end
+end
+
+local camera = workspace.CurrentCamera
+if camera then
+    camera:GetPropertyChangedSignal("ViewportSize"):Connect(refreshResponsiveLayout)
+end
+refreshResponsiveLayout()
 
 local function animateMeter(fill, valueLabel, value)
     valueLabel.Text = string.format("%d%%", value)
+    local target = UDim2.fromScale(math.clamp(value / 100, 0, 1), 1)
+    if reducedMotion then
+        fill.Size = target
+        return
+    end
     TweenService:Create(
         fill,
         TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-        { Size = UDim2.fromScale(math.clamp(value / 100, 0, 1), 1) }
+        { Size = target }
     ):Play()
 end
 
@@ -524,6 +672,13 @@ send.Activated:Connect(function()
     submit("Text", input.Text, input.Text)
 end)
 
+input.Focused:Connect(function()
+    if compact then
+        scrollToLatest()
+        guidance.Text = "Keyboard open • send when your argument is ready."
+    end
+end)
+
 input.FocusLost:Connect(function(enterPressed)
     if enterPressed then
         submit("Text", input.Text, input.Text)
@@ -532,6 +687,7 @@ end)
 
 toggle.Activated:Connect(function()
     profileCard.Visible = false
+    tutorial.Visible = false
     if current then
         panel.Visible = not panel.Visible
     else
@@ -599,13 +755,16 @@ local function showResult(packet)
         resultRating.Text = "PRACTICE • ELO UNCHANGED"
     end
     resultOverlay.Visible = true
-    resultScale.Scale = 0.86
-
-    TweenService:Create(
-        resultScale,
-        TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-        { Scale = 1 }
-    ):Play()
+    if reducedMotion then
+        resultScale.Scale = 1
+    else
+        resultScale.Scale = 0.86
+        TweenService:Create(
+            resultScale,
+            TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            { Scale = 1 }
+        ):Play()
+    end
 
     ping(won and 1.25 or 0.72)
 end
@@ -638,6 +797,7 @@ stateRemote.OnClientEvent:Connect(function(packet)
         return
     end
 
+    tutorial.Visible = false
     pending = false
 
     if not current or current.MatchId ~= packet.MatchId then
@@ -651,15 +811,16 @@ stateRemote.OnClientEvent:Connect(function(packet)
 
     current = packet
     refreshProfileCard()
+    applyDistrictAccent(packet.DistrictId)
 
     animateMeter(trustFill, trustValue, packet.Progress)
     animateMeter(suspicionFill, suspicionValue, packet.Suspicion)
 
     if packet.Progress > lastProgress then
-        flashGuidance(string.format("+%d TRUST", packet.Progress - lastProgress), colors.Green)
+        flashGuidance(string.format("TRUST +%d • Good approach", packet.Progress - lastProgress), colors.Green)
         ping(1.12)
     elseif packet.Suspicion > lastSuspicion then
-        flashGuidance(string.format("+%d SUSPICION", packet.Suspicion - lastSuspicion), colors.Red)
+        flashGuidance(string.format("SUSPICION +%d • Change approach", packet.Suspicion - lastSuspicion), colors.Red)
         ping(0.86)
     end
 
@@ -743,15 +904,29 @@ task.spawn(function()
     local insight = leaderstats:WaitForChild("Insight")
 
     local function refresh()
-        stats.Text = string.format(
-            "ELO %d  •  %s  •  INSIGHT %d  •  STREAK %d%s",
-            elo.Value,
-            player:GetAttribute("RankTitle") or "Outsider",
-            insight.Value,
-            player:GetAttribute("DailyStreak") or 0,
-            player:GetAttribute("SessionOnly") and "  •  TEST" or ""
-        )
+        if compact then
+            stats.Text = string.format(
+                "ELO %d  •  %s  •  INSIGHT %d",
+                elo.Value,
+                player:GetAttribute("RankTitle") or "Outsider",
+                insight.Value
+            )
+        else
+            stats.Text = string.format(
+                "ELO %d  •  %s  •  INSIGHT %d  •  STREAK %d%s",
+                elo.Value,
+                player:GetAttribute("RankTitle") or "Outsider",
+                insight.Value,
+                player:GetAttribute("DailyStreak") or 0,
+                player:GetAttribute("SessionOnly") and "  •  TEST" or ""
+            )
+        end
         refreshProfileCard()
+
+        if not tutorialPresented and not tutorialDismissed and not current and wins.Value + losses.Value == 0 then
+            tutorialPresented = true
+            tutorial.Visible = true
+        end
     end
 
     elo.Changed:Connect(refresh)
