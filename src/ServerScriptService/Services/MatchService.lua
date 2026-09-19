@@ -641,6 +641,39 @@ function MatchService.RequestRematch(player)
     task.defer(MatchService.Start, player, arenaId, true)
 end
 
+local function returnPlayerToPlaza(player)
+    local character = player and player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    local destination = worldService.GetDestinationCFrame and worldService.GetDestinationCFrame("central_plaza")
+    if root and destination then
+        character:PivotTo(destination)
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
+    end
+end
+
+function MatchService.Exit(player)
+    local match = MatchService.Matches[player]
+    if not match then
+        returnPlayerToPlaza(player)
+        return
+    end
+
+    if not match.Ended then
+        MatchService.Finish(match, false, "Challenge left. The opponent wins.")
+    else
+        while match.Saving do
+            task.wait()
+        end
+    end
+
+    if MatchService.Slots[match.ArenaId] == match then
+        releaseArena(match)
+    end
+    returnPlayerToPlaza(player)
+    tell(player, "Returned to Central Plaza.")
+end
+
 function MatchService.Forfeit(player)
     local match = MatchService.Matches[player]
     if match then
@@ -659,13 +692,16 @@ function MatchService.Leave(player)
     MatchService.LastOpponent[player] = nil
 end
 
-function MatchService.Init(data, world, stateRemote, submitRemote, rematchRemote)
+function MatchService.Init(data, world, stateRemote, submitRemote, rematchRemote, exitRemote)
     dataService = data
     worldService = world
     remote = stateRemote
 
     submitRemote.OnServerEvent:Connect(MatchService.Submit)
     rematchRemote.OnServerEvent:Connect(MatchService.RequestRematch)
+    exitRemote.OnServerEvent:Connect(function(player)
+        task.spawn(MatchService.Exit, player)
+    end)
 
     task.spawn(function()
         while true do
