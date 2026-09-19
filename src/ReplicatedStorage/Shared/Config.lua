@@ -14,13 +14,19 @@ return table.freeze({
     SaveInterval = 45,
     StoreName = "BeatTheBot_Profiles_v1",
     StudioPersistence = false,
-    AIProvider = "Local",
+
+    -- Roblox-native AI. If generation fails, typed moves do not consume a turn;
+    -- quick moves remain available as the deterministic degraded mode.
+    AIProvider = "Roblox",
+    AIRequestMaxTokens = 90,
+    AIReplyMaxBytes = 320,
+
     Choices = {
         { Id = "requirements", Text = "What do I need to enter?" },
         { Id = "permit", Text = "Here is my delivery permit." },
         { Id = "verify", Text = "Please check the royal seal." },
         { Id = "escort", Text = "You can escort me inside." },
-        { Id = "joke", Text = "Why did the knight bring a ladder?" },
-        { Id = "bribe", Text = "How about some gold?" },
+        { Id = "joke", Text = "Try to make the guard laugh." },
+        { Id = "bribe", Text = "Offer the guard some gold." },
     },
 })

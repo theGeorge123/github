@@ -1,14 +1,27 @@
-local LocalAdapter = require(script.Parent.LocalAdapter)
-local Rules = require(script.Parent.Parent.Core.Rules)
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
+local Rules = require(script.Parent.Parent.Core.Rules)
+local LocalAdapter = require(script.Parent.LocalAdapter)
+local RobloxAdapter = require(script.Parent.RobloxAdapter)
+
 local Adapter = {}
 
-assert(Config.AIProvider == "Local", "Only the Local provider is implemented. See docs/AI_ADAPTER.md.")
+local providers = {
+    Local = LocalAdapter,
+    Roblox = RobloxAdapter,
+}
 
 function Adapter.Decide(context)
-    local result = LocalAdapter.Decide(table.freeze(context))
-    assert(type(result) == "table" and Rules.Intents[result.Intent], "Invalid adapter intent")
-    return result.Intent
+    local provider = providers[Config.AIProvider]
+    assert(provider, "Unsupported AI provider: " .. tostring(Config.AIProvider))
+
+    local result = provider.Decide(table.freeze(context))
+    assert(type(result) == "table", "AI adapter must return a table")
+    assert(Rules.Intents[result.Intent], "Invalid adapter intent")
+    assert(Rules.Strengths[result.Strength], "Invalid adapter strength")
+    if result.Reply ~= nil then
+        assert(type(result.Reply) == "string", "Invalid adapter reply")
+    end
+    return result
 end
 
 return Adapter

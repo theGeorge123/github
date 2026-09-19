@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 local ProfileStore = require(script.Parent.Parent.Core.ProfileStore)
 local Rules = require(script.Parent.Parent.Core.Rules)
+
 local DataService = { Sessions = {} }
 local repository
 local sessionOnly = RunService:IsStudio() and not Config.StudioPersistence
@@ -23,25 +24,30 @@ end
 local function publish(player, session)
     local profile = session.Profile
     local stats = player:FindFirstChild("leaderstats")
+
     if not stats then
         stats = Instance.new("Folder")
         stats.Name = "leaderstats"
         stats.Parent = player
+
         for _, name in ipairs({ "Elo", "Wins", "Losses" }) do
             local value = Instance.new("IntValue")
             value.Name = name
             value.Parent = stats
         end
     end
+
     for _, name in ipairs({ "Elo", "Wins", "Losses" }) do
         stats[name].Value = profile[name]
     end
+
     player:SetAttribute("SessionOnly", sessionOnly)
     player:SetAttribute("ProfileReady", true)
 end
 
 function DataService.Init()
     local store
+
     if sessionOnly then
         local records = {}
         store = {
@@ -56,7 +62,9 @@ function DataService.Init()
     else
         store = DataStoreService:GetDataStore(Config.StoreName)
     end
+
     repository = ProfileStore.new(store, Config, Rules, os.time)
+
     task.spawn(function()
         while true do
             task.wait(Config.SaveInterval)
@@ -80,16 +88,26 @@ function DataService.Load(player)
     local profile = retry(function()
         return repository:Acquire(player.UserId, token)
     end)
+
     if not profile then
         player:Kick("Data unavailable or already open on another server. Please try again shortly.")
         return
     end
-    local session = { Token = token, Profile = profile, Busy = false, Closing = false }
+
+    local session = {
+        Token = token,
+        Profile = profile,
+        Busy = false,
+        Closing = false,
+    }
+
     DataService.Sessions[player] = session
+
     if not player.Parent then
         DataService.Release(player)
         return
     end
+
     publish(player, session)
 end
 
@@ -98,21 +116,26 @@ function DataService.Get(player)
     return session and session.Profile
 end
 
-function DataService.Update(player, operation, matchId, won)
+function DataService.Update(player, operation, matchId, won, opponentRating)
     local session = DataService.Sessions[player]
     if not session then
         return nil
     end
+
     while session.Busy do
         task.wait()
     end
+
     if DataService.Sessions[player] ~= session or session.Released then
         return nil
     end
+
     session.Busy = true
+
     local profile = retry(function()
-        return repository:Update(player.UserId, session.Token, operation, matchId, won)
+        return repository:Update(player.UserId, session.Token, operation, matchId, won, opponentRating)
     end)
+
     if profile then
         session.Profile = profile
         if operation == "Release" then
@@ -121,6 +144,7 @@ function DataService.Update(player, operation, matchId, won)
             publish(player, session)
         end
     end
+
     session.Busy = false
     return profile
 end
@@ -130,6 +154,7 @@ function DataService.Release(player)
     if not session or session.Closing then
         return
     end
+
     session.Closing = true
     DataService.Update(player, "Release")
     DataService.Sessions[player] = nil
