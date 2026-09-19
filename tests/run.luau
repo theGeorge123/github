@@ -12,7 +12,7 @@ local Rewards = require("../src/ServerScriptService/Core/RewardDefinitions")
 local Cosmetics = require("../src/ServerScriptService/Core/CosmeticDefinitions")
 local EntitlementPolicy = require("../src/ServerScriptService/Core/EntitlementPolicy")
 local History = require("../src/ServerScriptService/Core/History")
-local DebateDiagnostics = require("../src/ServerScriptService/Core/DebateDiagnostics.lua")
+local DebateDiagnostics = require("../src/ServerScriptService/Core/DebateDiagnostics")
 
 local total = 0
 
