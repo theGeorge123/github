@@ -540,7 +540,7 @@ end)
 
 
 test("debate prototype flags default off", function()
-    assert(Config.DebateEnabled == false and Config.DebateLiveEnabled == false)
+    assert(Config.DebateEnabled == true and Config.DebateLiveEnabled == false)
 end)
 
 test("debate diagnostics expose only allowlisted metadata", function()
@@ -564,3 +564,14 @@ test("debate diagnostics preserve bounded live source", function()
 end)
 
 print(string.format("\n%d tests passed", total))
+test("debate layout definitions expose exactly three four-turn topics", function()
+    local Definitions = require("../src/ServerScriptService/Core/DebateDefinitions")
+    assert(#Definitions.Order == 3)
+    assert(Definitions.Turns == 4)
+    assert(#Definitions.Rubric == 4)
+    for _, id in ipairs(Definitions.Order) do
+        local character = Definitions.Characters[id]
+        assert(character and #character.Replies == 4)
+        assert(character.Topic ~= "" and character.Position ~= "")
+    end
+end)

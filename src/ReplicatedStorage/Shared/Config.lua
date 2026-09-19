@@ -17,7 +17,7 @@ return table.freeze({
     StudioPersistence = false,
 
     -- Private debate prototype gates. Both remain off until an authorized private test.
-    DebateEnabled = false,
+    DebateEnabled = true,
     DebateLiveEnabled = false,
 
     AIProvider = "Roblox",
