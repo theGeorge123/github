@@ -1,46 +1,48 @@
-# Verification and release checklist
+# Beat the Bot v0.4 verification and release checklist
 
-## Automated local checks
+## Automated CI
 
-Run `luau tests/run.luau` using Luau 0.739. Tests exercise ordered wins, turn-eight boundary wins, losses, repeat/out-of-order moves, suspicion, Elo, vocabulary, payload validation, duplicate results, retry ambiguity, locks, abandoned-match recovery, release/rejoin memory, and storage failures. The fake storage runs transaction callbacks twice to catch callback side effects.
+The GitHub workflow must execute all of the following on the exact release commit:
 
-Compile every script with `luau-compile --null`, build with Rojo 7.7.0, and run `git diff --check`. These checks do not execute Roblox services.
+1. luau tests/run.luau
+2. Compile every Lua/Luau source under src/ and tests/ with luau-compile --null.
+3. rojo build default.project.json -o build/BeatTheBot.rbxlx
+4. python3 scripts/verify_build.py build/BeatTheBot.rbxlx
+5. rojo build test.project.json -o build/BeatTheBotSmoke.rbxlx
+6. git diff --check
+7. Upload both builds as the BeatTheBot-v0.4-builds artifact.
 
-## Opt-in Studio smoke place
+The pure suite covers rank mapping, ELO district gates, opponent definitions, deterministic match rules, malformed AI decisions, response parsing, prompt-injection-like input, protocol forgery, eight-turn history, profile migration, unknown schema rejection, session locks, ranked rewards, Insight forgery rejection, mastery, cosmetics, Daily Trial reservation, Daily practice isolation, streaks, duplicate-result protection and abandoned-match recovery.
 
-`rojo build test.project.json -o build/BeatTheBotSmoke.rbxlx` builds an isolated test place. Open it in Studio and press Play. `tests/StudioSmoke.server.lua` exercises a win, invalid submissions, and a forfeit using the actual server modules, then prints `BEAT_THE_BOT_SMOKE_PASS`. It runs only in Studio with session-only data. Never publish the smoke place.
+## Studio smoke place
 
-The normal `default.project.json` does not include this test script. Smoke actions intentionally move the test player's character and play a match, so use only this separate place.
+Build test.project.json, open build/BeatTheBotSmoke.rbxlx in Roblox Studio and press Play in a session-only test environment. A successful run prints BEAT_THE_BOT_SMOKE_PASS.
 
-## Manual Studio checklist
+The smoke script exercises the real Roblox services and checks the Citadel build, four ranked spaces plus Daily, future landmarks, VIP Observatory, ranked Great Gate match, forged match-id rejection, deterministic win path, dynamic ELO, Insight/mastery award, duplicate-finish idempotency, Watch ELO rejection, rematch/forfeit, official Daily reservation, Daily ELO isolation, streak write, second-run practice mode and official-result isolation.
 
-- Start in a fresh place: one world, one HUD, correct spawn, no legacy Crystal Rush scripts.
-- Walk to each console and start a match. After a five-second result display it becomes available again.
-- Win with requirements → permit → verify → escort; expect 1,016 Elo, one win, open gate, changed leaderboard, and champion avatar if avatar services are available.
-- Make eight ineffective moves; expect one loss and a closed gate. Test a last-turn win separately.
-- Bribe four times or threaten three times; expect an early loss. Repeated correct moves should not give extra trust.
-- Try blank, too-long, and blocked input. Filter failure should use no turn and leave quick choices available; no raw message should appear on a board.
-- Start a second match: greeting refers to prior wins/losses without changing the rules.
-- Reset, disconnect, and allow the timer to expire; each active match should resolve only once as a loss.
-- Hide/reopen the panel while a match runs. Timer continues. Long dialogue remains scrollable.
-- Test phone portrait, landscape, touch prompts, small-screen text, keyboard submission, and safe-area insets.
-- Use Studio's server/multi-client test with at least two players. They must occupy different arenas; spectator text is authored summaries only. Busy arenas reject extra players. Submissions cannot target someone else's match or replay an old turn.
-- Departing champion is replaced; an avatar service error must not block matches or the leaderboard.
+Never publish the smoke place.
 
-## Published private test checklist
+## Required manual Studio validation
 
-- Use a separate private experience and test store. Verify UserId-keyed data survives leaving and rejoining a different server.
-- Change display name only if independently desired; confirm code keys are UserId-based without needing a real account rename.
-- Confirm ordinary Studio's TEST ONLY mode never writes production data.
-- Simulate profile acquisition failure and confirm the game refuses to play rather than overwriting with defaults.
-- Test quick reconnect while a lease is held; confirm no two servers can update a profile concurrently.
-- Crash with an active marker; after the lease expires, rejoin and verify exactly one recovery loss.
-- Confirm successful result retries do not duplicate Elo or wins/losses.
-- Confirm text filtering works for real users. Keep normal chat in Roblox's own chat system.
-- Review Roblox's current content/maturity/disclosure requirements before publishing publicly, especially before enabling any generated dialogue.
+- World/navigation: spawn in Central Plaza; inspect Great Gate, Customs, Watch, Royal Court and Oracle approaches. Check spawn safety, collisions, return paths and void/fall risks.
+- District security: below 1100 ELO locally teleport into Customs and attempt ranked play; reject. Repeat Watch below 1250. At each threshold, allow the ranked challenge.
+- AI runtime: test capitalization, Unicode, markdown-like output, malformed/missing fields, unknown tactics/strengths, generation failure, filtering failure, prompt injection, contradictory claims, all eight turns and a late response after terminal state. No generation may manufacture competitive state.
+- Privacy: multi-client Studio test. Spectators see authored summaries/status only, never raw player messages or private generated replies.
+- Match races: replay old submissions, future turns, double submit, double Finish, character reset, disconnect during generation/save, generation timeout, match timeout, arena reuse and rematch spam.
+- Persistence: private test place with API access. Migrate a schema-1 fixture, renew leases, reconnect after lease expiry, recover abandonment once, retry an ambiguous successful write and confirm unknown schema data remains untouched.
+- Daily Trial: verify UTC rollover, reconnect/server hop after reservation, repeated prompt activation and practice. Official match ID/result remains fixed for the day.
+- VIP: non-VIP rejected from Observatory and VIP travel. Placeholder VIP reaches only ELO-unlocked travel destinations. 25% bonus affects Insight only.
+- Cosmetics: forged/non-owned equip is rejected; an owned item can be equipped; ownership remains separate from equipped state.
+- Desktop UI: 16:9 and narrow desktop. Conversation stays dominant; input/suggestions/result controls remain reachable; long replies wrap and scroll.
+- Mobile/tablet UI: phone portrait, landscape and tablet. Test touch prompts, software keyboard, safe area, long text and profile card.
+- Performance: inspect part count, rendering, collisions, lighting, particles, memory, script activity and streaming. Confirm no unbounded per-frame server work or accumulating TextGenerator instances/connections.
+- Effects: review torch/lantern density, Atmosphere/fog and Watch rain/VFX hooks before adding production particles/audio.
+- Shutdown/data: BindToClose releases sessions within budget; persistence failure fails closed rather than continuing with unprotected competitive state.
 
-## Known MVP limits
+## Private published-experience checks
 
-One fixed English puzzle; no semantic LLM, global leaderboard, cross-experience memory, monetization, matchmaking calibration, custom analytics funnel, or multi-place teleport handoff. Session leaderboard and human/Guard totals are labelled as server-only. Crash-recovery losses are reflected in personal data but not retroactively added to another server's match counter.
+Before public release, use a separate private experience/test DataStore configuration and at least two accounts. Verify UserId storage across servers, real Roblox text filtering, TextGenerator runtime behavior, streaming, device UI and current Roblox policy/disclosure requirements for generated dialogue.
 
-Storage failures can prevent a terminal result from being confirmed. The game kicks rather than continuing with unprotected data; the next session recovers any remaining active match as a loss. This intentionally prevents disconnect-to-avoid-loss but is not a guarantee against every outage-related loss. Resolve that product trade-off before a serious ranked launch.
+## Deliberately deferred
+
+v0.4 does not create a live Robux product, paid Daily retry, global/friends leaderboard, persistent raw chat history or cross-place teleport system. VIP entitlement lookup remains placeholder configuration until monetization is intentionally activated.
