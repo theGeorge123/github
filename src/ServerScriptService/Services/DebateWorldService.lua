@@ -28,6 +28,8 @@ function World.Init()
  local sign=part("DebateSign",Vector3.new(15,3,.5),Vector3.new(0,8.3,-9.4),C.navy,root,Enum.Material.Metal);text(sign,"MAKE THE STRONGER CASE",C.gold)
  part("Table",Vector3.new(10,1,3),Vector3.new(0,3,-1),C.blue,root,Enum.Material.Wood)
  part("TableBase",Vector3.new(1.2,3,1.2),Vector3.new(0,1.5,-1),C.gold,root,Enum.Material.Metal)
+ part("PlayerChairA",Vector3.new(3,1,3),Vector3.new(-5,1.3,3),C.blue,root,Enum.Material.Wood)
+ part("PlayerChairB",Vector3.new(3,1,3),Vector3.new(5,1.3,3),C.gold,root,Enum.Material.Wood)
  bot(root,"RIVET",-7,C.cyan,"antenna");bot(root,"PIP",0,C.gold,"square");bot(root,"MOSS",7,C.green,"round")
  local spawn=Instance.new("SpawnLocation");spawn.Name="DebateSpawn";spawn.Size=Vector3.new(8,1,5);spawn.Position=Vector3.new(0,1,7);spawn.Anchored=true;spawn.Neutral=true;spawn.Duration=0;spawn.Transparency=1;spawn.Parent=root;World.Spawn=spawn
  Lighting.ClockTime=14;Lighting.Brightness=3.2;Lighting.Ambient=Color3.fromRGB(155,165,180);Lighting.OutdoorAmbient=Color3.fromRGB(175,185,198);Lighting.EnvironmentDiffuseScale=1;Lighting.EnvironmentSpecularScale=.5

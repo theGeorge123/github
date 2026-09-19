@@ -575,3 +575,12 @@ test("debate layout definitions expose exactly three four-turn topics", function
         assert(character.Topic ~= "" and character.Position ~= "")
     end
 end)
+
+test("multiplayer debate definitions bound scoring and unlocks", function()
+    local Definitions = require("../src/ServerScriptService/Core/MultiplayerDebateDefinitions")
+    assert(#Definitions.Topics == 3 and Definitions.PlayerTurnsEach == 3)
+    local basic = select(1, Definitions.Score("I agree"))
+    local strong = select(1, Definitions.Score("However, because this matters, for example if players learn faster."))
+    assert(basic == 10 and strong == 25)
+    assert(#Definitions.Unlocks == 4 and Definitions.Unlocks[1].Points == 0)
+end)
