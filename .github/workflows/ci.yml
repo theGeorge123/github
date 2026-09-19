@@ -27,6 +27,13 @@ jobs:
       - name: Run pure Luau regression tests
         run: luau tests/run.luau
 
+      - name: Compile every Luau source
+        shell: bash
+        run: |
+          while IFS= read -r -d '' file; do
+            luau-compile --null "$file"
+          done < <(find src tests -name '*.lua' -print0)
+
       - name: Build production place
         run: |
           mkdir -p build
@@ -37,6 +44,14 @@ jobs:
 
       - name: Build Studio smoke place
         run: rojo build test.project.json -o build/BeatTheBotSmoke.rbxlx
+
+      - name: Upload v0.4 Rojo builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: BeatTheBot-v0.4-builds
+          path: |
+            build/BeatTheBot.rbxlx
+            build/BeatTheBotSmoke.rbxlx
 
       - name: Check whitespace errors
         run: git diff --check
