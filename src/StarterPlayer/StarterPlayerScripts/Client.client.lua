@@ -334,7 +334,7 @@ ordered(label(
 local resultOverlay = Instance.new("Frame")
 resultOverlay.AnchorPoint = Vector2.new(0.5, 0.5)
 resultOverlay.Position = UDim2.fromScale(0.5, 0.5)
-resultOverlay.Size = UDim2.fromOffset(430, 330)
+resultOverlay.Size = UDim2.new(0.9, 0, 0, 330)
 resultOverlay.BackgroundColor3 = colors.Background
 resultOverlay.Visible = false
 resultOverlay.ZIndex = 20
@@ -353,16 +353,19 @@ resultScale.Parent = resultOverlay
 
 local resultTitle = label(resultOverlay, "VICTORY", 54, 34, colors.Green, Enum.Font.GothamBlack)
 resultTitle.TextXAlignment = Enum.TextXAlignment.Center
+resultTitle.ZIndex = 21
 resultTitle.Position = UDim2.fromOffset(20, 28)
 resultTitle.Size = UDim2.new(1, -40, 0, 54)
 
 local resultReason = label(resultOverlay, "", 72, 16, colors.White, Enum.Font.GothamMedium)
 resultReason.TextXAlignment = Enum.TextXAlignment.Center
+resultReason.ZIndex = 21
 resultReason.Position = UDim2.fromOffset(28, 91)
 resultReason.Size = UDim2.new(1, -56, 0, 72)
 
 local resultRating = label(resultOverlay, "", 38, 20, colors.Gold, Enum.Font.GothamBold)
 resultRating.TextXAlignment = Enum.TextXAlignment.Center
+resultRating.ZIndex = 21
 resultRating.Position = UDim2.fromOffset(20, 162)
 resultRating.Size = UDim2.new(1, -40, 0, 38)
 

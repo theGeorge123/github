@@ -301,14 +301,19 @@ local function createArena(arenaId, center)
 
     local gate = part("Portcullis", Vector3.new(9, 11, 0.8), center + Vector3.new(0, 5.5, -14), palette.Gold, arenaFolder, Enum.Material.Metal)
     local closedCFrame = gate.CFrame
+    local gateParts = {
+        { Part = gate, ClosedCFrame = gate.CFrame },
+    }
 
     for x = -3, 3, 1.5 do
         local bar = part("GateBar", Vector3.new(0.35, 10, 0.45), center + Vector3.new(x, 5.5, -13.45), palette.StoneDark, arenaFolder, Enum.Material.Metal)
         bar.CanCollide = false
+        table.insert(gateParts, { Part = bar, ClosedCFrame = bar.CFrame })
     end
     for y = 2.5, 8.5, 3 do
         local bar = part("GateCrossbar", Vector3.new(8.5, 0.35, 0.45), center + Vector3.new(0, y, -13.45), palette.StoneDark, arenaFolder, Enum.Material.Metal)
         bar.CanCollide = false
+        table.insert(gateParts, { Part = bar, ClosedCFrame = bar.CFrame })
     end
 
     banner(center + Vector3.new(-6, 13, -13.35), "I", arenaFolder)
@@ -349,6 +354,7 @@ local function createArena(arenaId, center)
         Console = console,
         Gate = gate,
         GateClosedCFrame = closedCFrame,
+        GateParts = gateParts,
         GateOpen = false,
         Guard = guardModel,
     }
@@ -358,21 +364,27 @@ local function setGate(arena, open)
     if arena.GateOpen == open then
         return
     end
+
     arena.GateOpen = open
     arena.Gate.CanCollide = not open
 
-    local target = open and (arena.GateClosedCFrame + Vector3.new(0, 13, 0)) or arena.GateClosedCFrame
-    TweenService:Create(
-        arena.Gate,
-        TweenInfo.new(open and 1.1 or 0.7, Enum.EasingStyle.Quart, open and Enum.EasingDirection.Out or Enum.EasingDirection.InOut),
-        { CFrame = target, Transparency = open and 0.2 or 0 }
-    ):Play()
+    for index, entry in ipairs(arena.GateParts or {}) do
+        local target = open and (entry.ClosedCFrame + Vector3.new(0, 13, 0)) or entry.ClosedCFrame
+        TweenService:Create(
+            entry.Part,
+            TweenInfo.new(open and 1.1 or 0.7, Enum.EasingStyle.Quart, open and Enum.EasingDirection.Out or Enum.EasingDirection.InOut),
+            {
+                CFrame = target,
+                Transparency = index == 1 and (open and 0.2 or 0) or 0,
+            }
+        ):Play()
+    end
 
     if open then
         local sparkle = Instance.new("Sparkles")
         sparkle.Name = "VictorySparkles"
         sparkle.SparkleColor = palette.Gold
-        sparkle.Parent = arena.Gate
+        sparkle.Parent = (arena.GateParts and arena.GateParts[2] and arena.GateParts[2].Part) or arena.Gate
         task.delay(2.5, function()
             if sparkle.Parent then
                 sparkle:Destroy()

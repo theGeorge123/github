@@ -117,7 +117,7 @@ function MatchService.Finish(match, won, reason)
     end)
 end
 
-function MatchService.Start(player, arenaId)
+function MatchService.Start(player, arenaId, trustedRematch)
     if MatchService.Closing or MatchService.Matches[player] then
         return
     end
@@ -133,7 +133,7 @@ function MatchService.Start(player, arenaId)
         return
     end
 
-    if (characterRoot.Position - arena.Console.Position).Magnitude > 16 then
+    if not trustedRematch and (characterRoot.Position - arena.Console.Position).Magnitude > 16 then
         return
     end
 
@@ -303,7 +303,7 @@ function MatchService.RequestRematch(player)
 
     releaseArena(match)
     lastRequest[player] = nil
-    task.defer(MatchService.Start, player, arenaId)
+    task.defer(MatchService.Start, player, arenaId, true)
 end
 
 function MatchService.Forfeit(player)
