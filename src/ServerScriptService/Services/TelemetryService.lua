@@ -20,8 +20,19 @@ function TelemetryService.Log(player, eventName, value)
     end
 end
 
-function TelemetryService.MatchStarted(player, guard)
+function TelemetryService.ProfileLoaded(player, returning)
+    TelemetryService.Log(player, "BTB_ProfileLoaded")
+    TelemetryService.Log(player, returning and "BTB_ReturningPlayer" or "BTB_NewPlayer")
+end
+
+function TelemetryService.MatchStarted(player, guard, firstMatch)
+    TelemetryService.Log(player, "BTB_MatchStarted")
     TelemetryService.Log(player, "BTB_MatchStarted_" .. safeName(guard.Id))
+    if firstMatch then
+        TelemetryService.Log(player, "BTB_FirstMatchStarted")
+    else
+        TelemetryService.Log(player, "BTB_RepeatMatchStarted")
+    end
 end
 
 function TelemetryService.Move(player, kind)
@@ -33,6 +44,8 @@ function TelemetryService.AIError(player)
 end
 
 function TelemetryService.MatchFinished(player, guard, won, turns, duration)
+    TelemetryService.Log(player, "BTB_MatchCompleted")
+    TelemetryService.Log(player, won and "BTB_MatchWon" or "BTB_MatchLost")
     TelemetryService.Log(player, (won and "BTB_MatchWon_" or "BTB_MatchLost_") .. safeName(guard.Id))
     TelemetryService.Log(player, "BTB_MovesUsed", turns)
     TelemetryService.Log(player, "BTB_MatchDuration", math.max(0, math.round(duration)))
