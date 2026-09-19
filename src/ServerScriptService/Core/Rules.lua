@@ -155,7 +155,7 @@ function Rules.Advance(state, decision, guard, maxTurns)
 
     if decision.Intent == "verify" and not state.PermitPresented then
         trustDelta *= 0.35
-        suspicionDelta += 5
+        suspicionDelta = math.max(0, suspicionDelta) + 5
     end
 
     nextState.Used[decision.Intent] = true
