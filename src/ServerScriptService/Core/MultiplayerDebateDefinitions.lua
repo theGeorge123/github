@@ -2,10 +2,10 @@ local Definitions = {}
 Definitions.PlayerTurnsEach = 3
 Definitions.MaxArgumentBytes = 500
 Definitions.Unlocks = table.freeze({
-    { Points = 0, Id = "starter-chair", Label = "Starter Chair" },
-    { Points = 30, Id = "blue-chair", Label = "Blue Chair" },
-    { Points = 60, Id = "clear-thinker", Label = "Clear Thinker title" },
-    { Points = 100, Id = "gold-chair", Label = "Gold Chair" },
+    { Points = 0, Id = "starter-chair", Label = "Starter Chair", Kind = "chair" },
+    { Points = 30, Id = "blue-chair", Label = "Blue Chair", Kind = "chair" },
+    { Points = 60, Id = "clear-thinker", Label = "Clear Thinker title", Kind = "title" },
+    { Points = 100, Id = "gold-chair", Label = "Gold Chair", Kind = "chair" },
 })
 Definitions.Topics = table.freeze({
     { Id="hints", Character="Rivet", Topic="Should hints be optional in building games?", AIPosition="Hints should stay available but optional.", Opening="Optional hints help new builders while leaving experts in control." },
