@@ -22,6 +22,10 @@ function ProgressionService.CanAccess(profile, districtId, player)
     return DistrictDefinitions.CanAccess(profile.Elo, districtId)
 end
 
+function ProgressionService.NextPlayable(profile)
+    return DistrictDefinitions.NextPlayable(profile and profile.Elo or 0)
+end
+
 function ProgressionService.Status(profile)
     local rank = ProgressionService.Rank(profile)
     return {
