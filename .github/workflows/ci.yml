@@ -33,10 +33,11 @@ jobs:
           tmp="$(mktemp --suffix=.luau)"
           trap 'rm -f "$tmp"' EXIT
           while IFS= read -r -d '' file; do
+            echo "syntax-check: $file"
             {
-              echo 'local function __syntax_check__()'
+              printf '%s\n' 'local function __syntax_check__()'
               cat "$file"
-              echo 'end'
+              printf '\n%s\n' 'end'
             } > "$tmp"
             luau "$tmp" >/dev/null
           done < <(find src tests -name '*.lua' -print0)
