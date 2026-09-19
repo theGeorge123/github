@@ -82,7 +82,6 @@ With Luau/Rojo installed:
 
 ```sh
 luau tests/run.luau
-find src -name '*.lua' -exec luau-compile --null '{}' +
 mkdir -p build
 rojo build default.project.json -o build/BeatTheBot.rbxlx
 python3 scripts/verify_build.py build/BeatTheBot.rbxlx

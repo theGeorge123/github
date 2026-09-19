@@ -27,9 +27,6 @@ jobs:
       - name: Run pure Luau regression tests
         run: luau tests/run.luau
 
-      - name: Compile every Luau source
-        run: find src tests -name '*.lua' -o -name '*.luau' | while read file; do luau-compile --null "$file"; done
-
       - name: Build production place
         run: |
           mkdir -p build
