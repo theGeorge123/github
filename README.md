@@ -96,7 +96,7 @@ Studio smoke build:
 
     rojo build test.project.json -o build/BeatTheBotSmoke.rbxlx
 
-CI also compiles every Luau source and uploads both Rojo place files as the BeatTheBot-v0.4-builds artifact.
+CI also syntax-checks every Luau source with the installed Luau runtime and uploads both Rojo place files as the BeatTheBot-v0.4-builds artifact.
 
 Roblox-runtime behavior still requires Studio/private-experience validation. The exact checklist is maintained in docs/TESTING.md; automated CI is not treated as proof of Roblox runtime behavior.
 
