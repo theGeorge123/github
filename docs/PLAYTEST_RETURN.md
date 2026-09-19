@@ -4,13 +4,11 @@ Automated CI proves source syntax, pure regression behavior, Rojo packaging and 
 
 ## 1. Get the reviewed builds
 
-Review and merge only green PRs in this order:
+PR #12 is the conflict-free integrated candidate. It supersedes the overlapping feature PRs #2-#6 and #8-#11; do not merge those separately after choosing #12.
 
-1. Private tester access and world boundary.
-2. Mobile-first HUD and keyboard polish.
-3. Later onboarding/accessibility PRs only after their own checks pass.
+Before merge, test the exact green PR #12 artifact from its latest CI run. After merge, test the newest `BeatTheBot-v0.4-builds` artifact from the resulting `main` run as the final release candidate. Never publish `BeatTheBotSmoke.rbxlx`.
 
-Download the newest `BeatTheBot-v0.4-builds` artifact from the merged main CI run. Never publish `BeatTheBotSmoke.rbxlx`.
+Record the tested commit SHA and CI run URL with the screenshots so later commits cannot be mistaken for the build that passed.
 
 ## 2. Studio smoke gate
 
@@ -64,4 +62,4 @@ Do not call the game public-release ready until all are true:
 
 ## After the playable gate
 
-Sequence larger work behind the stable build: onboarding polish, accessibility and low-effects settings, then friend challenges and shareable results. Keep each change reviewable and green rather than combining the release surface with untested social features.
+Fix failures found by the gate before widening scope. Treat onboarding, mobile layout, and reduced-motion behavior as included but unverified until their Studio/device checks pass. Friend challenges, shareable results, multiplayer, monetization, and later worlds remain separate releases.
