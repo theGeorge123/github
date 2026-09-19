@@ -13,18 +13,18 @@ local rematchRemote = remotes:WaitForChild("Rematch")
 
 local current
 local pending = false
-local lastSent = 0
-local lastRenderedTurn = -1
 local pendingTurn
+local pendingPlayerWrapper
 local pendingPlayerBubble
 local thinkingWrapper
 local thinkingSpeaker
 local thinkingBubble
+local lastSent = 0
+local lastRenderedTurn = -1
 local lastProgress = 0
 local lastSuspicion = 0
 local suggestionIds = {}
 local suggestionTexts = {}
-local submit
 
 local colors = {
     Background = Color3.fromRGB(10, 15, 29),
@@ -38,18 +38,10 @@ local colors = {
     Muted = Color3.fromRGB(166, 183, 206),
 }
 
-local screen = Instance.new("ScreenGui")
-screen.Name = "BeatTheBotHUD"
-screen.ResetOnSpawn = false
-screen.IgnoreGuiInset = false
-screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screen.Parent = player:WaitForChild("PlayerGui")
-
 local function corner(object, radius)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, radius or 10)
     c.Parent = object
-    return c
 end
 
 local function stroke(object, color, thickness, transparency)
@@ -58,44 +50,41 @@ local function stroke(object, color, thickness, transparency)
     s.Thickness = thickness or 1
     s.Transparency = transparency or 0.3
     s.Parent = object
-    return s
 end
 
-local function label(parent, text, height, size, color, font)
+local function label(parent, text, size, color, font)
     local object = Instance.new("TextLabel")
     object.BackgroundTransparency = 1
-    object.Size = UDim2.new(1, 0, 0, height)
     object.Text = text
-    object.Font = font or Enum.Font.Gotham
-    object.TextSize = size or 16
     object.TextColor3 = color or colors.White
+    object.TextSize = size or 15
+    object.Font = font or Enum.Font.Gotham
     object.TextWrapped = true
     object.TextXAlignment = Enum.TextXAlignment.Left
-    object.RichText = false
+    object.TextYAlignment = Enum.TextYAlignment.Center
     object.Parent = parent
     return object
 end
 
-local function button(parent, text, height, accent)
+local function button(parent, text, accent)
     local object = Instance.new("TextButton")
-    object.Size = UDim2.new(1, 0, 0, height or 44)
     object.BackgroundColor3 = accent or colors.Panel2
     object.AutoButtonColor = true
     object.TextColor3 = colors.White
     object.Text = text
-    object.TextSize = 15
+    object.TextSize = 13
     object.TextWrapped = true
     object.Font = Enum.Font.GothamMedium
     object.Parent = parent
     corner(object, 10)
-    stroke(object, colors.Cyan, 1, 0.65)
+    stroke(object, colors.Cyan, 1, 0.68)
     return object
 end
 
 local function ping(pitch)
     local sound = Instance.new("Sound")
     sound.SoundId = "rbxasset://sounds/electronicpingshort.wav"
-    sound.Volume = 0.22
+    sound.Volume = 0.2
     sound.PlaybackSpeed = pitch or 1
     sound.Parent = SoundService
     sound.Ended:Connect(function()
@@ -104,8 +93,15 @@ local function ping(pitch)
     sound:Play()
 end
 
+local screen = Instance.new("ScreenGui")
+screen.Name = "BeatTheBotHUD"
+screen.ResetOnSpawn = false
+screen.IgnoreGuiInset = false
+screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screen.Parent = player:WaitForChild("PlayerGui")
+
 local header = Instance.new("Frame")
-header.Size = UDim2.new(0.94, 0, 0, 82)
+header.Size = UDim2.new(0.94, 0, 0, 78)
 header.Position = UDim2.new(0.03, 0, 0, 8)
 header.BackgroundColor3 = colors.Panel
 header.BackgroundTransparency = 0.05
@@ -113,129 +109,113 @@ header.Parent = screen
 corner(header, 14)
 stroke(header, colors.Cyan, 1.5, 0.45)
 
-local stats = label(header, "BEAT THE BOT  |  Loading profile...", 36, 17, colors.Cyan, Enum.Font.GothamBold)
+local stats = label(header, "BEAT THE BOT  |  Loading profile...", 16, colors.Cyan, Enum.Font.GothamBold)
 stats.Position = UDim2.fromOffset(14, 2)
-stats.Size = UDim2.new(1, -130, 0, 36)
+stats.Size = UDim2.new(1, -128, 0, 34)
 
-local guidance = label(header, "Walk to a glowing arena console. Beat the Guard in 8 moves.", 38, 13, colors.Muted)
-guidance.Position = UDim2.fromOffset(14, 38)
-guidance.Size = UDim2.new(1, -28, 0, 38)
+local guidance = label(header, "Walk to a glowing arena console. Convince a Guard in 8 messages.", 12, colors.Muted)
+guidance.Position = UDim2.fromOffset(14, 35)
+guidance.Size = UDim2.new(1, -28, 0, 36)
 
-local toggle = button(header, "MATCH", 34, Color3.fromRGB(31, 74, 92))
-toggle.Size = UDim2.fromOffset(100, 34)
-toggle.Position = UDim2.new(1, -114, 0, 6)
+local toggle = button(header, "MATCH", Color3.fromRGB(31, 74, 92))
+toggle.Size = UDim2.fromOffset(96, 32)
+toggle.Position = UDim2.new(1, -110, 0, 5)
 
 local panel = Instance.new("Frame")
 panel.AnchorPoint = Vector2.new(0.5, 0)
-panel.Position = UDim2.new(0.5, 0, 0, 100)
-panel.Size = UDim2.new(0.94, 0, 0.74, -30)
+panel.Position = UDim2.new(0.5, 0, 0, 94)
+panel.Size = UDim2.new(0.94, 0, 1, -110)
 panel.BackgroundColor3 = colors.Background
-panel.BackgroundTransparency = 0.03
+panel.BackgroundTransparency = 0.025
 panel.Visible = false
 panel.Parent = screen
 corner(panel, 16)
 stroke(panel, colors.Cyan, 1.5, 0.35)
 
 local constraint = Instance.new("UISizeConstraint")
-constraint.MaxSize = Vector2.new(570, 880)
+constraint.MaxSize = Vector2.new(620, 800)
 constraint.Parent = panel
 
-local scroll = Instance.new("ScrollingFrame")
-scroll.Position = UDim2.fromOffset(16, 14)
-scroll.Size = UDim2.new(1, -32, 1, -28)
-scroll.BackgroundTransparency = 1
-scroll.BorderSizePixel = 0
-scroll.ScrollBarThickness = 5
-scroll.ScrollBarImageColor3 = colors.Cyan
-scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-scroll.CanvasSize = UDim2.new()
-scroll.Parent = panel
-
-local padding = Instance.new("UIPadding")
-padding.PaddingRight = UDim.new(0, 10)
-padding.PaddingBottom = UDim.new(0, 18)
-padding.Parent = scroll
-
-local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0, 10)
-layout.SortOrder = Enum.SortOrder.LayoutOrder
-layout.Parent = scroll
-
-local order = 0
-local function ordered(object)
-    order += 1
-    object.LayoutOrder = order
-    return object
-end
-
 local opponentCard = Instance.new("Frame")
-opponentCard.Size = UDim2.new(1, 0, 0, 78)
+opponentCard.Position = UDim2.fromOffset(14, 12)
+opponentCard.Size = UDim2.new(1, -28, 0, 68)
 opponentCard.BackgroundColor3 = colors.Panel
-opponentCard.Parent = scroll
+opponentCard.Parent = panel
 corner(opponentCard, 12)
 stroke(opponentCard, colors.Gold, 1.5, 0.35)
-ordered(opponentCard)
 
-local title = label(opponentCard, "🛡 THE CASTLE GUARD", 32, 22, colors.Gold, Enum.Font.GothamBold)
-title.Position = UDim2.fromOffset(14, 8)
-title.Size = UDim2.new(1, -28, 0, 32)
+local title = label(opponentCard, "THE CASTLE GUARD", 20, colors.Gold, Enum.Font.GothamBold)
+title.Position = UDim2.fromOffset(14, 5)
+title.Size = UDim2.new(1, -28, 0, 30)
 
-local subtitle = label(opponentCard, "AI-POWERED  •  RANKED OPPONENT  •  8 MOVES", 24, 12, colors.Muted, Enum.Font.GothamMedium)
-subtitle.Position = UDim2.fromOffset(14, 43)
+local subtitle = label(opponentCard, "AI-POWERED  •  RANKED  •  8 MESSAGES", 11, colors.Muted, Enum.Font.GothamMedium)
+subtitle.Position = UDim2.fromOffset(14, 35)
 subtitle.Size = UDim2.new(1, -28, 0, 24)
 
-local objective = ordered(label(
-    scroll,
-    "OBJECTIVE  •  Get your sealed delivery through the gate. Build trust before suspicion reaches 100% or your eight moves run out.",
-    58,
-    14,
-    colors.White,
-    Enum.Font.GothamMedium
-))
-
-local function meter(parent, name, fillColor)
+local function meter(parent, name, fillColor, xScale)
     local holder = Instance.new("Frame")
-    holder.Size = UDim2.new(1, 0, 0, 54)
+    holder.Position = UDim2.new(xScale, xScale == 0 and 14 or 4, 0, 88)
+    holder.Size = UDim2.new(0.5, -20, 0, 42)
     holder.BackgroundTransparency = 1
     holder.Parent = parent
 
-    local heading = label(holder, name, 20, 13, colors.Muted, Enum.Font.GothamBold)
-    heading.Size = UDim2.new(0.7, 0, 0, 20)
+    local heading = label(holder, name, 11, colors.Muted, Enum.Font.GothamBold)
+    heading.Size = UDim2.new(0.68, 0, 0, 17)
 
-    local value = label(holder, "0%", 20, 13, fillColor, Enum.Font.GothamBold)
+    local value = label(holder, "0%", 11, fillColor, Enum.Font.GothamBold)
     value.TextXAlignment = Enum.TextXAlignment.Right
-    value.Position = UDim2.new(0.7, 0, 0, 0)
-    value.Size = UDim2.new(0.3, 0, 0, 20)
+    value.Position = UDim2.new(0.68, 0, 0, 0)
+    value.Size = UDim2.new(0.32, 0, 0, 17)
 
     local track = Instance.new("Frame")
-    track.Position = UDim2.fromOffset(0, 28)
-    track.Size = UDim2.new(1, 0, 0, 14)
+    track.Position = UDim2.fromOffset(0, 23)
+    track.Size = UDim2.new(1, 0, 0, 10)
     track.BackgroundColor3 = colors.Panel2
     track.Parent = holder
-    corner(track, 7)
+    corner(track, 5)
 
     local fill = Instance.new("Frame")
     fill.Size = UDim2.fromScale(0, 1)
     fill.BackgroundColor3 = fillColor
     fill.Parent = track
-    corner(fill, 7)
+    corner(fill, 5)
 
-    return holder, fill, value
+    return fill, value
 end
 
-local trustHolder, trustFill, trustValue = meter(scroll, "TRUST", colors.Green)
-ordered(trustHolder)
-local suspicionHolder, suspicionFill, suspicionValue = meter(scroll, "SUSPICION", colors.Red)
-ordered(suspicionHolder)
+local trustFill, trustValue = meter(panel, "TRUST", colors.Green, 0)
+local suspicionFill, suspicionValue = meter(panel, "SUSPICION", colors.Red, 0.5)
 
-local statusLine = ordered(label(scroll, "MOVE 0 / 8  •  180s remaining", 28, 14, colors.Cyan, Enum.Font.GothamBold))
+local statusLine = label(panel, "MOVE 0 / 8  •  180s", 12, colors.Cyan, Enum.Font.GothamBold)
+statusLine.Position = UDim2.fromOffset(14, 132)
+statusLine.Size = UDim2.new(1, -28, 0, 22)
+
+local conversationScroll = Instance.new("ScrollingFrame")
+conversationScroll.Position = UDim2.fromOffset(14, 158)
+conversationScroll.Size = UDim2.new(1, -28, 1, -382)
+conversationScroll.BackgroundColor3 = Color3.fromRGB(8, 12, 23)
+conversationScroll.BackgroundTransparency = 0.12
+conversationScroll.BorderSizePixel = 0
+conversationScroll.ScrollBarThickness = 4
+conversationScroll.ScrollBarImageColor3 = colors.Cyan
+conversationScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+conversationScroll.CanvasSize = UDim2.new()
+conversationScroll.Parent = panel
+corner(conversationScroll, 12)
+stroke(conversationScroll, colors.Cyan, 1, 0.82)
+
+local conversationPadding = Instance.new("UIPadding")
+conversationPadding.PaddingLeft = UDim.new(0, 10)
+conversationPadding.PaddingRight = UDim.new(0, 10)
+conversationPadding.PaddingTop = UDim.new(0, 10)
+conversationPadding.PaddingBottom = UDim.new(0, 10)
+conversationPadding.Parent = conversationScroll
 
 local conversation = Instance.new("Frame")
 conversation.Size = UDim2.new(1, 0, 0, 0)
 conversation.AutomaticSize = Enum.AutomaticSize.Y
 conversation.BackgroundTransparency = 1
-conversation.Parent = scroll
-ordered(conversation)
+conversation.Parent = conversationScroll
 
 local conversationLayout = Instance.new("UIListLayout")
 conversationLayout.Padding = UDim.new(0, 10)
@@ -255,23 +235,24 @@ local function addConversationBubble(speakerText, message, isPlayer, muted)
     bubbleLayout.SortOrder = Enum.SortOrder.LayoutOrder
     bubbleLayout.Parent = wrapper
 
-    local speaker = label(wrapper, speakerText, 18, 11, isPlayer and colors.Cyan or colors.Gold, Enum.Font.GothamBold)
+    local speaker = label(wrapper, speakerText, 10, isPlayer and colors.Cyan or colors.Gold, Enum.Font.GothamBold)
     speaker.AutomaticSize = Enum.AutomaticSize.Y
     speaker.Size = UDim2.new(0.88, 0, 0, 0)
     speaker.TextXAlignment = isPlayer and Enum.TextXAlignment.Right or Enum.TextXAlignment.Left
 
-    local bubble = label(wrapper, message, 0, 16, muted and colors.Muted or colors.White, Enum.Font.GothamMedium)
+    local bubble = label(wrapper, message, 15, muted and colors.Muted or colors.White, Enum.Font.GothamMedium)
     bubble.AutomaticSize = Enum.AutomaticSize.Y
     bubble.Size = UDim2.new(0.88, 0, 0, 0)
     bubble.BackgroundTransparency = 0
     bubble.BackgroundColor3 = isPlayer and Color3.fromRGB(26, 70, 86) or colors.Panel
     bubble.TextXAlignment = Enum.TextXAlignment.Left
+    bubble.TextYAlignment = Enum.TextYAlignment.Top
 
     local bubblePadding = Instance.new("UIPadding")
     bubblePadding.PaddingLeft = UDim.new(0, 12)
     bubblePadding.PaddingRight = UDim.new(0, 12)
-    bubblePadding.PaddingTop = UDim.new(0, 10)
-    bubblePadding.PaddingBottom = UDim.new(0, 10)
+    bubblePadding.PaddingTop = UDim.new(0, 9)
+    bubblePadding.PaddingBottom = UDim.new(0, 9)
     bubblePadding.Parent = bubble
 
     corner(bubble, 12)
@@ -280,30 +261,46 @@ local function addConversationBubble(speakerText, message, isPlayer, muted)
     return wrapper, speaker, bubble
 end
 
+local function scrollToLatest()
+    task.defer(function()
+        task.wait()
+        local maxY = math.max(0, conversationScroll.AbsoluteCanvasSize.Y - conversationScroll.AbsoluteSize.Y)
+        conversationScroll.CanvasPosition = Vector2.new(0, maxY)
+    end)
+end
+
 local function clearConversation()
     for _, child in ipairs(conversation:GetChildren()) do
         if child ~= conversationLayout then
             child:Destroy()
         end
     end
+    pendingTurn = nil
+    pendingPlayerWrapper = nil
+    pendingPlayerBubble = nil
     thinkingWrapper = nil
     thinkingSpeaker = nil
     thinkingBubble = nil
-    pendingPlayerBubble = nil
-    pendingTurn = nil
     lastRenderedTurn = -1
 end
 
-local function scrollToLatest()
-    task.defer(function()
-        task.wait()
-        local maxY = math.max(0, scroll.AbsoluteCanvasSize.Y - scroll.AbsoluteSize.Y)
-        scroll.CanvasPosition = Vector2.new(0, maxY)
-    end)
+local function cancelPendingExchange()
+    if thinkingWrapper and thinkingWrapper.Parent then
+        thinkingWrapper:Destroy()
+    end
+    if pendingPlayerWrapper and pendingPlayerWrapper.Parent then
+        pendingPlayerWrapper:Destroy()
+    end
+    thinkingWrapper = nil
+    thinkingSpeaker = nil
+    thinkingBubble = nil
+    pendingPlayerWrapper = nil
+    pendingPlayerBubble = nil
+    pendingTurn = nil
 end
 
 local function startThinking()
-    if thinkingWrapper then
+    if thinkingWrapper and thinkingWrapper.Parent then
         thinkingWrapper:Destroy()
     end
     thinkingWrapper, thinkingSpeaker, thinkingBubble = addConversationBubble("GUARD", "Thinking…", false, true)
@@ -324,44 +321,54 @@ local function resolveThinking(guardName, message)
     scrollToLatest()
 end
 
-local function cancelThinking()
-    if thinkingWrapper and thinkingWrapper.Parent then
-        thinkingWrapper:Destroy()
-    end
-    thinkingWrapper = nil
-    thinkingSpeaker = nil
-    thinkingBubble = nil
-end
+local composer = Instance.new("Frame")
+composer.AnchorPoint = Vector2.new(0, 1)
+composer.Position = UDim2.new(0, 14, 1, -12)
+composer.Size = UDim2.new(1, -28, 0, 210)
+composer.BackgroundTransparency = 1
+composer.Parent = panel
 
-local hint = ordered(label(scroll, "", 50, 14, colors.Gold, Enum.Font.GothamMedium))
-ordered(label(scroll, "SUGGESTIONS  •  OR TYPE YOUR OWN ARGUMENT", 24, 13, colors.Muted, Enum.Font.GothamBold))
+local hint = label(composer, "Convince the Guard with words. There are no physical items to show.", 12, colors.Gold, Enum.Font.GothamMedium)
+hint.Size = UDim2.new(1, 0, 0, 32)
+
+local suggestionLabel = label(composer, "SUGGESTIONS  •  OPTIONAL", 10, colors.Muted, Enum.Font.GothamBold)
+suggestionLabel.Position = UDim2.fromOffset(0, 34)
+suggestionLabel.Size = UDim2.new(1, 0, 0, 16)
+
+local suggestionRow = Instance.new("Frame")
+suggestionRow.Position = UDim2.fromOffset(0, 53)
+suggestionRow.Size = UDim2.new(1, 0, 0, 55)
+suggestionRow.BackgroundTransparency = 1
+suggestionRow.Parent = composer
+
+local suggestionLayout = Instance.new("UIListLayout")
+suggestionLayout.FillDirection = Enum.FillDirection.Horizontal
+suggestionLayout.Padding = UDim.new(0, 7)
+suggestionLayout.SortOrder = Enum.SortOrder.LayoutOrder
+suggestionLayout.Parent = suggestionRow
 
 local suggestionButtons = {}
 for index = 1, 3 do
-    local move = ordered(button(scroll, "Suggestion loading…", 44))
+    local move = button(suggestionRow, "Suggestion loading…")
+    move.Size = UDim2.new(1 / 3, -5, 1, 0)
+    move.LayoutOrder = index
     suggestionButtons[index] = move
-    move.Activated:Connect(function()
-        local id = suggestionIds[index]
-        local text = suggestionTexts[index]
-        if id and text then
-            submit("Choice", id, text)
-        end
-    end)
 end
 
 local input = Instance.new("TextBox")
-input.Size = UDim2.new(1, 0, 0, 52)
+input.Position = UDim2.fromOffset(0, 116)
+input.Size = UDim2.new(1, -118, 0, 48)
 input.BackgroundColor3 = colors.Panel2
 input.TextColor3 = colors.White
 input.PlaceholderColor3 = colors.Muted
-input.PlaceholderText = "Try your own argument..."
+input.PlaceholderText = "Make your argument..."
 input.Text = ""
 input.ClearTextOnFocus = false
 input.MultiLine = false
-input.TextSize = 16
+input.TextSize = 15
 input.Font = Enum.Font.Gotham
 input.TextXAlignment = Enum.TextXAlignment.Left
-input.Parent = scroll
+input.Parent = composer
 corner(input, 10)
 stroke(input, colors.Cyan, 1, 0.65)
 
@@ -370,28 +377,58 @@ inputPadding.PaddingLeft = UDim.new(0, 12)
 inputPadding.PaddingRight = UDim.new(0, 12)
 inputPadding.Parent = input
 
-submit = function(kind, value, displayText)
+local send = button(composer, "SEND", Color3.fromRGB(22, 102, 112))
+send.Position = UDim2.new(1, -108, 0, 116)
+send.Size = UDim2.fromOffset(108, 48)
+send.TextSize = 15
+
+local disclosure = label(
+    composer,
+    "AI opponent • full 8-message match memory • conversation discarded after the match",
+    10,
+    colors.Muted
+)
+disclosure.Position = UDim2.fromOffset(0, 171)
+disclosure.Size = UDim2.new(1, 0, 0, 30)
+
+local function animateMeter(fill, valueLabel, value)
+    valueLabel.Text = string.format("%d%%", value)
+    TweenService:Create(
+        fill,
+        TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+        { Size = UDim2.fromScale(math.clamp(value / 100, 0, 1), 1) }
+    ):Play()
+end
+
+local function flashGuidance(text, color)
+    guidance.Text = text
+    guidance.TextColor3 = color
+    task.delay(0.7, function()
+        if guidance.Parent then
+            guidance.TextColor3 = colors.Muted
+        end
+    end)
+end
+
+local function submit(kind, value, displayText)
     if not current or current.Status ~= "Playing" or pending then
         return
     end
-
     if os.clock() - lastSent < Config.RequestCooldown then
         return
     end
-
     if kind == "Text" and (#value == 0 or #value > Config.MaxMessageBytes) then
-        guidance.Text = "Use 1–240 bytes, or select a quick move."
+        guidance.Text = "Use 1–240 bytes."
         return
     end
 
     pending = true
     pendingTurn = current.Turns + 1
     lastSent = os.clock()
-    guidance.Text = "The Guard is considering your move..."
+    guidance.Text = "The Guard is thinking about what you said..."
 
     local shown = displayText or value
-    local _, _, playerBubble = addConversationBubble("YOU", shown, true, false)
-    pendingPlayerBubble = playerBubble
+    pendingPlayerWrapper, _, pendingPlayerBubble = addConversationBubble("YOU", shown, true, false)
     startThinking()
     scrollToLatest()
 
@@ -403,11 +440,16 @@ submit = function(kind, value, displayText)
     })
 end
 
-input.Parent = scroll
-ordered(input)
+for index, move in ipairs(suggestionButtons) do
+    move.Activated:Connect(function()
+        local id = suggestionIds[index]
+        local text = suggestionTexts[index]
+        if id and text then
+            submit("Choice", id, text)
+        end
+    end)
+end
 
-local send = ordered(button(scroll, "SEND ARGUMENT", 48, Color3.fromRGB(22, 102, 112)))
-send.TextSize = 16
 send.Activated:Connect(function()
     submit("Text", input.Text, input.Text)
 end)
@@ -418,23 +460,18 @@ input.FocusLost:Connect(function(enterPressed)
     end
 end)
 
-local hide = ordered(button(scroll, "WATCH FROM THE ARENA", 42))
-hide.Activated:Connect(function()
-    panel.Visible = false
+toggle.Activated:Connect(function()
+    if current then
+        panel.Visible = not panel.Visible
+    else
+        guidance.Text = "Walk to a glowing console and challenge a Guard."
+    end
 end)
-
-ordered(label(
-    scroll,
-    "AI-POWERED OPPONENT  •  You are interacting with generative AI. It can make mistakes. The server—not the model—controls Trust, Suspicion, wins, losses and ELO.",
-    70,
-    12,
-    colors.Muted
-))
 
 local resultOverlay = Instance.new("Frame")
 resultOverlay.AnchorPoint = Vector2.new(0.5, 0.5)
 resultOverlay.Position = UDim2.fromScale(0.5, 0.5)
-resultOverlay.Size = UDim2.new(0.9, 0, 0, 330)
+resultOverlay.Size = UDim2.new(0.88, 0, 0, 315)
 resultOverlay.BackgroundColor3 = colors.Background
 resultOverlay.Visible = false
 resultOverlay.ZIndex = 20
@@ -443,64 +480,44 @@ corner(resultOverlay, 18)
 stroke(resultOverlay, colors.Gold, 2, 0.15)
 
 local resultConstraint = Instance.new("UISizeConstraint")
-resultConstraint.MaxSize = Vector2.new(430, 360)
-resultConstraint.MinSize = Vector2.new(290, 300)
+resultConstraint.MaxSize = Vector2.new(430, 340)
 resultConstraint.Parent = resultOverlay
 
 local resultScale = Instance.new("UIScale")
 resultScale.Scale = 0.9
 resultScale.Parent = resultOverlay
 
-local resultTitle = label(resultOverlay, "VICTORY", 54, 34, colors.Green, Enum.Font.GothamBlack)
+local resultTitle = label(resultOverlay, "VICTORY", 32, colors.Green, Enum.Font.GothamBlack)
 resultTitle.TextXAlignment = Enum.TextXAlignment.Center
 resultTitle.ZIndex = 21
-resultTitle.Position = UDim2.fromOffset(20, 28)
-resultTitle.Size = UDim2.new(1, -40, 0, 54)
+resultTitle.Position = UDim2.fromOffset(20, 24)
+resultTitle.Size = UDim2.new(1, -40, 0, 48)
 
-local resultReason = label(resultOverlay, "", 72, 16, colors.White, Enum.Font.GothamMedium)
+local resultReason = label(resultOverlay, "", 15, colors.White, Enum.Font.GothamMedium)
 resultReason.TextXAlignment = Enum.TextXAlignment.Center
 resultReason.ZIndex = 21
-resultReason.Position = UDim2.fromOffset(28, 91)
-resultReason.Size = UDim2.new(1, -56, 0, 72)
+resultReason.Position = UDim2.fromOffset(28, 78)
+resultReason.Size = UDim2.new(1, -56, 0, 78)
 
-local resultRating = label(resultOverlay, "", 38, 20, colors.Gold, Enum.Font.GothamBold)
+local resultRating = label(resultOverlay, "", 20, colors.Gold, Enum.Font.GothamBold)
 resultRating.TextXAlignment = Enum.TextXAlignment.Center
 resultRating.ZIndex = 21
-resultRating.Position = UDim2.fromOffset(20, 162)
-resultRating.Size = UDim2.new(1, -40, 0, 38)
+resultRating.Position = UDim2.fromOffset(20, 158)
+resultRating.Size = UDim2.new(1, -40, 0, 34)
 
-local rematchButton = button(resultOverlay, "REMATCH THE GUARD", 48, Color3.fromRGB(22, 112, 95))
-rematchButton.Position = UDim2.new(0.08, 0, 1, -112)
-rematchButton.Size = UDim2.new(0.84, 0, 0, 48)
+local rematchButton = button(resultOverlay, "REMATCH", Color3.fromRGB(22, 112, 95))
+rematchButton.Position = UDim2.new(0.08, 0, 1, -105)
+rematchButton.Size = UDim2.new(0.84, 0, 0, 44)
 rematchButton.ZIndex = 21
 
-local plazaButton = button(resultOverlay, "BACK TO PLAZA", 40, colors.Panel2)
-plazaButton.Position = UDim2.new(0.08, 0, 1, -58)
-plazaButton.Size = UDim2.new(0.84, 0, 0, 40)
+local plazaButton = button(resultOverlay, "BACK TO PLAZA", colors.Panel2)
+plazaButton.Position = UDim2.new(0.08, 0, 1, -55)
+plazaButton.Size = UDim2.new(0.84, 0, 0, 38)
 plazaButton.ZIndex = 21
-
-local function animateMeter(fill, valueLabel, value)
-    valueLabel.Text = string.format("%d%%", value)
-    TweenService:Create(
-        fill,
-        TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-        { Size = UDim2.fromScale(math.clamp(value / 100, 0, 1), 1) }
-    ):Play()
-end
-
-local function flashGuidance(text, color)
-    guidance.Text = text
-    guidance.TextColor3 = color
-    task.delay(0.75, function()
-        if guidance.Parent then
-            guidance.TextColor3 = colors.Muted
-        end
-    end)
-end
 
 local function showResult(packet)
     local won = packet.Status == "Won"
-    resultTitle.Text = won and "GATE BROKEN" or "THE GUARD WINS"
+    resultTitle.Text = won and "GATE OPEN" or "THE GUARD WINS"
     resultTitle.TextColor3 = won and colors.Green or colors.Red
     resultReason.Text = packet.Message
     resultRating.Text = string.format("ELO %+d", packet.Delta or 0)
@@ -529,25 +546,13 @@ end)
 plazaButton.Activated:Connect(function()
     resultOverlay.Visible = false
     panel.Visible = false
-    guidance.Text = "Walk to any glowing console when you want another match."
-end)
-
-toggle.Activated:Connect(function()
-    if current then
-        panel.Visible = not panel.Visible
-    else
-        guidance.Text = "Walk to a glowing console and use its Challenge Guard prompt."
-    end
+    guidance.Text = "Walk to a glowing console when you want another match."
 end)
 
 stateRemote.OnClientEvent:Connect(function(packet)
-    pending = false
-
     if packet.Kind == "Notice" then
         pending = false
-        cancelThinking()
-        pendingTurn = nil
-        pendingPlayerBubble = nil
+        cancelPendingExchange()
         guidance.Text = packet.Message
         return
     end
@@ -556,13 +561,15 @@ stateRemote.OnClientEvent:Connect(function(packet)
         return
     end
 
+    pending = false
+
     if not current or current.MatchId ~= packet.MatchId then
         clearConversation()
         lastProgress = 0
         lastSuspicion = 0
         resultOverlay.Visible = false
         panel.Visible = true
-        scroll.CanvasPosition = Vector2.zero
+        conversationScroll.CanvasPosition = Vector2.zero
     end
 
     current = packet
@@ -582,11 +589,11 @@ stateRemote.OnClientEvent:Connect(function(packet)
     lastSuspicion = packet.Suspicion
 
     title.Text = packet.Status == "Playing"
-        and ("🛡 " .. string.upper(packet.GuardName or "THE GUARD"))
-        or string.upper(packet.Status == "Won" and "GATE OPEN" or "GATE CLOSED")
+        and string.upper(packet.GuardName or "THE GUARD")
+        or (packet.Status == "Won" and "GATE OPEN" or "GATE CLOSED")
 
     subtitle.Text = string.format(
-        "AI-POWERED  •  %s  •  %d ELO  •  %d MOVES",
+        "AI-POWERED  •  %s  •  %d ELO  •  %d MESSAGES",
         packet.GuardTitle or "Guard",
         packet.GuardRating or 1000,
         Config.MaxTurns
@@ -605,6 +612,7 @@ stateRemote.OnClientEvent:Connect(function(packet)
         resolveThinking(packet.GuardName, packet.Message)
         lastRenderedTurn = packet.Turns
         pendingTurn = nil
+        pendingPlayerWrapper = nil
         pendingPlayerBubble = nil
     elseif packet.Turns > lastRenderedTurn then
         if packet.PlayerMessage then
@@ -619,13 +627,17 @@ stateRemote.OnClientEvent:Connect(function(packet)
         local suggestion = packet.Suggestions and packet.Suggestions[index]
         suggestionIds[index] = suggestion and suggestion.Id or nil
         suggestionTexts[index] = suggestion and suggestion.Text or nil
-        suggestionButtons[index].Text = suggestion and suggestion.Text or "No suggestion"
-        suggestionButtons[index].Visible = suggestion ~= nil and packet.Status == "Playing"
+        suggestionButtons[index].Text = suggestion and suggestion.Text or "—"
+        suggestionButtons[index].Active = suggestion ~= nil and packet.Status == "Playing"
+        suggestionButtons[index].AutoButtonColor = suggestion ~= nil and packet.Status == "Playing"
     end
 
-    hint.Text = packet.Status == "Playing" and ("TACTICAL HINT  •  " .. packet.Hint) or "Result locked. Rematch or return to the plaza."
+    hint.Text = packet.Status == "Playing"
+        and ("HINT  •  " .. packet.Hint)
+        or "Match complete."
+
     guidance.Text = packet.Status == "Playing"
-        and "Read the Guard's reply, choose a suggestion, or write your own argument."
+        and "Stay in the conversation: respond to what the Guard actually said."
         or packet.Message
 
     if packet.Delta ~= nil then
