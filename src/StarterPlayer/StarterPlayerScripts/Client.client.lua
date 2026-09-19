@@ -101,8 +101,8 @@ screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screen.Parent = player:WaitForChild("PlayerGui")
 
 local header = Instance.new("Frame")
-header.Size = UDim2.new(0.94, 0, 0, 78)
-header.Position = UDim2.new(0.03, 0, 0, 8)
+header.Size = UDim2.new(0.98, 0, 0, 70)
+header.Position = UDim2.new(0.01, 0, 0, 6)
 header.BackgroundColor3 = colors.Panel
 header.BackgroundTransparency = 0.05
 header.Parent = screen
@@ -114,8 +114,8 @@ stats.Position = UDim2.fromOffset(14, 2)
 stats.Size = UDim2.new(1, -128, 0, 34)
 
 local guidance = label(header, "Walk to a glowing arena console. Convince a Guard in 8 messages.", 12, colors.Muted)
-guidance.Position = UDim2.fromOffset(14, 35)
-guidance.Size = UDim2.new(1, -28, 0, 36)
+guidance.Position = UDim2.fromOffset(14, 32)
+guidance.Size = UDim2.new(1, -28, 0, 30)
 
 local toggle = button(header, "MATCH", Color3.fromRGB(31, 74, 92))
 toggle.Size = UDim2.fromOffset(96, 32)
@@ -123,8 +123,8 @@ toggle.Position = UDim2.new(1, -110, 0, 5)
 
 local panel = Instance.new("Frame")
 panel.AnchorPoint = Vector2.new(0.5, 0)
-panel.Position = UDim2.new(0.5, 0, 0, 94)
-panel.Size = UDim2.new(0.94, 0, 1, -110)
+panel.Position = UDim2.new(0.5, 0, 0, 82)
+panel.Size = UDim2.new(0.98, 0, 1, -92)
 panel.BackgroundColor3 = colors.Background
 panel.BackgroundTransparency = 0.025
 panel.Visible = false
@@ -133,29 +133,29 @@ corner(panel, 16)
 stroke(panel, colors.Cyan, 1.5, 0.35)
 
 local constraint = Instance.new("UISizeConstraint")
-constraint.MaxSize = Vector2.new(620, 800)
+constraint.MaxSize = Vector2.new(760, 860)
 constraint.Parent = panel
 
 local opponentCard = Instance.new("Frame")
-opponentCard.Position = UDim2.fromOffset(14, 12)
-opponentCard.Size = UDim2.new(1, -28, 0, 68)
+opponentCard.Position = UDim2.fromOffset(14, 10)
+opponentCard.Size = UDim2.new(1, -28, 0, 56)
 opponentCard.BackgroundColor3 = colors.Panel
 opponentCard.Parent = panel
 corner(opponentCard, 12)
 stroke(opponentCard, colors.Gold, 1.5, 0.35)
 
 local title = label(opponentCard, "THE CASTLE GUARD", 20, colors.Gold, Enum.Font.GothamBold)
-title.Position = UDim2.fromOffset(14, 5)
-title.Size = UDim2.new(1, -28, 0, 30)
+title.Position = UDim2.fromOffset(14, 2)
+title.Size = UDim2.new(1, -28, 0, 27)
 
 local subtitle = label(opponentCard, "AI-POWERED  •  RANKED  •  8 MESSAGES", 11, colors.Muted, Enum.Font.GothamMedium)
-subtitle.Position = UDim2.fromOffset(14, 35)
-subtitle.Size = UDim2.new(1, -28, 0, 24)
+subtitle.Position = UDim2.fromOffset(14, 28)
+subtitle.Size = UDim2.new(1, -28, 0, 22)
 
 local function meter(parent, name, fillColor, xScale)
     local holder = Instance.new("Frame")
-    holder.Position = UDim2.new(xScale, xScale == 0 and 14 or 4, 0, 88)
-    holder.Size = UDim2.new(0.5, -20, 0, 42)
+    holder.Position = UDim2.new(xScale, xScale == 0 and 14 or 4, 0, 72)
+    holder.Size = UDim2.new(0.5, -20, 0, 34)
     holder.BackgroundTransparency = 1
     holder.Parent = parent
 
@@ -168,8 +168,8 @@ local function meter(parent, name, fillColor, xScale)
     value.Size = UDim2.new(0.32, 0, 0, 17)
 
     local track = Instance.new("Frame")
-    track.Position = UDim2.fromOffset(0, 23)
-    track.Size = UDim2.new(1, 0, 0, 10)
+    track.Position = UDim2.fromOffset(0, 20)
+    track.Size = UDim2.new(1, 0, 0, 8)
     track.BackgroundColor3 = colors.Panel2
     track.Parent = holder
     corner(track, 5)
@@ -187,12 +187,12 @@ local trustFill, trustValue = meter(panel, "TRUST", colors.Green, 0)
 local suspicionFill, suspicionValue = meter(panel, "SUSPICION", colors.Red, 0.5)
 
 local statusLine = label(panel, "MOVE 0 / 8  •  180s", 12, colors.Cyan, Enum.Font.GothamBold)
-statusLine.Position = UDim2.fromOffset(14, 132)
-statusLine.Size = UDim2.new(1, -28, 0, 22)
+statusLine.Position = UDim2.fromOffset(14, 108)
+statusLine.Size = UDim2.new(1, -28, 0, 20)
 
 local conversationScroll = Instance.new("ScrollingFrame")
-conversationScroll.Position = UDim2.fromOffset(14, 158)
-conversationScroll.Size = UDim2.new(1, -28, 1, -382)
+conversationScroll.Position = UDim2.fromOffset(14, 130)
+conversationScroll.Size = UDim2.new(1, -28, 1, -302)
 conversationScroll.BackgroundColor3 = Color3.fromRGB(8, 12, 23)
 conversationScroll.BackgroundTransparency = 0.12
 conversationScroll.BorderSizePixel = 0
@@ -237,12 +237,12 @@ local function addConversationBubble(speakerText, message, isPlayer, muted)
 
     local speaker = label(wrapper, speakerText, 10, isPlayer and colors.Cyan or colors.Gold, Enum.Font.GothamBold)
     speaker.AutomaticSize = Enum.AutomaticSize.Y
-    speaker.Size = UDim2.new(0.88, 0, 0, 0)
+    speaker.Size = UDim2.new(0.94, 0, 0, 0)
     speaker.TextXAlignment = isPlayer and Enum.TextXAlignment.Right or Enum.TextXAlignment.Left
 
     local bubble = label(wrapper, message, 15, muted and colors.Muted or colors.White, Enum.Font.GothamMedium)
     bubble.AutomaticSize = Enum.AutomaticSize.Y
-    bubble.Size = UDim2.new(0.88, 0, 0, 0)
+    bubble.Size = UDim2.new(0.94, 0, 0, 0)
     bubble.BackgroundTransparency = 0
     bubble.BackgroundColor3 = isPlayer and Color3.fromRGB(26, 70, 86) or colors.Panel
     bubble.TextXAlignment = Enum.TextXAlignment.Left
@@ -324,20 +324,20 @@ end
 local composer = Instance.new("Frame")
 composer.AnchorPoint = Vector2.new(0, 1)
 composer.Position = UDim2.new(0, 14, 1, -12)
-composer.Size = UDim2.new(1, -28, 0, 210)
+composer.Size = UDim2.new(1, -28, 0, 160)
 composer.BackgroundTransparency = 1
 composer.Parent = panel
 
 local hint = label(composer, "Convince the Guard with words. There are no physical items to show.", 12, colors.Gold, Enum.Font.GothamMedium)
-hint.Size = UDim2.new(1, 0, 0, 32)
+hint.Size = UDim2.new(1, 0, 0, 24)
 
 local suggestionLabel = label(composer, "SUGGESTIONS  •  OPTIONAL", 10, colors.Muted, Enum.Font.GothamBold)
-suggestionLabel.Position = UDim2.fromOffset(0, 34)
-suggestionLabel.Size = UDim2.new(1, 0, 0, 16)
+suggestionLabel.Position = UDim2.fromOffset(0, 24)
+suggestionLabel.Size = UDim2.new(1, 0, 0, 14)
 
 local suggestionRow = Instance.new("Frame")
-suggestionRow.Position = UDim2.fromOffset(0, 53)
-suggestionRow.Size = UDim2.new(1, 0, 0, 55)
+suggestionRow.Position = UDim2.fromOffset(0, 40)
+suggestionRow.Size = UDim2.new(1, 0, 0, 42)
 suggestionRow.BackgroundTransparency = 1
 suggestionRow.Parent = composer
 
@@ -348,16 +348,16 @@ suggestionLayout.SortOrder = Enum.SortOrder.LayoutOrder
 suggestionLayout.Parent = suggestionRow
 
 local suggestionButtons = {}
-for index = 1, 3 do
+for index = 1, 2 do
     local move = button(suggestionRow, "Suggestion loading…")
-    move.Size = UDim2.new(1 / 3, -5, 1, 0)
+    move.Size = UDim2.new(0.5, -4, 1, 0)
     move.LayoutOrder = index
     suggestionButtons[index] = move
 end
 
 local input = Instance.new("TextBox")
-input.Position = UDim2.fromOffset(0, 116)
-input.Size = UDim2.new(1, -118, 0, 48)
+input.Position = UDim2.fromOffset(0, 90)
+input.Size = UDim2.new(1, -118, 0, 46)
 input.BackgroundColor3 = colors.Panel2
 input.TextColor3 = colors.White
 input.PlaceholderColor3 = colors.Muted
@@ -378,18 +378,9 @@ inputPadding.PaddingRight = UDim.new(0, 12)
 inputPadding.Parent = input
 
 local send = button(composer, "SEND", Color3.fromRGB(22, 102, 112))
-send.Position = UDim2.new(1, -108, 0, 116)
-send.Size = UDim2.fromOffset(108, 48)
+send.Position = UDim2.new(1, -108, 0, 90)
+send.Size = UDim2.fromOffset(108, 46)
 send.TextSize = 15
-
-local disclosure = label(
-    composer,
-    "AI opponent • full 8-message match memory • conversation discarded after the match",
-    10,
-    colors.Muted
-)
-disclosure.Position = UDim2.fromOffset(0, 171)
-disclosure.Size = UDim2.new(1, 0, 0, 30)
 
 local function animateMeter(fill, valueLabel, value)
     valueLabel.Text = string.format("%d%%", value)
@@ -623,7 +614,7 @@ stateRemote.OnClientEvent:Connect(function(packet)
         scrollToLatest()
     end
 
-    for index = 1, 3 do
+    for index = 1, 2 do
         local suggestion = packet.Suggestions and packet.Suggestions[index]
         suggestionIds[index] = suggestion and suggestion.Id or nil
         suggestionTexts[index] = suggestion and suggestion.Text or nil

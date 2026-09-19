@@ -58,7 +58,8 @@ local function suggestionsFor(match)
     end
 
     local result = {}
-    for _, id in ipairs(ids) do
+    for index = 1, math.min(2, #ids) do
+        local id = ids[index]
         table.insert(result, {
             Id = id,
             Text = suggestionText[id] or choices[id] or id,
