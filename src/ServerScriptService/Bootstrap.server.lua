@@ -8,6 +8,7 @@ local MatchService = require(services.MatchService)
 local EntitlementService = require(services.EntitlementService)
 local FastTravelService = require(services.FastTravelService)
 local CosmeticService = require(services.CosmeticService)
+local TesterPolicy = require(script.Parent.Core.TesterPolicy)
 
 local previousRemotes = ReplicatedStorage:FindFirstChild("BeatTheBotRemotes")
 if previousRemotes then
@@ -145,6 +146,7 @@ end
 local function join(player)
     player.RespawnLocation = WorldService.Spawn
     EntitlementService.Publish(player)
+    player:SetAttribute("PrivateTester", TesterPolicy.IsTester(player))
 
     player.CharacterAdded:Connect(placeCharacter)
     player.CharacterRemoving:Connect(function()
