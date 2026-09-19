@@ -297,7 +297,7 @@ end
 local function scrollToLatest()
     task.defer(function()
         task.wait()
-        local maxY = math.max(0, scroll.AbsoluteCanvasSize.Y - scroll.AbsoluteWindowSize.Y)
+        local maxY = math.max(0, scroll.AbsoluteCanvasSize.Y - scroll.AbsoluteSize.Y)
         scroll.CanvasPosition = Vector2.new(0, maxY)
     end)
 end
