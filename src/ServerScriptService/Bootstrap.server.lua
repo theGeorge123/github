@@ -37,11 +37,31 @@ local function leave(player)
     leaving[player] = nil
 end
 
+local function placeCharacter(character)
+    local rootPart = character:WaitForChild("HumanoidRootPart", 10)
+    if not rootPart or not WorldService.Spawn or not WorldService.Spawn.Parent then
+        return
+    end
+
+    task.defer(function()
+        if character.Parent and WorldService.Spawn and WorldService.Spawn.Parent then
+            character:PivotTo(WorldService.Spawn.CFrame + Vector3.new(0, 4, 0))
+        end
+    end)
+end
+
 local function join(player)
     player.RespawnLocation = WorldService.Spawn
+
+    player.CharacterAdded:Connect(placeCharacter)
     player.CharacterRemoving:Connect(function()
         MatchService.Forfeit(player)
     end)
+
+    if player.Character then
+        task.spawn(placeCharacter, player.Character)
+    end
+
     task.spawn(DataService.Load, player)
 end
 

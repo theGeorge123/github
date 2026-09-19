@@ -423,6 +423,7 @@ function WorldService.Init(onStart)
     configureLighting()
     workspace.FallenPartsDestroyHeight = -100
 
+    part("SafetyFoundation", Vector3.new(260, 4, 260), Vector3.new(0, -4, 0), palette.Night, root, Enum.Material.Slate)
     part("Plaza", Vector3.new(205, 2, 205), Vector3.new(0, -1, 0), Color3.fromRGB(31, 38, 56), root, Enum.Material.Slate)
     part("CentralWalkway", Vector3.new(18, 0.18, 180), Vector3.new(0, 0.1, 0), palette.Navy, root, Enum.Material.Metal)
 
