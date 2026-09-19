@@ -100,10 +100,6 @@ CI also syntax-checks every Luau source with the installed Luau runtime and uplo
 
 Roblox-runtime behavior still requires Studio/private-experience validation. The exact checklist is maintained in docs/TESTING.md; automated CI is not treated as proof of Roblox runtime behavior.
 
-## Reusable-world direction
-
-AI Citadel is the first world for the persuasion loop. Future worlds may use very different settings and opponents while sharing the proven match, security, progression, persistence and telemetry systems. v0.4 does not build those worlds or turn the current code into a speculative generic engine; it keeps content definitions separate enough to extract only after a second world proves the needed variation.
-
 ## Release boundary
 
 v0.4 intentionally does not activate Robux monetization, a global/friends leaderboard, or paid extra Daily attempts. It also does not persist raw conversation history. These are deliberate product/security boundaries rather than missing shortcuts.
