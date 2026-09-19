@@ -9,6 +9,7 @@ return table.freeze({
     MaxMessageBytes = 240,
     RequestCooldown = 1,
     ArenaCount = 4,
+    ArenaResetSeconds = 5,
     LeaseSeconds = 180,
     SaveInterval = 45,
     StoreName = "BeatTheBot_Profiles_v1",

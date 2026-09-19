@@ -8,18 +8,25 @@ local MatchService = require(services.MatchService)
 local remotes = Instance.new("Folder")
 remotes.Name = "BeatTheBotRemotes"
 remotes.Parent = ReplicatedStorage
+
 local state = Instance.new("RemoteEvent")
 state.Name = "State"
 state.Parent = remotes
+
 local submit = Instance.new("RemoteEvent")
 submit.Name = "Submit"
 submit.Parent = remotes
 
+local rematch = Instance.new("RemoteEvent")
+rematch.Name = "Rematch"
+rematch.Parent = remotes
+
 DataService.Init()
-MatchService.Init(DataService, WorldService, state, submit)
+MatchService.Init(DataService, WorldService, state, submit, rematch)
 WorldService.Init(MatchService.Start)
 
 local leaving = {}
+
 local function leave(player)
     if leaving[player] then
         return
@@ -40,6 +47,7 @@ end
 
 Players.PlayerAdded:Connect(join)
 Players.PlayerRemoving:Connect(leave)
+
 for _, player in ipairs(Players:GetPlayers()) do
     join(player)
 end
@@ -70,4 +78,4 @@ game:BindToClose(function()
     end
 end)
 
-print("Beat the Bot ready: local opponent, server-owned rules, four arenas.")
+print("Beat the Bot v0.2 ready: polished Guard vertical slice, local opponent, server-owned rules.")
