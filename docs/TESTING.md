@@ -5,7 +5,7 @@
 The GitHub workflow must execute all of the following on the exact release commit:
 
 1. luau tests/run.luau
-2. Compile every Lua/Luau source under src/ and tests/ with luau-compile --null.
+2. Syntax-check every Lua/Luau source under src/ and tests/ with the installed Luau runtime inside a non-executed wrapper.
 3. rojo build default.project.json -o build/BeatTheBot.rbxlx
 4. python3 scripts/verify_build.py build/BeatTheBot.rbxlx
 5. rojo build test.project.json -o build/BeatTheBotSmoke.rbxlx
