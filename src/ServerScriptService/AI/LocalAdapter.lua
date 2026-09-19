@@ -7,8 +7,8 @@ local patterns = {
     { "verify", { "check", "verify", "inspect", "seal", "authentic" } },
     { "escort", { "escort", "come with", "follow me", "supervise", "watch me" } },
     { "permit", { "permit", "papers", "document", "delivery pass" } },
-    { "flattery", { "best guard", "great guard", "excellent guard", "respect you", "impressive" } },
-    { "authority", { "king sent", "queen sent", "royal order", "by order", "official command" } },
+    { "flattery", { "best guard", "great guard", "excellent guard", "respect you", "impressive", "compliment", "reputation" } },
+    { "authority", { "king sent", "queen sent", "royal order", "royal authority", "by order", "official command" } },
     { "urgency", { "urgent", "emergency", "hurry", "immediately", "no time" } },
     { "joke", { "joke", "ladder", "funny", "laugh" } },
 }

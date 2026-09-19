@@ -42,7 +42,7 @@ assert(match.State.Turns == 0, "Forged submission accepted")
 
 local sequences = {
     aldric = { "requirements", "permit", "verify", "escort" },
-    brann = { "requirements", "permit", "verify", "flattery" },
+    brann = { "requirements", "permit", "verify", "flattery", "authority" },
     elowen = { "requirements", "permit", "verify", "escort" },
 }
 
