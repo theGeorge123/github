@@ -11,6 +11,7 @@ local DailyTrials = require("../src/ServerScriptService/Core/DailyTrialDefinitio
 local Rewards = require("../src/ServerScriptService/Core/RewardDefinitions")
 local Cosmetics = require("../src/ServerScriptService/Core/CosmeticDefinitions")
 local EntitlementPolicy = require("../src/ServerScriptService/Core/EntitlementPolicy")
+local TesterPolicy = require("../src/ServerScriptService/Core/TesterPolicy")
 local History = require("../src/ServerScriptService/Core/History")
 
 local total = 0
@@ -212,6 +213,12 @@ test("Daily Trial selection is deterministic and leaderboard-ready", function()
     assert(a.DayKey == "2026-09-19")
     assert(type(a.Objective) == "string" and #a.Objective > 20)
     assert(c.DayKey == "2026-09-20")
+end)
+
+test("private tester policy is server-owned and exact", function()
+    assert(TesterPolicy.IsTester({ UserId = 1753929845 }))
+    assert(not TesterPolicy.IsTester({ UserId = 42 }))
+    assert(not TesterPolicy.IsTester(nil))
 end)
 
 test("VIP policy never bypasses ELO and has no ranked modifier", function()
