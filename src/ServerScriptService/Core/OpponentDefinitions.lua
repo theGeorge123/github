@@ -286,9 +286,22 @@ function OpponentDefinitions.Eligible(playerElo, districtId)
     return result
 end
 
-function OpponentDefinitions.Select(playerElo, roll, districtId)
+function OpponentDefinitions.Select(playerElo, roll, districtId, avoidId)
     local eligible = OpponentDefinitions.Eligible(playerElo, districtId)
     assert(#eligible > 0, "No eligible opponents")
+
+    if avoidId and #eligible > 1 then
+        local alternatives = {}
+        for _, opponent in ipairs(eligible) do
+            if opponent.Id ~= avoidId then
+                table.insert(alternatives, opponent)
+            end
+        end
+        if #alternatives > 0 then
+            eligible = alternatives
+        end
+    end
+
     local value = math.clamp(tonumber(roll) or 0, 0, 0.999999)
     return eligible[math.floor(value * #eligible) + 1]
 end
