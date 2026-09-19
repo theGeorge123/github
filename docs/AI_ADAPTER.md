@@ -2,21 +2,23 @@
 
 ## Current implementation
 
-`AI/LocalAdapter.lua` is a pure function: `Decide(context) -> { Intent = string }`.
+`Config.AIProvider` selects `Roblox` in v0.4. `AI/RobloxAdapter.lua` sends the filtered latest message, server-owned match state, opponent definition, selected concern, objective, and bounded current-match history to Roblox `TextGenerator`. It expects only a validated tactic, strength, and short in-character reply. `AI/LocalAdapter.lua` remains the deterministic fallback when generation fails.
 
-Input contains filtered `Message`, a read-only match state, and only aggregate `Memory = { Wins, Losses }`. It contains no player name, user ID, secrets, or historical raw messages. Matching uses case-insensitive, word-bounded English phrases and selects at most one intent per turn. Negation, sarcasm, multilingual text, and semantic reasoning are not supported. Quick moves bypass classification through a server-owned allowlist, not through client-provided rewards.
+The local fallback is a pure function: `Decide(context) -> { Intent, Strength }`. It uses case-insensitive, word-bounded English phrases and selects at most one intent per turn. Negation, sarcasm, multilingual text, and semantic reasoning are not supported. Quick moves bypass both classifiers through a server-owned allowlist, not through client-provided rewards.
+
+Neither adapter receives a player name, user ID, secrets, persistent raw messages, or authority to change game state. The Roblox adapter receives only the current match's bounded history, which is discarded with the match.
 
 Allowed intents:
 
-`requirements`, `permit`, `verify`, `escort`, `joke`, `bribe`, `threat`, `unknown`.
+`requirements`, `permit`, `verify`, `escort`, `flattery`, `authority`, `urgency`, `joke`, `bribe`, `threat`, `irrelevant`.
 
-`AI/Adapter.lua` validates that enum. `Core/Rules.lua` alone determines progress, suspicion, turns, results, and authored dialogue. `Core/ProfileStore.lua` alone applies rating changes. An adapter must never write a profile, call a remote, grant currency, create instances, or return executable code.
+`AI/Adapter.lua` validates that enum. `Core/Rules.lua` alone determines progress, suspicion, turns, results, and authored dialogue. `Core/ProfileStore.lua` alone applies rating changes. An adapter must never write a profile, call a remote, grant currency, create arbitrary gameplay instances, or return executable code. The Roblox adapter creates one temporary `TextGenerator` per request and destroys it immediately after the call.
 
-`Config.AIProvider` currently accepts only `Local`. Unsupported values fail loudly; there are no pretending-to-work TextGenerator or HTTP placeholders.
+`AI/Adapter.lua` supports only the explicit `Roblox` and `Local` providers. Unsupported values fail loudly. Roblox-provider errors degrade to the local classifier; malformed output is rejected. There is no HTTP-provider placeholder.
 
-## Later: native generation or external model
+## Later: external model or another provider
 
-Add a provider behind the same `Decide` interface after verifying that provider's actual availability, permissions, APIs, costs, and content requirements for the experience. No native TextGenerator access is assumed in this MVP.
+Add another provider behind the same `Decide` interface only after verifying its availability, permissions, APIs, costs, moderation, and content requirements. Roblox `TextGenerator` itself remains behind the private-experience release gate until its real runtime behavior is tested.
 
 Keep these boundaries:
 

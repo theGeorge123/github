@@ -99,3 +99,16 @@ No per-frame world server loop is needed. Match timeout checks run once per seco
 The status card is structured around a snapshot so a future inspected-player transport can reuse it, but v0.4 does not expose an other-player profile request protocol.
 
 Global/friends Daily leaderboards, a VIP unlocked-opponent practice selector, production audio/rain assets and live Robux lookup are intentionally deferred. Their trust/data boundaries exist without pretending Studio runtime verification has occurred.
+
+## Product-line boundary
+
+AI Citadel is the first world built on this persuasion-game core, not a reason to hard-code every future game around medieval guards. Future worlds may explore gods, the sea, space, the underworld, politics or mythology, but none is part of the v0.4 scope.
+
+Keep these layers separate so a later world can reuse the tested system without inheriting Citadel-specific content:
+
+- **Core system:** protocol validation, deterministic match state, persistence, ELO, mastery, rewards, Daily Trial rules, security and telemetry.
+- **World content:** districts, opponents, objectives, concerns, visual identity, dialogue style and world construction.
+- **World rule adapter:** bounded variation in available persuasion patterns or objective checks. It may supply data to `Rules`, but it must not bypass server-owned scoring, rewards, access or persistence.
+- **Presentation:** client text, labels, effects and environment. Presentation never decides competitive state.
+
+Before extracting a shared package, prove a second world needs it. Until then, prefer explicit data-driven seams over a speculative framework rewrite. A future world may change characters, objectives and persuasion patterns while preserving the same authority boundary and release checks.
