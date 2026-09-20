@@ -40,6 +40,7 @@ state.OnClientEvent:Connect(function(m)
  elseif m.Kind=="PlayerTurn"then row(m.Name.."  +"..m.Points,m.Text.."\n"..table.concat(m.Reasons," • "),C.white)
  elseif m.Kind=="AIReply"then row(m.Label,m.Text,C.gold)
  elseif m.Kind=="Complete"then myTurn=false;send.Text="COMPLETE";turn.Text=m.Message;rematch.Visible=true;for _,s in ipairs(m.Scores)do row("SCORE",s.Name..": "..s.Points.." session points",C.green)end
+ elseif m.Kind=="TurnTimedOut"then myTurn=false;row("SYSTEM",m.Message,C.gold)
  elseif m.Kind=="RematchStatus"then row("SYSTEM",m.Name.." wants another round.",C.green)
  elseif m.Kind=="Ended"or m.Kind=="Error"then myTurn=false;row("SYSTEM",m.Message,C.gold)end
  log.CanvasPosition=Vector2.new(0,99999)
