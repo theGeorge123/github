@@ -23,6 +23,9 @@ local DebateStructure = require("../src/ServerScriptService/Core/DebateStructure
 local DebateParticipation = require("../src/ServerScriptService/Services/DebateParticipationService")
 local BossAvailability = require("../src/ServerScriptService/Core/BossDebateAvailability")
 local BossProtocol = require("../src/ServerScriptService/Core/BossDebateProtocol")
+local BossState = require("../src/ServerScriptService/Core/BossDebateRoundState")
+local BossDefinitions = require("../src/ServerScriptService/Core/BossDebateDefinitions")
+local BossLedger = require("../src/ServerScriptService/Core/BossDebateSubmissionLedger")
 
 local total = 0
 
@@ -657,5 +660,15 @@ test("Boss availability defaults locked",function()local tier,reason,text=BossAv
 test("Boss availability has no live tier",function()local tier=BossAvailability.Resolve({BossDebate={Enabled=true,ScriptedPracticeEnabled=true}});assert(tier=="SCRIPTED_PRACTICE")end)
 test("Boss protocol rejects authority actions",function()for _,action in ipairs({"BeginLive","SetTier","SelectProvider","Judge","Complete","AwardResult"})do local ok=BossProtocol.ValidateClient({Action=action});assert(not ok)end end)
 test("locked Boss rejects arbitrary submit",function()local ok=BossProtocol.ValidateClient({Action="SubmitArgument"});assert(not ok)end)
+
+test("Boss state rejects illegal transition",function()local s=BossState.new(1,1,1);assert(not BossState.transition(s,"COMPLETE")and s.Phase=="READY")end)
+test("Boss filtering makes turn timeout stale",function()local s=BossState.new(1,1,1);local turn=BossState.startTurn(s);local filtering=BossState.beginFiltering(s,turn.TurnToken);assert(filtering and not BossState.matches(s,turn))end)
+test("Boss filter retry issues fresh turn token",function()local s=BossState.new(1,1,1);local turn=BossState.startTurn(s);local filtering=BossState.beginFiltering(s,turn.TurnToken);local retry=BossState.filterFailed(s,filtering);assert(retry and retry.TurnToken==turn.TurnToken+1 and not BossState.matches(s,filtering))end)
+test("Boss completes exactly after three authored turns",function()local s=BossState.new(1,1,1);for i=1,3 do local t=BossState.startTurn(s);local f=BossState.beginFiltering(s,t.TurnToken);assert(BossState.acceptFiltered(s,f));local result=BossState.finishReply(s,BossDefinitions.PlayerTurns);if i<3 then assert(type(result)=="table")else assert(result=="COMPLETE"and s.Phase=="COMPLETE")end end;assert(BossState.finishReply(s,BossDefinitions.PlayerTurns)==nil)end)
+test("Boss abort and close are explicit",function()local s=BossState.new(1,1,1);BossState.startTurn(s);assert(BossState.abort(s)and s.Phase=="ABORTED"and BossState.close(s)and s.Closed)end)
+test("Boss ledger deduplicates and replays ack",function()local l=BossLedger.new();assert(BossLedger.begin(l,1,"same")=="START");assert(BossLedger.begin(l,1,"same")=="IGNORE");assert(BossLedger.finish(l,1,"ACCEPTED",{Kind="Ack"}));local action,ack=BossLedger.begin(l,1,"same");assert(action=="REPLAY"and ack.Kind=="Ack");local bad,code=BossLedger.begin(l,1,"changed");assert(bad=="REJECT"and code=="SUBMISSION_ID_REUSED")end)
+test("Boss ledger rejects stale unknown IDs",function()local l=BossLedger.new();assert(BossLedger.begin(l,2,"new")=="START");local a,c=BossLedger.begin(l,1,"old");assert(a=="REJECT"and c=="STALE_SUBMISSION_ID")end)
+test("Boss ledger retains only eight terminal acknowledgements",function()local l=BossLedger.new();for i=1,10 do assert(BossLedger.begin(l,i,tostring(i))=="START");assert(BossLedger.finish(l,i,"REJECTED",{Id=i}))end;assert(#l.Order==8 and l.Records[1]==nil and l.Records[2]==nil and l.Records[10]~=nil)end)
+test("Boss practice has exactly three authored non-semantic replies",function()assert(BossDefinitions.PlayerTurns==3 and #BossDefinitions.ScriptedReplies==3);for _,text in ipairs(BossDefinitions.ScriptedReplies)do assert(string.find(text,"SCRIPTED PRACTICE",1,true))end;assert(BossDefinitions.Score==nil and BossDefinitions.Winner==nil and BossDefinitions.Reward==nil)end)
 
 print(string.format("\n%d tests passed", total))
