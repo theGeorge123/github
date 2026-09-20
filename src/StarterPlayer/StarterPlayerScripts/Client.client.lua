@@ -20,8 +20,14 @@ local turn=label(panel,"",14,C.green,true);turn.Position=UDim2.fromOffset(18,96)
 local log=Instance.new("ScrollingFrame");log.Position=UDim2.fromOffset(18,128);log.Size=UDim2.new(1,-36,1,-240);log.BackgroundColor3=C.panel;log.AutomaticCanvasSize=Enum.AutomaticSize.Y;log.CanvasSize=UDim2.new();log.BorderSizePixel=0;log.Parent=panel;corner(log,10)
 local ll=Instance.new("UIListLayout");ll.Padding=UDim.new(0,8);ll.Parent=log
 local box=Instance.new("TextBox");box.PlaceholderText="Give a reason, example, or rebuttal…";box.Text="";box.MultiLine=true;box.TextWrapped=true;box.TextColor3=C.white;box.PlaceholderColor3=C.muted;box.TextSize=14;box.Font=Enum.Font.Gotham;box.BackgroundColor3=C.panel;box.Position=UDim2.new(0,18,1,-98);box.Size=UDim2.new(1,-146,0,78);box.Parent=panel;corner(box,10)
+local counter=label(panel,"0 / 500 bytes",11,C.muted);counter.Position=UDim2.new(0,18,1,-118);counter.Size=UDim2.new(1,-146,0,18)
+box:GetPropertyChangedSignal("Text"):Connect(function()local bytes=#box.Text;counter.Text=("%d / %d bytes"):format(bytes,MAX_ARGUMENT_BYTES);counter.TextColor3=bytes>MAX_ARGUMENT_BYTES and C.gold or C.muted end)
 local send=button(panel,"SEND TURN",C.blue);send.Position=UDim2.new(1,-116,1,-98);send.Size=UDim2.fromOffset(98,78);send.Active=false;send.AutoButtonColor=false
 local queued=false
+local MAX_ARGUMENT_BYTES=500 -- mirrors authoritative server limit
+local nextSubmissionId=0
+local pendingSubmissionId=nil
+local pendingText=nil
 local myTurn=false
 local rematch=button(panel,"REMATCH",C.green);rematch.Position=UDim2.new(0,18,1,-138);rematch.Size=UDim2.fromOffset(112,34);rematch.Visible=false
 local function popup(heading,body)local f=Instance.new("Frame");f.AnchorPoint=Vector2.new(1,.5);f.Position=UDim2.new(1,-164,.5,0);f.Size=UDim2.fromOffset(280,260);f.BackgroundColor3=C.bg;f.Parent=g;corner(f,12);local h=label(f,heading,20,C.gold,true);h.Position=UDim2.fromOffset(16,12);h.Size=UDim2.new(1,-32,0,30);local b=label(f,body,14,C.white);b.Position=UDim2.fromOffset(16,48);b.Size=UDim2.new(1,-32,1,-64);b.TextYAlignment=Enum.TextYAlignment.Top;task.delay(6,function()if f.Parent then f:Destroy()end end)end
@@ -31,15 +37,16 @@ profileButton.Activated:Connect(function()submit:FireServer("profile")end)
 rematch.Activated:Connect(function()submit:FireServer("rematch");rematch.Text="WAITING…";rematch.Active=false end)
 local function row(who,text,col)local x=label(log,who.."\n"..text,14,col,who~="SYSTEM");x.Size=UDim2.new(1,-18,0,68);x.AutomaticSize=Enum.AutomaticSize.Y;x.TextYAlignment=Enum.TextYAlignment.Top;x.Parent=log;return x end
 play.Activated:Connect(function()panel.Visible=true;if queued then submit:FireServer("cancelQueue")else submit:FireServer("queue")end end)
-send.Activated:Connect(function()if myTurn and box.Text~=""then submit:FireServer("argument",box.Text);box.Text="";myTurn=false;send.Text="WAIT"end end)
+send.Activated:Connect(function()if not myTurn or pendingSubmissionId~=nil or box.Text==""then return end;nextSubmissionId+=1;pendingSubmissionId=nextSubmissionId;pendingText=box.Text;submit:FireServer("argument",{Id=pendingSubmissionId,Text=pendingText});send.Text="SENDING…";send.Active=false;send.AutoButtonColor=false end)
 state.OnClientEvent:Connect(function(m)
  if m.Kind=="Lobby"then queued=m.Status=="QUEUED";play.Text=queued and "CANCEL SEARCH" or "FIND DEBATE";if queued then panel.Visible=true;title.Text="WAITING FOR ANOTHER PLAYER";topic.Text=("Players waiting: %d"):format(m.QueueSize or 1)end
  elseif m.Kind=="Profile"then local x=m.Profile;popup("PROFILE",("Session points: %d\nChair: %s\nTitle: %s\n\nProgress resets when this server closes."):format(x.Points,x.Chair,x.Title))
  elseif m.Kind=="Start"then rematch.Visible=false;rematch.Text="REMATCH";rematch.Active=true;queued=false;play.Text="FIND DEBATE";title.Text=m.Players[1].Name.."  vs  "..m.Players[2].Name;topic.Text=m.Topic.Topic.."\nAI position: "..m.Topic.AIPosition;for _,x in ipairs(log:GetChildren())do if x:IsA("TextLabel")then x:Destroy()end end;row("AI OPENING",m.Opening,C.gold);row("SCORING",m.Rules.." Base +10, reason +5, example +5, rebuttal +5.",C.muted)
  elseif m.Kind=="Turn"then myTurn=m.UserId==p.UserId;turn.Text=myTurn and "YOUR TURN" or (m.Name.." IS THINKING");send.Text=myTurn and "SEND TURN" or "WAIT";send.Active=myTurn;send.AutoButtonColor=myTurn
- elseif m.Kind=="PlayerTurn"then row(m.Name.."  +"..m.Points,m.Text.."\n"..table.concat(m.Reasons," • "),C.white)
+ elseif m.Kind=="PlayerTurn"then if m.UserId==p.UserId and m.SubmissionId==pendingSubmissionId then pendingSubmissionId=nil;pendingText=nil;box.Text="";myTurn=false end;row(m.Name.."  +"..m.Points,m.Text.."\n"..table.concat(m.Reasons," • "),C.white)
  elseif m.Kind=="AIReply"then row(m.Label,m.Text,C.gold)
  elseif m.Kind=="Complete"then myTurn=false;send.Text="COMPLETE";turn.Text=m.Message;rematch.Visible=true;for _,s in ipairs(m.Scores)do row("SCORE",s.Name..": "..s.Points.." session points",C.green)end
+ elseif m.Kind=="ArgumentRejected"then if m.SubmissionId==pendingSubmissionId or m.SubmissionId==nil then pendingSubmissionId=nil;if pendingText then box.Text=pendingText end;pendingText=nil;myTurn=m.CanRetry==true;send.Text=myTurn and "SEND TURN" or "WAIT";send.Active=myTurn;send.AutoButtonColor=myTurn;row("SYSTEM",m.Message,C.gold)end
  elseif m.Kind=="TurnTimedOut"then myTurn=false;row("SYSTEM",m.Message,C.gold)
  elseif m.Kind=="RematchStatus"then row("SYSTEM",m.Name.." wants another round.",C.green)
  elseif m.Kind=="Ended"or m.Kind=="Error"then myTurn=false;row("SYSTEM",m.Message,C.gold)end
