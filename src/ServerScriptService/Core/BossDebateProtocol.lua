@@ -5,6 +5,8 @@ function Protocol.ValidateClient(message)
  if message.Action=="GetAvailability"or message.Action=="EnterPractice"then return true end
  if message.Action=="SubmitArgument"then
   if type(message.SessionId)~="string"or type(message.RoundGeneration)~="number"or type(message.TurnToken)~="number"or type(message.SubmissionId)~="number"or type(message.Text)~="string"then return false,"INVALID_SUBMISSION"end
+ elseif message.Action=="LeavePractice"or message.Action=="RestartPractice"then
+  if type(message.SessionId)~="string"then return false,"INVALID_SESSION"end
  end
  return true
 end
