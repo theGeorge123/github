@@ -16,6 +16,7 @@ local DebateDiagnostics = require("../src/ServerScriptService/Core/DebateDiagnos
 
 local DebateProtocol = require("../src/ServerScriptService/Core/DebateProtocol")
 local StartupMode = require("../src/ServerScriptService/Core/StartupMode")
+local DebateRoundState = require("../src/ServerScriptService/Core/DebateRoundState")
 
 local total = 0
 
@@ -623,3 +624,9 @@ test("startup mode legacy preserves existing systems", function()
  local m=StartupMode.Resolve({DebateEnabled=false});assert(m.Mode=="legacy" and not m.InitDebate and m.InitLegacy and m.BuildEmergencyWorld and m.RunLegacyRefresh)
 end)
 test("startup mode defaults to legacy", function()assert(StartupMode.Resolve({}).Mode=="legacy")end)
+
+
+test("debate round timeout advances active turn",function()local s=DebateRoundState.new(1,3,1);local t=DebateRoundState.beginTurn(s);local r=DebateRoundState.completeTurn(s,t.RoundGeneration,t.TurnToken,1);assert(r.Applied and not r.Complete and s.Turns[1]==1 and s.PlayerIndex==2)end)
+test("debate round ignores stale timeout token",function()local s=DebateRoundState.new(1,3,1);local a=DebateRoundState.beginTurn(s);DebateRoundState.completeTurn(s,a.RoundGeneration,a.TurnToken,1);local b=DebateRoundState.beginTurn(s);local r=DebateRoundState.completeTurn(s,a.RoundGeneration,a.TurnToken,1);assert(not r.Applied and s.PlayerIndex==2 and s.TurnToken==b.TurnToken)end)
+test("debate round timeout can complete final turn",function()local s=DebateRoundState.new(1,1,1);local a=DebateRoundState.beginTurn(s);DebateRoundState.completeTurn(s,a.RoundGeneration,a.TurnToken,1);local b=DebateRoundState.beginTurn(s);local r=DebateRoundState.completeTurn(s,b.RoundGeneration,b.TurnToken,2);assert(r.Applied and r.Complete and s.Closed)end)
+test("debate round rejects wrong player",function()local s=DebateRoundState.new(1,3,1);local t=DebateRoundState.beginTurn(s);local r=DebateRoundState.completeTurn(s,t.RoundGeneration,t.TurnToken,2);assert(not r.Applied and s.PlayerIndex==1 and s.Turns[1]==0)end)
