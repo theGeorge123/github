@@ -19,6 +19,13 @@ return table.freeze({
     -- Private debate prototype gates. Both remain off until an authorized private test.
     DebateEnabled = true,
     DebateLiveEnabled = false,
+    BossDebate = {
+        Enabled = false,
+        ScriptedPracticeEnabled = false,
+        MaxArgumentBytes = 500,
+        PlayerTurnSeconds = 45,
+        PlayerTurns = 3,
+    },
 
     AIProvider = "Roblox",
     AIRequestMaxTokens = 90,

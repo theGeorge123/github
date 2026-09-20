@@ -21,6 +21,8 @@ local ArgumentValidation = require("../src/ServerScriptService/Core/ArgumentVali
 local WritingChecklist = require("../src/ServerScriptService/Core/WritingChecklist")
 local DebateStructure = require("../src/ServerScriptService/Core/DebateStructure")
 local DebateParticipation = require("../src/ServerScriptService/Services/DebateParticipationService")
+local BossAvailability = require("../src/ServerScriptService/Core/BossDebateAvailability")
+local BossProtocol = require("../src/ServerScriptService/Core/BossDebateProtocol")
 
 local total = 0
 
@@ -650,5 +652,10 @@ test("scripted host prompt states limits",function()local topic={Sides={Affirmat
 test("participation prevents cross-mode ownership",function()DebateParticipation.ResetForTests();local p={};local ok,m=DebateParticipation.TryClaim(p,"MULTIPLAYER");assert(ok and m.Mode=="MULTIPLAYER");local boss,reason=DebateParticipation.TryClaim(p,"BOSS");assert(not boss and reason=="PLAYER_BUSY")end)
 test("participation release requires exact token",function()DebateParticipation.ResetForTests();local p={};local _,m=DebateParticipation.TryClaim(p,"MULTIPLAYER");assert(not DebateParticipation.Release(p,{Mode="BOSS",Generation=m.Generation}));assert(DebateParticipation.Get(p)==m);assert(DebateParticipation.Release(p,m));local _,b=DebateParticipation.TryClaim(p,"BOSS");assert(not DebateParticipation.Release(p,m)and DebateParticipation.Get(p)==b)end)
 test("participation disconnect clears ownership",function()DebateParticipation.ResetForTests();local p={};DebateParticipation.TryClaim(p,"BOSS");DebateParticipation.Disconnect(p);assert(DebateParticipation.Get(p)==nil)end)
+
+test("Boss availability defaults locked",function()local tier,reason,text=BossAvailability.Resolve({BossDebate={Enabled=false,ScriptedPracticeEnabled=false}});assert(tier=="LOCKED"and reason=="BOSS_DISABLED"and string.find(text,"No live AI",1,true))end)
+test("Boss availability has no live tier",function()local tier=BossAvailability.Resolve({BossDebate={Enabled=true,ScriptedPracticeEnabled=true}});assert(tier=="SCRIPTED_PRACTICE")end)
+test("Boss protocol rejects authority actions",function()for _,action in ipairs({"BeginLive","SetTier","SelectProvider","Judge","Complete","AwardResult"})do local ok=BossProtocol.ValidateClient({Action=action});assert(not ok)end end)
+test("locked Boss rejects arbitrary submit",function()local ok=BossProtocol.ValidateClient({Action="SubmitArgument"});assert(not ok)end)
 
 print(string.format("\n%d tests passed", total))

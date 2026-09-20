@@ -1,5 +1,5 @@
 local Players=game:GetService("Players");local RS=game:GetService("ReplicatedStorage")
-local p=Players.LocalPlayer;local r=RS:WaitForChild("BeatTheBotRemotes");local state=r:WaitForChild("MultiplayerDebateState");local submit=r:WaitForChild("MultiplayerDebateSubmit")
+local p=Players.LocalPlayer;local BossController=require(script.Parent.BossDebateController);local r=RS:WaitForChild("BeatTheBotRemotes");local state=r:WaitForChild("MultiplayerDebateState");local submit=r:WaitForChild("MultiplayerDebateSubmit")
 local C={bg=Color3.fromRGB(10,16,29),panel=Color3.fromRGB(22,32,50),blue=Color3.fromRGB(73,168,235),gold=Color3.fromRGB(255,194,82),white=Color3.fromRGB(240,245,252),muted=Color3.fromRGB(165,180,200),green=Color3.fromRGB(89,190,130)}
 local function corner(x,n)local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,n or 10);c.Parent=x end
 local function label(pa,t,z,col,b)local l=Instance.new("TextLabel");l.BackgroundTransparency=1;l.Text=t;l.TextColor3=col or C.white;l.TextSize=z or 14;l.Font=b and Enum.Font.GothamBold or Enum.Font.Gotham;l.TextWrapped=true;l.TextXAlignment=Enum.TextXAlignment.Left;l.Parent=pa;return l end
@@ -13,6 +13,7 @@ local play=button(menu,"FIND DEBATE",C.blue);play.Size=UDim2.new(1,-16,0,44)
 local chairs=button(menu,"CHAIRS");chairs.Size=play.Size
 local titles=button(menu,"TITLES");titles.Size=play.Size
 local profileButton=button(menu,"PROFILE");profileButton.Size=play.Size
+BossController.Init(r,g,button,label,C)
 local panel=Instance.new("Frame");panel.AnchorPoint=Vector2.new(.5,.5);panel.Position=UDim2.fromScale(.46,.52);panel.Size=UDim2.new(.8,0,.82,0);panel.BackgroundColor3=C.bg;panel.Visible=false;panel.Parent=g;corner(panel,16)
 local pc=Instance.new("UISizeConstraint");pc.MaxSize=Vector2.new(820,700);pc.MinSize=Vector2.new(310,440);pc.Parent=panel
 local title=label(panel,"WAITING FOR ANOTHER PLAYER",22,C.white,true);title.Position=UDim2.fromOffset(18,12);title.Size=UDim2.new(1,-36,0,34)
