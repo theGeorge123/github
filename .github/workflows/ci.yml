@@ -59,6 +59,12 @@ jobs:
       - name: Build Studio smoke place
         run: rojo build test.project.json -o build/BeatTheBotSmoke.rbxlx
 
+      - name: Build isolated fixed-input probe
+        run: rojo build probe.project.json -o build/BeatTheBotFixedAIProbe.rbxlx
+
+      - name: Verify isolated probe build
+        run: python3 scripts/verify_probe_build.py build/BeatTheBotFixedAIProbe.rbxlx
+
       - name: Upload v0.4 Rojo builds
         uses: actions/upload-artifact@v4
         with:
@@ -67,6 +73,7 @@ jobs:
             build/BeatTheBot.rbxlx
             build/BeatTheBotDebate.rbxlx
             build/BeatTheBotSmoke.rbxlx
+            build/BeatTheBotFixedAIProbe.rbxlx
 
       - name: Check whitespace errors
         run: git diff --check
