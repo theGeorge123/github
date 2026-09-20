@@ -20,8 +20,8 @@ return table.freeze({
     DebateEnabled = true,
     DebateLiveEnabled = false,
     BossDebate = {
-        Enabled = false,
-        ScriptedPracticeEnabled = false,
+        Enabled = true,
+        ScriptedPracticeEnabled = true,
         MaxArgumentBytes = 500,
         PlayerTurnSeconds = 45,
         PlayerTurns = 3,

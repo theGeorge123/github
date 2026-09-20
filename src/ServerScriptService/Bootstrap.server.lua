@@ -13,7 +13,7 @@ local MultiplayerDebateService = require(services.MultiplayerDebateService)
 local DebateWorldService = require(services.DebateWorldService)
 local StartupMode = require(script.Parent.Core.StartupMode)
 local BossAvailability = require(script.Parent.Core.BossDebateAvailability)
-local BossProtocol = require(script.Parent.Core.BossDebateProtocol)
+local BossDebateService = require(services.BossDebateService)
 
 local previousRemotes = ReplicatedStorage:FindFirstChild("BeatTheBotRemotes")
 if previousRemotes then
@@ -39,15 +39,7 @@ local debateState = remoteEvent("MultiplayerDebateState")
 local debateSubmit = remoteEvent("MultiplayerDebateSubmit")
 local bossState = remoteEvent("BossDebateState")
 local bossSubmit = remoteEvent("BossDebateSubmit")
-bossSubmit.OnServerEvent:Connect(function(player, message)
-    local valid = BossProtocol.ValidateClient(message)
-    local tier, reason, disclosure = BossAvailability.Resolve(Config)
-    if valid and message.Action == "GetAvailability" then
-        bossState:FireClient(player, BossProtocol.Availability(tier, reason, disclosure))
-    else
-        bossState:FireClient(player, BossProtocol.Rejected("BOSS_LOCKED", disclosure))
-    end
-end)
+BossDebateService.Init(bossState, bossSubmit, Config)
 
 local startup = StartupMode.Resolve(Config)
 if startup.InitDebate then

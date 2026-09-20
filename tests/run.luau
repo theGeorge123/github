@@ -671,4 +671,7 @@ test("Boss ledger rejects stale unknown IDs",function()local l=BossLedger.new();
 test("Boss ledger retains only eight terminal acknowledgements",function()local l=BossLedger.new();for i=1,10 do assert(BossLedger.begin(l,i,tostring(i))=="START");assert(BossLedger.finish(l,i,"REJECTED",{Id=i}))end;assert(#l.Order==8 and l.Records[1]==nil and l.Records[2]==nil and l.Records[10]~=nil)end)
 test("Boss practice has exactly three authored non-semantic replies",function()assert(BossDefinitions.PlayerTurns==3 and #BossDefinitions.ScriptedReplies==3);for _,text in ipairs(BossDefinitions.ScriptedReplies)do assert(string.find(text,"SCRIPTED PRACTICE",1,true))end;assert(BossDefinitions.Score==nil and BossDefinitions.Winner==nil and BossDefinitions.Reward==nil)end)
 
+test("Boss leave and restart require a session",function()for _,action in ipairs({"LeavePractice","RestartPractice"})do local ok=BossProtocol.ValidateClient({Action=action});assert(not ok);assert(BossProtocol.ValidateClient({Action=action,SessionId="boss-1-1"}))end end)
+test("Boss scripted config is explicit",function()local tier=BossAvailability.Resolve({BossDebate={Enabled=true,ScriptedPracticeEnabled=true}});assert(tier=="SCRIPTED_PRACTICE")end)
+
 print(string.format("\n%d tests passed", total))
