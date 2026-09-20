@@ -570,7 +570,7 @@ test("debate diagnostics preserve bounded live source", function()
     assert(fields.Payload == nil)
 end)
 
-print(string.format("\n%d tests passed", total))
+
 test("debate layout definitions expose exactly three four-turn topics", function()
     local Definitions = require("../src/ServerScriptService/Core/DebateDefinitions")
     assert(#Definitions.Order == 3)
@@ -645,3 +645,5 @@ test("writing checklist stable ids",function()local _,_,c=WritingChecklist.Evalu
 test("debate sides swap independently each round",function() assert(DebateStructure.SideFor(1,1)=="Affirmative"and DebateStructure.SideFor(1,2)=="Negative"and DebateStructure.SideFor(2,1)=="Negative"and DebateStructure.SideFor(2,2)=="Affirmative")end)
 test("debate roles are deterministic",function()assert(DebateStructure.RoleForTurn(1)=="Opening"and DebateStructure.RoleForTurn(2)=="Rebuttal"and DebateStructure.RoleForTurn(3)=="Closing")end)
 test("scripted host prompt states limits",function()local topic={Sides={Affirmative={Label="FOR TEST",OpeningPrompt="Give a reason."}},TurnPrompts={Rebuttal="Address the other side."}};local x=DebateStructure.HostPrompt(topic,"Opening","Affirmative",{{Id="reason",Label="Gives a reason",Earned=true}});assert(string.find(x,"SCRIPTED HOST",1,true)and string.find(x,"does not judge",1,true)and string.find(x,"Gives a reason",1,true))end)
+
+print(string.format("\n%d tests passed", total))
