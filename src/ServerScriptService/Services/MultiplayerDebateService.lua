@@ -6,7 +6,8 @@ local RoundState=require(script.Parent.Parent.Core.DebateRoundState)
 local ArgumentValidation=require(script.Parent.Parent.Core.ArgumentValidation)
 local Participation=require(script.Parent.DebateParticipationService)
 local Structure=require(script.Parent.Parent.Core.DebateStructure)
-local Service={Queue={},Sessions={},Profiles={},LastSubmit={},Claims={}}
+local AntiEmptyPolicy=require(script.Parent.Parent.Core.AntiEmptyLobbyPolicy)
+local Service={Queue={},Sessions={},Profiles={},LastSubmit={},Claims={},Background={},Offers={}}
 local nextSessionId=0
 local function profile(p)
  local x=Service.Profiles[p];if not x then x={Points=0,Chair="starter-chair",Title="Debater"};Service.Profiles[p]=x end;return x
@@ -44,12 +45,30 @@ end
 local function start(remote,a,b)nextSessionId=nextSessionId+1;local s={Id=nextSessionId,Players={a,b},Round=1,RoundGeneration=0,Scores={},Ended=false};Service.Sessions[a]=s;Service.Sessions[b]=s;beginRound(s,remote)end
 local function removeQueued(p)for i=#Service.Queue,1,-1 do if Service.Queue[i]==p then table.remove(Service.Queue,i)end end end
 local function releaseClaim(p)local claim=Service.Claims[p];if claim then Participation.Release(p,claim);Service.Claims[p]=nil end end
+local function sendOffer(remote,bossPlayer,queuedPlayer)
+ local id=("offer-%d-%d-%d"):format(bossPlayer.UserId,queuedPlayer.UserId,math.floor(os.clock()*1000));local offer=AntiEmptyPolicy.NewOffer(id,bossPlayer,queuedPlayer,workspace:GetServerTimeNow()+30);Service.Offers[bossPlayer]=offer;Service.Offers[queuedPlayer]=offer
+ send(remote,bossPlayer,{Kind="MatchOffer",OfferId=id,OpponentName=queuedPlayer.DisplayName,Message="Opponent found. Finish your current scripted turn, then choose SWITCH TO PLAYER."})
+ send(remote,queuedPlayer,{Kind="Lobby",Status="QUEUED",Profile=publicProfile(queuedPlayer),QueueSize=#Service.Queue,Message="Opponent found and finishing a scripted turn."})
+ task.delay(30,function()if Service.Offers[bossPlayer]~=offer then return end;Service.Offers[bossPlayer]=nil;Service.Offers[queuedPlayer]=nil;if queuedPlayer.Parent==Players and Service.Claims[queuedPlayer]then table.insert(Service.Queue,1,queuedPlayer);publishLobby(remote,queuedPlayer,"QUEUED")end end)
+end
+local function tryBackgroundOffers(remote)
+ for bossPlayer in pairs(Service.Background)do if bossPlayer.Parent==Players and not Service.Offers[bossPlayer]and #Service.Queue>0 then local queued=table.remove(Service.Queue,1);if queued~=bossPlayer and queued.Parent==Players then sendOffer(remote,bossPlayer,queued);return end end end
+end
 local function endSession(s,remote,message)
  s.Ended=true;if s.RoundState then RoundState.close(s.RoundState)end;for _,q in ipairs(s.Players)do Service.Sessions[q]=nil;releaseClaim(q);send(remote,q,{Kind="Ended",Message=message,Profile=publicProfile(q)})end
 end
 function Service.Init(remote,submit)
  submit.OnServerEvent:Connect(function(p,action,value)
-  if action=="queue"then if Service.Sessions[p]then return end;local claimed,claim=Participation.TryClaim(p,"MULTIPLAYER");if not claimed then send(remote,p,{Kind="Error",Code="PLAYER_BUSY",Message="Leave the other debate mode before joining multiplayer."});return end;Service.Claims[p]=claim;removeQueued(p);table.insert(Service.Queue,p);publishLobby(remote,p,"QUEUED");while #Service.Queue>=2 do local a=table.remove(Service.Queue,1);local b=table.remove(Service.Queue,1);if a.Parent==Players and b.Parent==Players then start(remote,a,b)elseif a.Parent==Players then releaseClaim(b);table.insert(Service.Queue,1,a)elseif b.Parent==Players then releaseClaim(a);table.insert(Service.Queue,1,b)else releaseClaim(a);releaseClaim(b)end end
+  if action=="queue"then if Service.Sessions[p]then return end;local claimed,claim=Participation.TryClaim(p,"MULTIPLAYER");if not claimed then send(remote,p,{Kind="Error",Code="PLAYER_BUSY",Message="Leave the other debate mode before joining multiplayer."});return end;Service.Claims[p]=claim;removeQueued(p);table.insert(Service.Queue,p);publishLobby(remote,p,"QUEUED");tryBackgroundOffers(remote);while #Service.Queue>=2 do local a=table.remove(Service.Queue,1);local b=table.remove(Service.Queue,1);if a.Parent==Players and b.Parent==Players then start(remote,a,b)elseif a.Parent==Players then releaseClaim(b);table.insert(Service.Queue,1,a)elseif b.Parent==Players then releaseClaim(a);table.insert(Service.Queue,1,b)else releaseClaim(a);releaseClaim(b)end end
+  elseif action=="backgroundQueue"then
+   if Service.Sessions[p]then return end;if not AntiEmptyPolicy.CanBackgroundSearch(Participation.Get(p))then send(remote,p,{Kind="Error",Code="BOSS_REQUIRED",Message="Start scripted Boss Practice before background matchmaking."});return end;Service.Background[p]=true;send(remote,p,{Kind="BackgroundQueue",Status="SEARCHING",Message="Looking for a real player while scripted practice continues."});tryBackgroundOffers(remote)
+  elseif action=="cancelBackground"then Service.Background[p]=nil;local offer=Service.Offers[p];if offer then Service.Offers[offer.BossPlayer]=nil;Service.Offers[offer.QueuedPlayer]=nil;if offer.QueuedPlayer.Parent==Players and Service.Claims[offer.QueuedPlayer]then table.insert(Service.Queue,1,offer.QueuedPlayer);publishLobby(remote,offer.QueuedPlayer,"QUEUED")end end;send(remote,p,{Kind="BackgroundQueue",Status="OFF",Message="Background matchmaking cancelled."})
+  elseif action=="acceptOffer"then
+   local offer=Service.Offers[p];local canAccept,acceptCode=AntiEmptyPolicy.CanAccept(offer,type(value)=="table"and value.OfferId or nil,Participation.Get(p));if not canAccept then send(remote,p,{Kind="Error",Code=acceptCode,Message=acceptCode=="FINISH_CURRENT_TURN"and"Finish the current scripted turn and leave practice before switching."or"That opponent offer expired."});return end
+   AntiEmptyPolicy.Resolve(offer,"ACCEPTED")
+   local claimed,claim=Participation.TryClaim(p,"MULTIPLAYER");if not claimed then send(remote,p,{Kind="Error",Code="PLAYER_BUSY",Message="Leave the other mode before switching."});return end
+   Service.Claims[p]=claim;Service.Background[p]=nil;Service.Offers[offer.BossPlayer]=nil;Service.Offers[offer.QueuedPlayer]=nil
+   if offer.QueuedPlayer.Parent==Players and Service.Claims[offer.QueuedPlayer]then start(remote,p,offer.QueuedPlayer)else releaseClaim(p);send(remote,p,{Kind="Error",Code="OPPONENT_LEFT",Message="That player left. Background matchmaking can continue."})end
   elseif action=="cancelQueue"then removeQueued(p);releaseClaim(p);publishLobby(remote,p,"READY")
   elseif action=="profile"then publishProfile(remote,p)
   elseif action=="equip"and type(value)=="table"then local x=profile(p);local owned=unlocks(x.Points);if value.Kind=="chair"and owned[value.Id]then x.Chair=value.Id elseif value.Kind=="title"and owned[value.Id]then x.Title=value.Id end;publishLobby(remote,p,"READY")
@@ -68,9 +87,9 @@ function Service.Init(remote,submit)
    local result=RoundState.completeTurn(s.RoundState,token.Generation,token.Turn,token.PlayerIndex);if result.Complete then completeRound(s,remote)else publishTurn(s,remote)end
 
   elseif action=="rematch"then local s=Service.Sessions[p];if not s or not s.Closed then return end;s.Rematch[p]=true;both(s,remote,{Kind="RematchStatus",Name=p.DisplayName});if s.Rematch[s.Players[1]]and s.Rematch[s.Players[2]]then s.Round+=1;beginRound(s,remote)end
-  elseif action=="leave"then removeQueued(p);releaseClaim(p);local s=Service.Sessions[p];if s then endSession(s,remote,"A player left the debate.")else publishLobby(remote,p,"READY")end end
+  elseif action=="leave"then Service.Background[p]=nil;Service.Offers[p]=nil;removeQueued(p);releaseClaim(p);local s=Service.Sessions[p];if s then endSession(s,remote,"A player left the debate.")else publishLobby(remote,p,"READY")end end
  end)
  Players.PlayerAdded:Connect(function(p)task.defer(function()publishLobby(remote,p,"READY")end)end)
- Players.PlayerRemoving:Connect(function(p)removeQueued(p);releaseClaim(p);local s=Service.Sessions[p];if s then endSession(s,remote,"A player disconnected.")end;Service.Profiles[p]=nil;Service.LastSubmit[p]=nil;Participation.Disconnect(p)end)
+ Players.PlayerRemoving:Connect(function(p)Service.Background[p]=nil;local offer=Service.Offers[p];if offer then Service.Offers[offer.BossPlayer]=nil;Service.Offers[offer.QueuedPlayer]=nil end;removeQueued(p);releaseClaim(p);local s=Service.Sessions[p];if s then endSession(s,remote,"A player disconnected.")end;Service.Profiles[p]=nil;Service.LastSubmit[p]=nil;Participation.Disconnect(p)end)
 end
 return Service
