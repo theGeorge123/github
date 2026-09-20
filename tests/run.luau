@@ -19,6 +19,7 @@ local StartupMode = require("../src/ServerScriptService/Core/StartupMode")
 local DebateRoundState = require("../src/ServerScriptService/Core/DebateRoundState")
 local ArgumentValidation = require("../src/ServerScriptService/Core/ArgumentValidation")
 local WritingChecklist = require("../src/ServerScriptService/Core/WritingChecklist")
+local DebateStructure = require("../src/ServerScriptService/Core/DebateStructure")
 
 local total = 0
 
@@ -639,3 +640,8 @@ test("writing checklist rebuttal",function()local n,_,c=WritingChecklist.Evaluat
 
 test("writing checklist rejects whitespace",function()assert(WritingChecklist.Evaluate("   \n\t ")==0)end)
 test("writing checklist stable ids",function()local _,_,c=WritingChecklist.Evaluate("Because players need control, this should change.");assert(c[1].Id=="complete"and c[2].Id=="reason"and c[3].Id=="example"and c[4].Id=="rebuttal_attempt")end)
+
+
+test("debate sides swap independently each round",function() assert(DebateStructure.SideFor(1,1)=="Affirmative"and DebateStructure.SideFor(1,2)=="Negative"and DebateStructure.SideFor(2,1)=="Negative"and DebateStructure.SideFor(2,2)=="Affirmative")end)
+test("debate roles are deterministic",function()assert(DebateStructure.RoleForTurn(1)=="Opening"and DebateStructure.RoleForTurn(2)=="Rebuttal"and DebateStructure.RoleForTurn(3)=="Closing")end)
+test("scripted host prompt states limits",function()local topic={Sides={Affirmative={Label="FOR TEST",OpeningPrompt="Give a reason."}},TurnPrompts={Rebuttal="Address the other side."}};local x=DebateStructure.HostPrompt(topic,"Opening","Affirmative",{{Id="reason",Label="Gives a reason",Earned=true}});assert(string.find(x,"SCRIPTED HOST",1,true)and string.find(x,"does not judge",1,true)and string.find(x,"Gives a reason",1,true))end)
