@@ -1,3 +1,4 @@
+local WritingChecklist = require(script.Parent.WritingChecklist)
 local Definitions = {}
 Definitions.PlayerTurnsEach = 3
 Definitions.TurnSeconds = 45
@@ -14,11 +15,6 @@ Definitions.Topics = table.freeze({
     { Id="scores", Character="Moss", Topic="Should team games show individual contribution scores?", AIPosition="Contribution details should stay private.", Opening="Private feedback can help improvement without creating a public blame board." },
 })
 function Definitions.Score(text)
-    local lower = string.lower(text)
-    local score, reasons = 10, { "Complete filtered turn +10" }
-    if string.find(lower,"because",1,true) or string.find(lower,"so that",1,true) then score += 5; table.insert(reasons,"Gives a reason +5") end
-    if string.find(lower,"for example",1,true) or string.find(lower,"for instance",1,true) or string.find(lower,"if ",1,true) then score += 5; table.insert(reasons,"Uses an example or scenario +5") end
-    if string.find(lower,"but ",1,true) or string.find(lower,"however",1,true) or string.find(lower,"you said",1,true) then score += 5; table.insert(reasons,"Attempts a rebuttal +5") end
-    return score, reasons
+    return WritingChecklist.Evaluate(text)
 end
 return Definitions
