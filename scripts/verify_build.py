@@ -1,7 +1,7 @@
 import argparse, collections, pathlib, xml.etree.ElementTree as ET
 parser=argparse.ArgumentParser(description="Verify production Rojo script sources against the source tree.")
 parser.add_argument("place",type=pathlib.Path);args=parser.parse_args();root=pathlib.Path(__file__).resolve().parents[1]
-required=[root/"src/ServerScriptService/Core/DebateProbeDefinitions.lua",root/"src/ServerScriptService/AI/DebateProbeAdapter.lua",root/"src/ServerScriptService/Services/DebateProbeService.lua"]
+required=[root/"src/ServerScriptService/Core/DebateProbeDefinitions.lua",root/"src/ServerScriptService/AI/DebateProbeAdapter.lua",root/"src/ServerScriptService/Services/DebateProbeService.lua",root/"src/ServerScriptService/Core/AIDiagnostics.lua"]
 for path in required:
  if not path.is_file():raise SystemExit(f"FAIL: required source missing: {path.relative_to(root)}")
 malformed=[path for path in (root/"src").rglob("*") if path.is_file() and "src" in path.relative_to(root/"src").parts]
