@@ -17,6 +17,7 @@ local DebateDiagnostics = require("../src/ServerScriptService/Core/DebateDiagnos
 local DebateProtocol = require("../src/ServerScriptService/Core/DebateProtocol")
 local StartupMode = require("../src/ServerScriptService/Core/StartupMode")
 local DebateRoundState = require("../src/ServerScriptService/Core/DebateRoundState")
+local ArgumentValidation = require("../src/ServerScriptService/Core/ArgumentValidation")
 
 local total = 0
 
@@ -630,3 +631,10 @@ test("debate round timeout advances active turn",function()local s=DebateRoundSt
 test("debate round ignores stale timeout token",function()local s=DebateRoundState.new(1,3,1);local a=DebateRoundState.beginTurn(s);DebateRoundState.completeTurn(s,a.RoundGeneration,a.TurnToken,1);local b=DebateRoundState.beginTurn(s);local r=DebateRoundState.completeTurn(s,a.RoundGeneration,a.TurnToken,1);assert(not r.Applied and s.PlayerIndex==2 and s.TurnToken==b.TurnToken)end)
 test("debate round timeout can complete final turn",function()local s=DebateRoundState.new(1,1,1);local a=DebateRoundState.beginTurn(s);DebateRoundState.completeTurn(s,a.RoundGeneration,a.TurnToken,1);local b=DebateRoundState.beginTurn(s);local r=DebateRoundState.completeTurn(s,b.RoundGeneration,b.TurnToken,2);assert(r.Applied and r.Complete and s.Closed)end)
 test("debate round rejects wrong player",function()local s=DebateRoundState.new(1,3,1);local t=DebateRoundState.beginTurn(s);local r=DebateRoundState.completeTurn(s,t.RoundGeneration,t.TurnToken,2);assert(not r.Applied and s.PlayerIndex==1 and s.Turns[1]==0)end)
+
+
+test("argument validation accepts valid payload",function()assert(ArgumentValidation.Validate({Id=7,Text="Because this is a reason."},500)==true)end)
+test("argument validation rejects oversized bytes",function()local ok,code=ArgumentValidation.Validate({Id=8,Text=string.rep("a",501)},500);assert(not ok and code=="TOO_LONG")end)
+test("argument validation rejects legacy string payload",function()local ok,code=ArgumentValidation.Validate("Because",500);assert(not ok and code=="BAD_PAYLOAD")end)
+test("argument validation requires submission id",function()local ok,code=ArgumentValidation.Validate({Text="Valid text"},500);assert(not ok and code=="BAD_ID")end)
+test("argument validation counts utf8 as bytes",function()local text=string.rep("å",251);local ok,code=ArgumentValidation.Validate({Id=9,Text=text},500);assert(#text>500 and not ok and code=="TOO_LONG")end)
