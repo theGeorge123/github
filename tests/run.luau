@@ -669,4 +669,6 @@ test("Boss scripted config is explicit",function()local tier=BossAvailability.Re
 test("AI diagnostics normalize and omit sensitive fields",function()local d=AIDiagnostics.Failure("bad","bad",-1,-2,-3);local f=AIDiagnostics.LogFields(d,string.rep("v",40));assert(f.Stage=="GENERATE"and f.Category=="UNKNOWN_FAILURE"and #f.Build==32);assert(f.Prompt==nil and f.Response==nil and f.Exception==nil and f.Payload==nil and f.Player==nil and f.UserId==nil)end)
 test("strict parser rejects malformed and oversized output",function()local l={MaxOutputBytes=64,MaxReplyBytes=10};for _,text in ipairs({"","```\nTACTIC=verify\nSTRENGTH=normal\nREPLY=ok\n```","TACTIC=verify\nTACTIC=verify\nREPLY=ok","INTENT=verify\nSTRENGTH=normal\nREPLY=ok","TACTIC=verify\nSTRENGTH=normal\nREPLY=12345678901","preamble\nTACTIC=verify\nSTRENGTH=normal\nREPLY=ok"})do assert(Parser.Parse(text,l)==nil)end;assert(Parser.Parse(string.rep("x",65),l)==nil);assert(Parser.Parse("TACTIC=verify\nSTRENGTH=normal\nREPLY="..string.char(255),{MaxOutputBytes=2048,MaxReplyBytes=320})==nil)end)
 
+test("probe config stays disabled",function()assert(Config.DebateLiveEnabled==false and Config.DebateProbe.Enabled==false)end)
+
 print(string.format("\n%d tests passed", total))
