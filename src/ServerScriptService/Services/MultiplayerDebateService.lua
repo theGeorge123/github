@@ -58,8 +58,8 @@ function Service.Init(remote,submit)
    local token={Generation=s.RoundState.RoundGeneration,Turn=s.RoundState.TurnToken,PlayerIndex=playerIndex,SessionId=s.Id}
    local ok,filtered=pcall(function()return TextService:FilterStringAsync(value.Text,p.UserId):GetNonChatStringForBroadcastAsync()end);if not ok or filtered==""then reject(remote,p,value.Id,"FILTER_FAILED","That turn could not be filtered. Edit it and try again.");return end
    if Service.Sessions[p]~=s or s.Id~=token.SessionId or not RoundState.matches(s.RoundState,token.Generation,token.Turn,token.PlayerIndex)then reject(remote,p,value.Id,"TURN_EXPIRED","That turn already ended. Your draft was kept.");return end
-   local score,reasons=Definitions.Score(filtered);profile(p).Points+=score;s.Scores[p]=(s.Scores[p]or 0)+score
-   both(s,remote,{Kind="PlayerTurn",UserId=p.UserId,SubmissionId=value.Id,Name=p.DisplayName,Text=filtered,Points=score,Reasons=reasons,RoundTotal=s.Scores[p],Profile=publicProfile(p)})
+   local score,reasons,criteria=Definitions.Score(filtered);if score==0 then reject(remote,p,value.Id,"NO_MEANINGFUL_TEXT","Add a readable argument before sending.");return end;profile(p).Points+=score;s.Scores[p]=(s.Scores[p]or 0)+score
+   both(s,remote,{Kind="PlayerTurn",UserId=p.UserId,SubmissionId=value.Id,Name=p.DisplayName,Text=filtered,Points=score,Reasons=reasons,Criteria=criteria,RoundTotal=s.Scores[p],Profile=publicProfile(p)})
    local t=topicFor(s);both(s,remote,{Kind="AIReply",Character=t.Character,Text="Scripted AI prompt: the next speaker should address the previous reason, add an example, or challenge a trade-off.",Label="SCRIPTED AI PRACTICE"})
    local result=RoundState.completeTurn(s.RoundState,token.Generation,token.Turn,token.PlayerIndex);if result.Complete then completeRound(s,remote)else publishTurn(s,remote)end
 
