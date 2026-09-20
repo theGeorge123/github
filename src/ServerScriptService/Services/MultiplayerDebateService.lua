@@ -1,6 +1,7 @@
 local Players=game:GetService("Players")
 local TextService=game:GetService("TextService")
 local Definitions=require(script.Parent.Parent.Core.MultiplayerDebateDefinitions)
+local Protocol=require(script.Parent.Parent.Core.DebateProtocol)
 local Service={Queue={},Sessions={},Profiles={},LastSubmit={}}
 local function profile(p)
  local x=Service.Profiles[p];if not x then x={Points=0,Chair="starter-chair",Title="Debater"};Service.Profiles[p]=x end;return x
@@ -10,10 +11,11 @@ local function both(s,remote,data) for _,p in ipairs(s.Players) do send(remote,p
 local function unlocks(points)local owned={};for _,u in ipairs(Definitions.Unlocks)do if points>=u.Points then owned[u.Id]=true end end;return owned end
 local function publicProfile(p)local x=profile(p);return {Points=x.Points,Chair=x.Chair,Title=x.Title,Unlocks=unlocks(x.Points)}end
 local function topicFor(s)return Definitions.Topics[((s.Round-1)%#Definitions.Topics)+1]end
-local function publishLobby(remote,p,status)send(remote,p,{Kind="Lobby",Status=status,Profile=publicProfile(p),QueueSize=#Service.Queue})end
+local function publishLobby(remote,p,status)send(remote,p,Protocol.Lobby(status,publicProfile(p),#Service.Queue))end
+local function publishProfile(remote,p)send(remote,p,Protocol.Profile(publicProfile(p)))end
 local function beginRound(s,remote)
  s.Turns={0,0};s.PlayerIndex=(s.Round%2)+1;s.Closed=false;s.Rematch={};local t=topicFor(s)
- both(s,remote,{Kind="Start",Round=s.Round,Topic=t,Players={{Name=s.Players[1].DisplayName,Profile=publicProfile(s.Players[1])},{Name=s.Players[2].DisplayName,Profile=publicProfile(s.Players[2])}},Opening=t.Opening,Rules="Session points use a visible writing checklist; they are not an AI judgment."})
+ both(s,remote,Protocol.Start(s.Round,t,{Name=s.Players[1].DisplayName,UserId=s.Players[1].UserId,Profile=publicProfile(s.Players[1])},{Name=s.Players[2].DisplayName,UserId=s.Players[2].UserId,Profile=publicProfile(s.Players[2])},t.Opening,"Session points use a visible writing checklist; they are not an AI judgment."))
  local n=s.Players[s.PlayerIndex];both(s,remote,{Kind="Turn",UserId=n.UserId,Name=n.DisplayName,TurnNumber=1})
 end
 local function start(remote,a,b)local s={Players={a,b},Round=1,Scores={[a]=0,[b]=0}};Service.Sessions[a]=s;Service.Sessions[b]=s;beginRound(s,remote)end
@@ -23,9 +25,9 @@ local function endSession(s,remote,message)
 end
 function Service.Init(remote,submit)
  submit.OnServerEvent:Connect(function(p,action,value)
-  if action=="queue"then if Service.Sessions[p]then return end;removeQueued(p);table.insert(Service.Queue,p);publishLobby(remote,p,"QUEUED");while #Service.Queue>=2 do local a=table.remove(Service.Queue,1);local b=table.remove(Service.Queue,1);if a.Parent and b.Parent then start(remote,a,b)end end
+  if action=="queue"then if Service.Sessions[p]then return end;removeQueued(p);table.insert(Service.Queue,p);publishLobby(remote,p,"QUEUED");while #Service.Queue>=2 do local a=table.remove(Service.Queue,1);local b=table.remove(Service.Queue,1);if a.Parent==Players and b.Parent==Players then start(remote,a,b)elseif a.Parent==Players then table.insert(Service.Queue,1,a)elseif b.Parent==Players then table.insert(Service.Queue,1,b)end end
   elseif action=="cancelQueue"then removeQueued(p);publishLobby(remote,p,"READY")
-  elseif action=="profile"then publishLobby(remote,p,"READY")
+  elseif action=="profile"then publishProfile(remote,p)
   elseif action=="equip"and type(value)=="table"then local x=profile(p);local owned=unlocks(x.Points);if value.Kind=="chair"and owned[value.Id]then x.Chair=value.Id elseif value.Kind=="title"and owned[value.Id]then x.Title=value.Id end;publishLobby(remote,p,"READY")
   elseif action=="argument"then
    local now=os.clock();if now-(Service.LastSubmit[p]or 0)<1 then return end;Service.LastSubmit[p]=now
