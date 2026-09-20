@@ -6,6 +6,21 @@ assert(RunService:IsStudio() and not Config.StudioPersistence, "Smoke tests requ
 
 local services = game:GetService("ServerScriptService").Services
 local core = game:GetService("ServerScriptService").Core
+
+if Config.DebateEnabled then
+    local player = Players:GetPlayers()[1] or Players.PlayerAdded:Wait()
+    local deadline = os.clock() + 30
+    while (not workspace:FindFirstChild("BeatTheBotDebateStage") or not game:GetService("ReplicatedStorage"):FindFirstChild("BeatTheBotRemotes")) and os.clock() < deadline do
+        task.wait(0.1)
+    end
+    local stage = workspace:FindFirstChild("BeatTheBotDebateStage")
+    local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("BeatTheBotRemotes")
+    assert(stage and stage:FindFirstChild("DebateSpawn"), "Debate stage failed to load")
+    assert(remotes and remotes:FindFirstChild("MultiplayerDebateState") and remotes:FindFirstChild("MultiplayerDebateSubmit"), "Debate remotes missing")
+    assert(player.RespawnLocation == stage.DebateSpawn, "Debate spawn was not assigned")
+    print("BEAT_THE_BOT_DEBATE_SMOKE_PASS: exclusive startup, stage, remotes, spawn")
+    return
+end
 local DataService = require(services.DataService)
 local MatchService = require(services.MatchService)
 local WorldService = require(services.WorldService)
