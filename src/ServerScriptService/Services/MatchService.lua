@@ -9,6 +9,7 @@ local DistrictDefinitions = require(script.Parent.Parent.Core.DistrictDefinition
 local History = require(script.Parent.Parent.Core.History)
 local ProfileStore = require(script.Parent.Parent.Core.ProfileStore)
 local Adapter = require(script.Parent.Parent.AI.Adapter)
+local AIDiagnostics = require(script.Parent.Parent.Core.AIDiagnostics)
 local TelemetryService = require(script.Parent.TelemetryService)
 local ProgressionService = require(script.Parent.ProgressionService)
 local DailyTrialService = require(script.Parent.DailyTrialService)
@@ -209,6 +210,8 @@ local function releaseArena(match)
     end
 end
 
+-- BLOCKED FOR RELEASE: Roblox documentation does not establish a valid fromUserId for model-authored text.
+-- Do not enable live generated replies publicly.
 local function filterGeneratedReply(player, reply)
     if type(reply) ~= "string" or reply == "" then
         return nil
@@ -518,34 +521,27 @@ function MatchService.Submit(player, payload)
         end
 
         playerMessage = filtered
-        local success, result = pcall(function()
-            return Adapter.Decide({
-                Message = filtered,
-                State = table.freeze(table.clone(match.State)),
-                Guard = match.Opponent,
-                Opponent = match.Opponent,
-                Concern = match.Concern,
-                History = match.History,
-                Scenario = match.Scenario,
-                Objective = match.Objective,
-            })
-        end)
-
-        if match.Ended then
-            return
+        local expectedMatch = match
+        local expectedMatchId = match.Id
+        local expectedTurns = match.State.Turns
+        decision = Adapter.Decide({
+            Message = filtered,
+            State = table.freeze(table.clone(match.State)),
+            Guard = match.Opponent,
+            Opponent = match.Opponent,
+            Concern = match.Concern,
+            History = match.History,
+            Scenario = match.Scenario,
+            Objective = match.Objective,
+        })
+        if MatchService.Matches[player] ~= expectedMatch or expectedMatch.Id ~= expectedMatchId or expectedMatch.Ended or expectedMatch.State.Turns ~= expectedTurns then
+            local stale = AIDiagnostics.LogFields(AIDiagnostics.Failure("APPLY","STALE",0,#filtered,0),Config.Version)
+            print(string.format("BEAT_THE_BOT_AI schema=%d build=%s stage=%s category=%s source=%s elapsed_ms=%d input_bytes=%d output_bytes=%d",stale.Schema,stale.Build,stale.Stage,stale.Category,stale.Source,stale.ElapsedMs,stale.InputBytes,stale.OutputBytes));return
         end
-        if not success then
-            match.Busy = false
-            TelemetryService.AIError(player)
-            warn("BEAT_THE_BOT_AI_ERROR:", result)
-            tell(player, "The AI could not answer that turn. No move was used; try again or use a quick move.")
-            return
-        end
-
-        decision = result
-        if decision.Degraded then
-            TelemetryService.AIError(player)
-            warn("BEAT_THE_BOT_AI_DEGRADED: deterministic classification used for this turn")
+        local fields = AIDiagnostics.LogFields(decision.Diagnostics,Config.Version)
+        print(string.format("BEAT_THE_BOT_AI schema=%d build=%s stage=%s category=%s source=%s elapsed_ms=%d input_bytes=%d output_bytes=%d",fields.Schema,fields.Build,fields.Stage,fields.Category,fields.Source,fields.ElapsedMs,fields.InputBytes,fields.OutputBytes))
+        if not decision.Ok then
+            match.Busy=false;TelemetryService.AIError(player);tell(player,"Live AI is unavailable. No move was used.");return
         end
     end
 
@@ -572,7 +568,7 @@ function MatchService.Submit(player, payload)
     match.SpectatorReply = fallbackReply
 
     local playerReply = fallbackReply
-    if nextState.Status == "Playing" and decision.Provider == "Roblox" then
+    if nextState.Status == "Playing" and decision.Source == "LIVE" then
         playerReply = filterGeneratedReply(player, decision.Reply) or fallbackReply
     end
 
