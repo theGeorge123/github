@@ -11,6 +11,7 @@ local CosmeticService = require(services.CosmeticService)
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 local MultiplayerDebateService = require(services.MultiplayerDebateService)
 local DebateWorldService = require(services.DebateWorldService)
+local StartupMode = require(script.Parent.Core.StartupMode)
 
 local previousRemotes = ReplicatedStorage:FindFirstChild("BeatTheBotRemotes")
 if previousRemotes then
@@ -35,10 +36,27 @@ local equipCosmetic = remoteEvent("EquipCosmetic")
 local debateState = remoteEvent("MultiplayerDebateState")
 local debateSubmit = remoteEvent("MultiplayerDebateSubmit")
 
-if Config.DebateEnabled then
-    MultiplayerDebateService.Init(debateState, debateSubmit)
+local startup = StartupMode.Resolve(Config)
+if startup.InitDebate then
     DebateWorldService.Init()
     WorldService.Spawn = DebateWorldService.Spawn
+    MultiplayerDebateService.Init(debateState, debateSubmit)
+
+    local function placeDebater(character)
+        character:WaitForChild("HumanoidRootPart", 10)
+        if character.Parent and WorldService.Spawn and WorldService.Spawn.Parent then
+            character:PivotTo(WorldService.Spawn.CFrame + Vector3.new(0, 5, 0))
+        end
+    end
+    local function joinDebater(player)
+        player.RespawnLocation = WorldService.Spawn
+        player.CharacterAdded:Connect(placeDebater)
+        if player.Character then task.spawn(placeDebater, player.Character) end
+    end
+    Players.PlayerAdded:Connect(joinDebater)
+    for _, player in ipairs(Players:GetPlayers()) do joinDebater(player) end
+    print("BEAT_THE_BOT_MULTIPLAYER_DEBATE_READY", "exclusive debate startup")
+    return
 end
 
 local fallbackFolder = Instance.new("Folder")
