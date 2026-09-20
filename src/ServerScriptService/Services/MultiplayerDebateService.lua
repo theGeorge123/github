@@ -4,6 +4,7 @@ local Definitions=require(script.Parent.Parent.Core.MultiplayerDebateDefinitions
 local Protocol=require(script.Parent.Parent.Core.DebateProtocol)
 local RoundState=require(script.Parent.Parent.Core.DebateRoundState)
 local ArgumentValidation=require(script.Parent.Parent.Core.ArgumentValidation)
+local Structure=require(script.Parent.Parent.Core.DebateStructure)
 local Service={Queue={},Sessions={},Profiles={},LastSubmit={}}
 local nextSessionId=0
 local function profile(p)
@@ -24,7 +25,8 @@ local function completeRound(s,remote)
 end
 publishTurn=function(s,remote)
  local turn=RoundState.beginTurn(s.RoundState);local player=s.Players[turn.PlayerIndex];local deadline=workspace:GetServerTimeNow()+Definitions.TurnSeconds;s.TurnDeadline=deadline
- both(s,remote,{Kind="Turn",UserId=player.UserId,Name=player.DisplayName,TurnNumber=turn.TurnNumber,Deadline=deadline})
+ local side=Structure.SideFor(s.Round,turn.PlayerIndex);local role=Structure.RoleForTurn(turn.TurnNumber)
+ both(s,remote,{Kind="Turn",UserId=player.UserId,Name=player.DisplayName,TurnNumber=turn.TurnNumber,Deadline=deadline,Side=side,Role=role,HostPrompt=Structure.HostPrompt(topicFor(s),role,side,s.PreviousCriteria)})
  local sessionId=s.Id
  task.delay(Definitions.TurnSeconds,function()
   if s.Ended or Service.Sessions[player]~=s or s.Id~=sessionId then return end
@@ -34,8 +36,8 @@ publishTurn=function(s,remote)
  end)
 end
 local function beginRound(s,remote)
- s.RoundGeneration=(s.RoundGeneration or 0)+1;s.RoundState=RoundState.new(s.RoundGeneration,Definitions.PlayerTurnsEach,(s.Round%2)+1);s.Closed=false;s.Rematch={};s.Scores={[s.Players[1]]=0,[s.Players[2]]=0};local t=topicFor(s)
- both(s,remote,Protocol.Start(s.Round,t,{Name=s.Players[1].DisplayName,UserId=s.Players[1].UserId,Profile=publicProfile(s.Players[1])},{Name=s.Players[2].DisplayName,UserId=s.Players[2].UserId,Profile=publicProfile(s.Players[2])},t.Opening,"Session points use a visible writing checklist; they are not an AI judgment."));publishTurn(s,remote)
+ s.RoundGeneration=(s.RoundGeneration or 0)+1;s.RoundState=RoundState.new(s.RoundGeneration,Definitions.PlayerTurnsEach,(s.Round%2)+1);s.Closed=false;s.Rematch={};s.PreviousCriteria=nil;s.Scores={[s.Players[1]]=0,[s.Players[2]]=0};local t=topicFor(s)
+ both(s,remote,Protocol.Start(s.Round,t,{Name=s.Players[1].DisplayName,UserId=s.Players[1].UserId,Profile=publicProfile(s.Players[1])},{Name=s.Players[2].DisplayName,UserId=s.Players[2].UserId,Profile=publicProfile(s.Players[2])},t.ScriptedOpening,"Session points use a visible writing checklist; they are not an AI judgment."));publishTurn(s,remote)
 end
 
 local function start(remote,a,b)nextSessionId=nextSessionId+1;local s={Id=nextSessionId,Players={a,b},Round=1,RoundGeneration=0,Scores={},Ended=false};Service.Sessions[a]=s;Service.Sessions[b]=s;beginRound(s,remote)end
@@ -60,7 +62,7 @@ function Service.Init(remote,submit)
    if Service.Sessions[p]~=s or s.Id~=token.SessionId or not RoundState.matches(s.RoundState,token.Generation,token.Turn,token.PlayerIndex)then reject(remote,p,value.Id,"TURN_EXPIRED","That turn already ended. Your draft was kept.");return end
    local score,reasons,criteria=Definitions.Score(filtered);if score==0 then reject(remote,p,value.Id,"NO_MEANINGFUL_TEXT","Add a readable argument before sending.");return end;profile(p).Points+=score;s.Scores[p]=(s.Scores[p]or 0)+score
    both(s,remote,{Kind="PlayerTurn",UserId=p.UserId,SubmissionId=value.Id,Name=p.DisplayName,Text=filtered,Points=score,Reasons=reasons,Criteria=criteria,RoundTotal=s.Scores[p],Profile=publicProfile(p)})
-   local t=topicFor(s);both(s,remote,{Kind="AIReply",Character=t.Character,Text="Scripted AI prompt: the next speaker should address the previous reason, add an example, or challenge a trade-off.",Label="SCRIPTED AI PRACTICE"})
+   s.PreviousCriteria=criteria
    local result=RoundState.completeTurn(s.RoundState,token.Generation,token.Turn,token.PlayerIndex);if result.Complete then completeRound(s,remote)else publishTurn(s,remote)end
 
   elseif action=="rematch"then local s=Service.Sessions[p];if not s or not s.Closed then return end;s.Rematch[p]=true;both(s,remote,{Kind="RematchStatus",Name=p.DisplayName});if s.Rematch[s.Players[1]]and s.Rematch[s.Players[2]]then s.Round+=1;beginRound(s,remote)end
