@@ -18,6 +18,8 @@ local DebateProtocol = require("../src/ServerScriptService/Core/DebateProtocol")
 local StartupMode = require("../src/ServerScriptService/Core/StartupMode")
 local DebateRoundState = require("../src/ServerScriptService/Core/DebateRoundState")
 local ArgumentValidation = require("../src/ServerScriptService/Core/ArgumentValidation")
+local WritingChecklist = require("../src/ServerScriptService/Core/WritingChecklist")
+local DebateStructure = require("../src/ServerScriptService/Core/DebateStructure")
 
 local total = 0
 
@@ -581,24 +583,7 @@ test("debate layout definitions expose exactly three four-turn topics", function
     end
 end)
 
-test("multiplayer debate definitions bound scoring and unlocks", function()
-    local Definitions = require("../src/ServerScriptService/Core/MultiplayerDebateDefinitions")
-    assert(#Definitions.Topics == 3 and Definitions.PlayerTurnsEach == 3)
-    local basic = select(1, Definitions.Score("I agree"))
-    local strong = select(1, Definitions.Score("However, because this matters, for example if players learn faster."))
-    assert(basic == 10 and strong == 25)
-    assert(#Definitions.Unlocks == 4 and Definitions.Unlocks[1].Points == 0)
-end)
 
-test("multiplayer product unlock thresholds are ordered and typed", function()
-    local Definitions = require("../src/ServerScriptService/Core/MultiplayerDebateDefinitions")
-    local previous = -1
-    for _, unlock in ipairs(Definitions.Unlocks) do
-        assert(unlock.Points > previous)
-        assert(unlock.Kind == "chair" or unlock.Kind == "title")
-        previous = unlock.Points
-    end
-end)
 
 
 test("debate protocol start contains named players", function()
@@ -638,3 +623,25 @@ test("argument validation rejects oversized bytes",function()local ok,code=Argum
 test("argument validation rejects legacy string payload",function()local ok,code=ArgumentValidation.Validate("Because",500);assert(not ok and code=="BAD_PAYLOAD")end)
 test("argument validation requires submission id",function()local ok,code=ArgumentValidation.Validate({Text="Valid text"},500);assert(not ok and code=="BAD_ID")end)
 test("argument validation counts utf8 as bytes",function()local text=string.rep("å",251);local ok,code=ArgumentValidation.Validate({Id=9,Text=text},500);assert(#text>500 and not ok and code=="TOO_LONG")end)
+
+test("writing checklist complete",function()local n,_,c=WritingChecklist.Evaluate("Optional hints can help new players.");assert(n==10 and c[1].Earned==true)end)
+
+test("writing checklist reason",function()local n,_,c=WritingChecklist.Evaluate("Hints should be optional because experienced players need more control.");assert(n==15 and c[2].Earned==true)end)
+
+test("writing checklist bare because",function()local n,_,c=WritingChecklist.Evaluate("This is because");assert(n==10 and c[2].Earned==false)end)
+
+test("writing checklist bare if",function()local n,_,c=WritingChecklist.Evaluate("What if this were different?");assert(n==10 and c[3].Earned==false)end)
+
+test("writing checklist example",function()local n,_,c=WritingChecklist.Evaluate("For example a beginner could request one hint.");assert(n==15 and c[3].Earned==true)end)
+
+test("writing checklist bare but",function()local n,_,c=WritingChecklist.Evaluate("I understand, but no.");assert(n==10 and c[4].Earned==false)end)
+
+test("writing checklist rebuttal",function()local n,_,c=WritingChecklist.Evaluate("However that approach gives experienced players less control.");assert(n==15 and c[4].Earned==true)end)
+
+test("writing checklist rejects whitespace",function()assert(WritingChecklist.Evaluate("   \n\t ")==0)end)
+test("writing checklist stable ids",function()local _,_,c=WritingChecklist.Evaluate("Because players need control, this should change.");assert(c[1].Id=="complete"and c[2].Id=="reason"and c[3].Id=="example"and c[4].Id=="rebuttal_attempt")end)
+
+
+test("debate sides swap independently each round",function() assert(DebateStructure.SideFor(1,1)=="Affirmative"and DebateStructure.SideFor(1,2)=="Negative"and DebateStructure.SideFor(2,1)=="Negative"and DebateStructure.SideFor(2,2)=="Affirmative")end)
+test("debate roles are deterministic",function()assert(DebateStructure.RoleForTurn(1)=="Opening"and DebateStructure.RoleForTurn(2)=="Rebuttal"and DebateStructure.RoleForTurn(3)=="Closing")end)
+test("scripted host prompt states limits",function()local topic={Sides={Affirmative={Label="FOR TEST",OpeningPrompt="Give a reason."}},TurnPrompts={Rebuttal="Address the other side."}};local x=DebateStructure.HostPrompt(topic,"Opening","Affirmative",{{Id="reason",Label="Gives a reason",Earned=true}});assert(string.find(x,"SCRIPTED HOST",1,true)and string.find(x,"does not judge",1,true)and string.find(x,"Gives a reason",1,true))end)

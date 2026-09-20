@@ -1,24 +1,11 @@
-local Definitions = {}
-Definitions.PlayerTurnsEach = 3
-Definitions.TurnSeconds = 45
-Definitions.MaxArgumentBytes = 500
-Definitions.Unlocks = table.freeze({
-    { Points = 0, Id = "starter-chair", Label = "Starter Chair", Kind = "chair" },
-    { Points = 30, Id = "blue-chair", Label = "Blue Chair", Kind = "chair" },
-    { Points = 60, Id = "clear-thinker", Label = "Clear Thinker title", Kind = "title" },
-    { Points = 100, Id = "gold-chair", Label = "Gold Chair", Kind = "chair" },
+local WritingChecklist=require(script.Parent.WritingChecklist)
+local Definitions={PlayerTurnsEach=3,TurnSeconds=45,MaxArgumentBytes=500}
+Definitions.Unlocks=table.freeze({{Points=0,Id="starter-chair",Label="Starter Chair",Kind="chair"},{Points=30,Id="blue-chair",Label="Blue Chair",Kind="chair"},{Points=60,Id="clear-thinker",Label="Clear Thinker title",Kind="title"},{Points=100,Id="gold-chair",Label="Gold Chair",Kind="chair"}})
+local prompts={Opening="State your assigned position and give one reason.",Rebuttal="Respond to the other side and identify a trade-off or weakness.",Closing="Summarize your case and give one concrete example or consequence."}
+Definitions.Topics=table.freeze({
+ {Id="hints",Character="Rivet",Proposition="Building games should make hints optional.",Topic="Should hints be optional in building games?",Sides={Affirmative={Id="affirmative",Label="FOR OPTIONAL HINTS",Position="Hints should be available but optional.",OpeningPrompt="Explain why optional hints help players while preserving choice."},Negative={Id="negative",Label="AGAINST OPTIONAL HINTS",Position="Building games should use one consistent hint system.",OpeningPrompt="Explain why a consistent hint system is better than optional hints."}},ScriptedOpening="Rivet has assigned one player to each side. The host tracks turn order and visible writing features only; it does not judge which argument is true or stronger.",TurnPrompts=prompts},
+ {Id="pieces",Character="Pip",Proposition="Build challenges should limit the number of pieces.",Topic="Should build challenges limit the number of pieces?",Sides={Affirmative={Id="affirmative",Label="FOR PIECE LIMITS",Position="Build challenges should use a clear piece limit.",OpeningPrompt="Explain why a shared piece limit improves the challenge."},Negative={Id="negative",Label="AGAINST PIECE LIMITS",Position="Build challenges should allow unrestricted piece counts.",OpeningPrompt="Explain why unrestricted building creates a better challenge."}},ScriptedOpening="Pip has assigned one player to each side. The host tracks turn order and visible writing features only; it does not judge which argument is true or stronger.",TurnPrompts=prompts},
+ {Id="scores",Character="Moss",Proposition="Team games should show individual contribution scores publicly.",Topic="Should team games show individual contribution scores publicly?",Sides={Affirmative={Id="affirmative",Label="FOR PUBLIC SCORES",Position="Individual contribution scores should be public.",OpeningPrompt="Explain why public contribution scores help teams or players."},Negative={Id="negative",Label="AGAINST PUBLIC SCORES",Position="Individual contribution details should remain private.",OpeningPrompt="Explain why contribution details should remain private."}},ScriptedOpening="Moss has assigned one player to each side. The host tracks turn order and visible writing features only; it does not judge which argument is true or stronger.",TurnPrompts=prompts},
 })
-Definitions.Topics = table.freeze({
-    { Id="hints", Character="Rivet", Topic="Should hints be optional in building games?", AIPosition="Hints should stay available but optional.", Opening="Optional hints help new builders while leaving experts in control." },
-    { Id="pieces", Character="Pip", Topic="Should build challenges limit the number of pieces?", AIPosition="Challenges should use a clear piece limit.", Opening="A shared piece limit makes choices meaningful and judging comparable." },
-    { Id="scores", Character="Moss", Topic="Should team games show individual contribution scores?", AIPosition="Contribution details should stay private.", Opening="Private feedback can help improvement without creating a public blame board." },
-})
-function Definitions.Score(text)
-    local lower = string.lower(text)
-    local score, reasons = 10, { "Complete filtered turn +10" }
-    if string.find(lower,"because",1,true) or string.find(lower,"so that",1,true) then score += 5; table.insert(reasons,"Gives a reason +5") end
-    if string.find(lower,"for example",1,true) or string.find(lower,"for instance",1,true) or string.find(lower,"if ",1,true) then score += 5; table.insert(reasons,"Uses an example or scenario +5") end
-    if string.find(lower,"but ",1,true) or string.find(lower,"however",1,true) or string.find(lower,"you said",1,true) then score += 5; table.insert(reasons,"Attempts a rebuttal +5") end
-    return score, reasons
-end
+function Definitions.Score(text)return WritingChecklist.Evaluate(text)end
 return Definitions
