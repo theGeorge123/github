@@ -1,28 +1,5 @@
-local LocalAdapter = {}
-
-local patterns = {
-    { "threat", { "attack", "kill", "punch", "hurt", "destroy you" } },
-    { "bribe", { "gold", "bribe", "pay you", "money", "coins" } },
-    { "requirements", { "what do i need", "requirements", "how can i enter", "rules", "what is required" } },
-    { "verify", { "check", "verify", "inspect", "seal", "authentic" } },
-    { "escort", { "escort", "come with", "follow me", "supervise", "watch me" } },
-    { "permit", { "permit", "papers", "document", "delivery pass" } },
-    { "flattery", { "best guard", "great guard", "excellent guard", "respect you", "impressive", "compliment", "reputation" } },
-    { "authority", { "king sent", "queen sent", "royal order", "royal authority", "by order", "official command" } },
-    { "urgency", { "urgent", "emergency", "hurry", "immediately", "no time" } },
-    { "joke", { "joke", "ladder", "funny", "laugh" } },
-}
-
-function LocalAdapter.Decide(context)
-    local message = " " .. string.lower(context.Message):gsub("[^%w%s]", " "):gsub("%s+", " ") .. " "
-    for _, entry in ipairs(patterns) do
-        for _, phrase in ipairs(entry[2]) do
-            if string.find(message, " " .. phrase .. " ", 1, true) then
-                return { Intent = entry[1], Strength = "normal", Provider = "Local" }
-            end
-        end
-    end
-    return { Intent = "irrelevant", Strength = "normal", Provider = "Local" }
-end
-
-return LocalAdapter
+local Diagnostics=require(script.Parent.Parent.Core.AIDiagnostics)
+local Local={}
+local patterns={{"threat",{"attack","kill","punch","hurt","destroy you"}},{"bribe",{"gold","bribe","pay you","money","coins"}},{"requirements",{"what do i need","requirements","how can i enter","rules","what is required"}},{"verify",{"check","verify","inspect","seal","authentic"}},{"escort",{"escort","come with","follow me","supervise","watch me"}},{"permit",{"permit","papers","document","delivery pass"}},{"flattery",{"best guard","great guard","excellent guard","respect you","impressive","compliment","reputation"}},{"authority",{"king sent","queen sent","royal order","royal authority","by order","official command"}},{"urgency",{"urgent","emergency","hurry","immediately","no time"}},{"joke",{"joke","ladder","funny","laugh"}}}
+function Local.Decide(context)local message=" "..string.lower(context.Message):gsub("[^%w%s]"," "):gsub("%s+"," ").." ";local intent="irrelevant";for _,entry in ipairs(patterns)do for _,phrase in ipairs(entry[2])do if string.find(message," "..phrase.." ",1,true)then intent=entry[1];break end end;if intent~="irrelevant"then break end end;return {Ok=true,Source="SCRIPTED",Intent=intent,Strength="normal",Reply=nil,Diagnostics=Diagnostics.Success("PARSE",0,#context.Message,0,"SCRIPTED")}end
+return Local
