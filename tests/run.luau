@@ -15,6 +15,7 @@ local History = require("../src/ServerScriptService/Core/History")
 local DebateDiagnostics = require("../src/ServerScriptService/Core/DebateDiagnostics")
 
 local DebateProtocol = require("../src/ServerScriptService/Core/DebateProtocol")
+local StartupMode = require("../src/ServerScriptService/Core/StartupMode")
 
 local total = 0
 
@@ -613,3 +614,12 @@ end)
 test("debate protocol profile is not a lobby event", function()
  local m=DebateProtocol.Profile({Points=25});assert(m.Kind=="Profile" and m.Profile.Points==25)
 end)
+
+
+test("startup mode debate excludes legacy systems", function()
+ local m=StartupMode.Resolve({DebateEnabled=true});assert(m.Mode=="debate" and m.InitDebate and not m.InitLegacy and not m.BuildEmergencyWorld and not m.RunLegacyRefresh)
+end)
+test("startup mode legacy preserves existing systems", function()
+ local m=StartupMode.Resolve({DebateEnabled=false});assert(m.Mode=="legacy" and not m.InitDebate and m.InitLegacy and m.BuildEmergencyWorld and m.RunLegacyRefresh)
+end)
+test("startup mode defaults to legacy", function()assert(StartupMode.Resolve({}).Mode=="legacy")end)
