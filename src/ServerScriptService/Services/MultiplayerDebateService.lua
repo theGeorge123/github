@@ -3,12 +3,14 @@ local TextService=game:GetService("TextService")
 local Definitions=require(script.Parent.Parent.Core.MultiplayerDebateDefinitions)
 local Protocol=require(script.Parent.Parent.Core.DebateProtocol)
 local RoundState=require(script.Parent.Parent.Core.DebateRoundState)
+local ArgumentValidation=require(script.Parent.Parent.Core.ArgumentValidation)
 local Service={Queue={},Sessions={},Profiles={},LastSubmit={}}
 local nextSessionId=0
 local function profile(p)
  local x=Service.Profiles[p];if not x then x={Points=0,Chair="starter-chair",Title="Debater"};Service.Profiles[p]=x end;return x
 end
 local function send(remote,p,data) if p and p.Parent then remote:FireClient(p,data) end end
+local function reject(remote,p,id,code,message)send(remote,p,{Kind="ArgumentRejected",SubmissionId=id,Code=code,Message=message,CanRetry=true})end
 local function both(s,remote,data) for _,p in ipairs(s.Players) do send(remote,p,data) end end
 local function unlocks(points)local owned={};for _,u in ipairs(Definitions.Unlocks)do if points>=u.Points then owned[u.Id]=true end end;return owned end
 local function publicProfile(p)local x=profile(p);return {Points=x.Points,Chair=x.Chair,Title=x.Title,Unlocks=unlocks(x.Points)}end
@@ -48,15 +50,19 @@ function Service.Init(remote,submit)
   elseif action=="profile"then publishProfile(remote,p)
   elseif action=="equip"and type(value)=="table"then local x=profile(p);local owned=unlocks(x.Points);if value.Kind=="chair"and owned[value.Id]then x.Chair=value.Id elseif value.Kind=="title"and owned[value.Id]then x.Title=value.Id end;publishLobby(remote,p,"READY")
   elseif action=="argument"then
-   local now=os.clock();if now-(Service.LastSubmit[p]or 0)<1 then return end;Service.LastSubmit[p]=now
-   local s=Service.Sessions[p];local playerIndex=s and playerIndexFor(s,p);if not s or s.Closed or not playerIndex or s.RoundState.PlayerIndex~=playerIndex or type(value)~="string"or #value<2 or #value>Definitions.MaxArgumentBytes then return end
+   local submissionId=type(value)=="table"and value.Id or nil
+   local valid,code,message=ArgumentValidation.Validate(value,Definitions.MaxArgumentBytes);if not valid then reject(remote,p,submissionId,code,message);return end
+   local s=Service.Sessions[p];if not s or s.Closed then reject(remote,p,value.Id,"NO_ACTIVE_ROUND","There is no active debate round.");return end
+   local playerIndex=playerIndexFor(s,p);if not playerIndex or s.RoundState.PlayerIndex~=playerIndex then reject(remote,p,value.Id,"NOT_YOUR_TURN","Wait for your turn before sending.");return end
+   local now=os.clock();if now-(Service.LastSubmit[p]or 0)<1 then reject(remote,p,value.Id,"RATE_LIMITED","Wait a moment before trying again.");return end;Service.LastSubmit[p]=now
    local token={Generation=s.RoundState.RoundGeneration,Turn=s.RoundState.TurnToken,PlayerIndex=playerIndex,SessionId=s.Id}
-   local ok,filtered=pcall(function()return TextService:FilterStringAsync(value,p.UserId):GetNonChatStringForBroadcastAsync()end);if not ok or filtered==""then send(remote,p,{Kind="Error",Message="That turn could not be filtered."});return end
-   if Service.Sessions[p]~=s or s.Id~=token.SessionId or not RoundState.matches(s.RoundState,token.Generation,token.Turn,token.PlayerIndex)then return end
+   local ok,filtered=pcall(function()return TextService:FilterStringAsync(value.Text,p.UserId):GetNonChatStringForBroadcastAsync()end);if not ok or filtered==""then reject(remote,p,value.Id,"FILTER_FAILED","That turn could not be filtered. Edit it and try again.");return end
+   if Service.Sessions[p]~=s or s.Id~=token.SessionId or not RoundState.matches(s.RoundState,token.Generation,token.Turn,token.PlayerIndex)then reject(remote,p,value.Id,"TURN_EXPIRED","That turn already ended. Your draft was kept.");return end
    local score,reasons=Definitions.Score(filtered);profile(p).Points+=score;s.Scores[p]=(s.Scores[p]or 0)+score
-   both(s,remote,{Kind="PlayerTurn",Name=p.DisplayName,Text=filtered,Points=score,Reasons=reasons,RoundTotal=s.Scores[p],Profile=publicProfile(p)})
+   both(s,remote,{Kind="PlayerTurn",UserId=p.UserId,SubmissionId=value.Id,Name=p.DisplayName,Text=filtered,Points=score,Reasons=reasons,RoundTotal=s.Scores[p],Profile=publicProfile(p)})
    local t=topicFor(s);both(s,remote,{Kind="AIReply",Character=t.Character,Text="Scripted AI prompt: the next speaker should address the previous reason, add an example, or challenge a trade-off.",Label="SCRIPTED AI PRACTICE"})
    local result=RoundState.completeTurn(s.RoundState,token.Generation,token.Turn,token.PlayerIndex);if result.Complete then completeRound(s,remote)else publishTurn(s,remote)end
+
   elseif action=="rematch"then local s=Service.Sessions[p];if not s or not s.Closed then return end;s.Rematch[p]=true;both(s,remote,{Kind="RematchStatus",Name=p.DisplayName});if s.Rematch[s.Players[1]]and s.Rematch[s.Players[2]]then s.Round+=1;beginRound(s,remote)end
   elseif action=="leave"then removeQueued(p);local s=Service.Sessions[p];if s then endSession(s,remote,"A player left the debate.")else publishLobby(remote,p,"READY")end end
  end)
