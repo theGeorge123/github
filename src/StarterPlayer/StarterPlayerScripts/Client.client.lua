@@ -21,6 +21,7 @@ local log=Instance.new("ScrollingFrame");log.Position=UDim2.fromOffset(18,128);l
 local ll=Instance.new("UIListLayout");ll.Padding=UDim.new(0,8);ll.Parent=log
 local box=Instance.new("TextBox");box.PlaceholderText="Give a reason, example, or rebuttal…";box.Text="";box.MultiLine=true;box.TextWrapped=true;box.TextColor3=C.white;box.PlaceholderColor3=C.muted;box.TextSize=14;box.Font=Enum.Font.Gotham;box.BackgroundColor3=C.panel;box.Position=UDim2.new(0,18,1,-98);box.Size=UDim2.new(1,-146,0,78);box.Parent=panel;corner(box,10)
 local send=button(panel,"SEND TURN",C.blue);send.Position=UDim2.new(1,-116,1,-98);send.Size=UDim2.fromOffset(98,78);send.Active=false;send.AutoButtonColor=false
+local queued=false
 local myTurn=false
 local rematch=button(panel,"REMATCH",C.green);rematch.Position=UDim2.new(0,18,1,-138);rematch.Size=UDim2.fromOffset(112,34);rematch.Visible=false
 local function popup(heading,body)local f=Instance.new("Frame");f.AnchorPoint=Vector2.new(1,.5);f.Position=UDim2.new(1,-164,.5,0);f.Size=UDim2.fromOffset(280,260);f.BackgroundColor3=C.bg;f.Parent=g;corner(f,12);local h=label(f,heading,20,C.gold,true);h.Position=UDim2.fromOffset(16,12);h.Size=UDim2.new(1,-32,0,30);local b=label(f,body,14,C.white);b.Position=UDim2.fromOffset(16,48);b.Size=UDim2.new(1,-32,1,-64);b.TextYAlignment=Enum.TextYAlignment.Top;task.delay(6,function()if f.Parent then f:Destroy()end end)end
@@ -29,12 +30,12 @@ titles.Activated:Connect(function()popup("TITLES","Debater — owned\nClear Thin
 profileButton.Activated:Connect(function()submit:FireServer("profile")end)
 rematch.Activated:Connect(function()submit:FireServer("rematch");rematch.Text="WAITING…";rematch.Active=false end)
 local function row(who,text,col)local x=label(log,who.."\n"..text,14,col,who~="SYSTEM");x.Size=UDim2.new(1,-18,0,68);x.AutomaticSize=Enum.AutomaticSize.Y;x.TextYAlignment=Enum.TextYAlignment.Top;x.Parent=log;return x end
-play.Activated:Connect(function()panel.Visible=true;play.Text="QUEUED…";submit:FireServer("queue")end)
+play.Activated:Connect(function()panel.Visible=true;if queued then submit:FireServer("cancelQueue")else submit:FireServer("queue")end end)
 send.Activated:Connect(function()if myTurn and box.Text~=""then submit:FireServer("argument",box.Text);box.Text="";myTurn=false;send.Text="WAIT"end end)
 state.OnClientEvent:Connect(function(m)
- if m.Kind=="Queued"then title.Text="WAITING FOR ANOTHER PLAYER";row("SYSTEM","You are in the private practice queue.",C.muted)
- elseif m.Kind=="Lobby"then if m.Profile then popup("PROFILE",("Session points: %d\nChair: %s\nTitle: %s\n\nProgress resets when this server closes."):format(m.Profile.Points,m.Profile.Chair,m.Profile.Title))end
- elseif m.Kind=="Start"then rematch.Visible=false;rematch.Text="REMATCH";rematch.Active=true;title.Text=m.Players[1].."  vs  "..m.Players[2];topic.Text=m.Topic.Topic.."\nAI position: "..m.Topic.AIPosition;for _,x in ipairs(log:GetChildren())do if x:IsA("TextLabel")then x:Destroy()end end;row("AI OPENING",m.Opening,C.gold);row("SCORING",m.Rules.." Base +10, reason +5, example +5, rebuttal +5.",C.muted)
+ if m.Kind=="Lobby"then queued=m.Status=="QUEUED";play.Text=queued and "CANCEL SEARCH" or "FIND DEBATE";if queued then panel.Visible=true;title.Text="WAITING FOR ANOTHER PLAYER";topic.Text=("Players waiting: %d"):format(m.QueueSize or 1)end
+ elseif m.Kind=="Profile"then local x=m.Profile;popup("PROFILE",("Session points: %d\nChair: %s\nTitle: %s\n\nProgress resets when this server closes."):format(x.Points,x.Chair,x.Title))
+ elseif m.Kind=="Start"then rematch.Visible=false;rematch.Text="REMATCH";rematch.Active=true;queued=false;play.Text="FIND DEBATE";title.Text=m.Players[1].Name.."  vs  "..m.Players[2].Name;topic.Text=m.Topic.Topic.."\nAI position: "..m.Topic.AIPosition;for _,x in ipairs(log:GetChildren())do if x:IsA("TextLabel")then x:Destroy()end end;row("AI OPENING",m.Opening,C.gold);row("SCORING",m.Rules.." Base +10, reason +5, example +5, rebuttal +5.",C.muted)
  elseif m.Kind=="Turn"then myTurn=m.UserId==p.UserId;turn.Text=myTurn and "YOUR TURN" or (m.Name.." IS THINKING");send.Text=myTurn and "SEND TURN" or "WAIT";send.Active=myTurn;send.AutoButtonColor=myTurn
  elseif m.Kind=="PlayerTurn"then row(m.Name.."  +"..m.Points,m.Text.."\n"..table.concat(m.Reasons," • "),C.white)
  elseif m.Kind=="AIReply"then row(m.Label,m.Text,C.gold)
