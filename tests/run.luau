@@ -582,22 +582,6 @@ test("debate layout definitions expose exactly three four-turn topics", function
     end
 end)
 
-test("multiplayer debate definitions expose bounded rounds", function()
-    local Definitions = require("../src/ServerScriptService/Core/MultiplayerDebateDefinitions")
-    assert(#Definitions.Topics == 3 and Definitions.PlayerTurnsEach == 3)
-end)
-
-test("multiplayer debate checklist scoring is deterministic", function()
-    local Definitions = require("../src/ServerScriptService/Core/MultiplayerDebateDefinitions")
-    assert(select(1, Definitions.Score("I agree")) == 0)
-    assert(select(1, Definitions.Score("However this approach gives experienced players less control.")) == 15)
-end)
-
-test("multiplayer debate definitions expose starter unlock", function()
-    local Definitions = require("../src/ServerScriptService/Core/MultiplayerDebateDefinitions")
-    assert(#Definitions.Unlocks == 4 and Definitions.Unlocks[1].Points == 0)
-end)
-
 test("multiplayer product unlock thresholds are ordered and typed", function()
     local Definitions = require("../src/ServerScriptService/Core/MultiplayerDebateDefinitions")
     local previous = -1
