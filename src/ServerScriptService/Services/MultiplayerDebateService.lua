@@ -4,8 +4,9 @@ local Definitions=require(script.Parent.Parent.Core.MultiplayerDebateDefinitions
 local Protocol=require(script.Parent.Parent.Core.DebateProtocol)
 local RoundState=require(script.Parent.Parent.Core.DebateRoundState)
 local ArgumentValidation=require(script.Parent.Parent.Core.ArgumentValidation)
+local Participation=require(script.Parent.DebateParticipationService)
 local Structure=require(script.Parent.Parent.Core.DebateStructure)
-local Service={Queue={},Sessions={},Profiles={},LastSubmit={}}
+local Service={Queue={},Sessions={},Profiles={},LastSubmit={},Claims={}}
 local nextSessionId=0
 local function profile(p)
  local x=Service.Profiles[p];if not x then x={Points=0,Chair="starter-chair",Title="Debater"};Service.Profiles[p]=x end;return x
@@ -42,13 +43,14 @@ end
 
 local function start(remote,a,b)nextSessionId=nextSessionId+1;local s={Id=nextSessionId,Players={a,b},Round=1,RoundGeneration=0,Scores={},Ended=false};Service.Sessions[a]=s;Service.Sessions[b]=s;beginRound(s,remote)end
 local function removeQueued(p)for i=#Service.Queue,1,-1 do if Service.Queue[i]==p then table.remove(Service.Queue,i)end end end
+local function releaseClaim(p)local claim=Service.Claims[p];if claim then Participation.Release(p,claim);Service.Claims[p]=nil end end
 local function endSession(s,remote,message)
- s.Ended=true;if s.RoundState then RoundState.close(s.RoundState)end;for _,q in ipairs(s.Players)do Service.Sessions[q]=nil;send(remote,q,{Kind="Ended",Message=message,Profile=publicProfile(q)})end
+ s.Ended=true;if s.RoundState then RoundState.close(s.RoundState)end;for _,q in ipairs(s.Players)do Service.Sessions[q]=nil;releaseClaim(q);send(remote,q,{Kind="Ended",Message=message,Profile=publicProfile(q)})end
 end
 function Service.Init(remote,submit)
  submit.OnServerEvent:Connect(function(p,action,value)
-  if action=="queue"then if Service.Sessions[p]then return end;removeQueued(p);table.insert(Service.Queue,p);publishLobby(remote,p,"QUEUED");while #Service.Queue>=2 do local a=table.remove(Service.Queue,1);local b=table.remove(Service.Queue,1);if a.Parent==Players and b.Parent==Players then start(remote,a,b)elseif a.Parent==Players then table.insert(Service.Queue,1,a)elseif b.Parent==Players then table.insert(Service.Queue,1,b)end end
-  elseif action=="cancelQueue"then removeQueued(p);publishLobby(remote,p,"READY")
+  if action=="queue"then if Service.Sessions[p]then return end;local claimed,claim=Participation.TryClaim(p,"MULTIPLAYER");if not claimed then send(remote,p,{Kind="Error",Code="PLAYER_BUSY",Message="Leave the other debate mode before joining multiplayer."});return end;Service.Claims[p]=claim;removeQueued(p);table.insert(Service.Queue,p);publishLobby(remote,p,"QUEUED");while #Service.Queue>=2 do local a=table.remove(Service.Queue,1);local b=table.remove(Service.Queue,1);if a.Parent==Players and b.Parent==Players then start(remote,a,b)elseif a.Parent==Players then releaseClaim(b);table.insert(Service.Queue,1,a)elseif b.Parent==Players then releaseClaim(a);table.insert(Service.Queue,1,b)else releaseClaim(a);releaseClaim(b)end end
+  elseif action=="cancelQueue"then removeQueued(p);releaseClaim(p);publishLobby(remote,p,"READY")
   elseif action=="profile"then publishProfile(remote,p)
   elseif action=="equip"and type(value)=="table"then local x=profile(p);local owned=unlocks(x.Points);if value.Kind=="chair"and owned[value.Id]then x.Chair=value.Id elseif value.Kind=="title"and owned[value.Id]then x.Title=value.Id end;publishLobby(remote,p,"READY")
   elseif action=="argument"then
@@ -66,9 +68,9 @@ function Service.Init(remote,submit)
    local result=RoundState.completeTurn(s.RoundState,token.Generation,token.Turn,token.PlayerIndex);if result.Complete then completeRound(s,remote)else publishTurn(s,remote)end
 
   elseif action=="rematch"then local s=Service.Sessions[p];if not s or not s.Closed then return end;s.Rematch[p]=true;both(s,remote,{Kind="RematchStatus",Name=p.DisplayName});if s.Rematch[s.Players[1]]and s.Rematch[s.Players[2]]then s.Round+=1;beginRound(s,remote)end
-  elseif action=="leave"then removeQueued(p);local s=Service.Sessions[p];if s then endSession(s,remote,"A player left the debate.")else publishLobby(remote,p,"READY")end end
+  elseif action=="leave"then removeQueued(p);releaseClaim(p);local s=Service.Sessions[p];if s then endSession(s,remote,"A player left the debate.")else publishLobby(remote,p,"READY")end end
  end)
  Players.PlayerAdded:Connect(function(p)task.defer(function()publishLobby(remote,p,"READY")end)end)
- Players.PlayerRemoving:Connect(function(p)removeQueued(p);local s=Service.Sessions[p];if s then endSession(s,remote,"A player disconnected.")end;Service.Profiles[p]=nil;Service.LastSubmit[p]=nil end)
+ Players.PlayerRemoving:Connect(function(p)removeQueued(p);releaseClaim(p);local s=Service.Sessions[p];if s then endSession(s,remote,"A player disconnected.")end;Service.Profiles[p]=nil;Service.LastSubmit[p]=nil;Participation.Disconnect(p)end)
 end
 return Service
