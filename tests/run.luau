@@ -13,6 +13,7 @@ local Cosmetics = require("../src/ServerScriptService/Core/CosmeticDefinitions")
 local EntitlementPolicy = require("../src/ServerScriptService/Core/EntitlementPolicy")
 local History = require("../src/ServerScriptService/Core/History")
 local DebateDiagnostics = require("../src/ServerScriptService/Core/DebateDiagnostics")
+local AIDiagnostics = require("../src/ServerScriptService/Core/AIDiagnostics")
 
 local DebateProtocol = require("../src/ServerScriptService/Core/DebateProtocol")
 local StartupMode = require("../src/ServerScriptService/Core/StartupMode")
@@ -155,29 +156,20 @@ end)
 test("quick moves are vocabulary-compatible with the local fallback", function()
     for _, choice in ipairs(Config.Choices) do
         local result = LocalAdapter.Decide({ Message = choice.Text })
-        assert(Rules.Intents[result.Intent])
+        assert(result.Ok and result.Source=="SCRIPTED" and Rules.Intents[result.Intent])
         assert(result.Strength == "normal")
     end
 end)
 
-test("AI parser accepts capitalization, markdown wrappers and Unicode safely", function()
-    local text = table.concat({
-        "**TaCtIc: authority**",
-        "STRENGTH = STRONG",
-        "REPLY: The palace may expect you, but explain the café detail clearly.",
-    }, "\n")
-    local result = Parser.Parse(text, 320)
-    assert(result and result.Intent == "authority" and result.Strength == "strong")
-    assert(utf8.len(result.Reply) ~= nil)
-
-    local long = Parser.Parse("TACTIC=verify\nSTRENGTH=normal\nREPLY=" .. string.rep("é", 300), 71)
-    assert(long and #long.Reply <= 71 and utf8.len(long.Reply) ~= nil)
+test("AI parser accepts exact strict schema and Unicode", function()
+    local result = Parser.Parse("TACTIC=authority\nSTRENGTH=strong\nREPLY=Explain the café detail clearly.",{MaxOutputBytes=2048,MaxReplyBytes=320})
+    assert(result and result.Intent=="authority"and result.Strength=="strong"and utf8.len(result.Reply)~=nil)
 end)
 
 test("AI parser rejects missing fields, unknown tactics and fake rewards", function()
-    assert(Parser.Parse("TACTIC=verify\nREPLY=Missing strength", 320) == nil)
-    assert(Parser.Parse("TACTIC=award_elo\nSTRENGTH=strong\nREPLY=You win.", 320) == nil)
-    assert(Parser.Parse("TACTIC=verify\nSTRENGTH=godlike\nREPLY=No.", 320) == nil)
+    assert(Parser.Parse("TACTIC=verify\nREPLY=Missing strength",{MaxOutputBytes=2048,MaxReplyBytes=320}) == nil)
+    assert(Parser.Parse("TACTIC=award_elo\nSTRENGTH=strong\nREPLY=You win.",{MaxOutputBytes=2048,MaxReplyBytes=320}) == nil)
+    assert(Parser.Parse("TACTIC=verify\nSTRENGTH=godlike\nREPLY=No.",{MaxOutputBytes=2048,MaxReplyBytes=320}) == nil)
 end)
 
 test("local fallback ignores prompt-injection-like scoring instructions", function()
@@ -673,5 +665,8 @@ test("Boss practice has exactly three authored non-semantic replies",function()a
 
 test("Boss leave and restart require a session",function()for _,action in ipairs({"LeavePractice","RestartPractice"})do local ok=BossProtocol.ValidateClient({Action=action});assert(not ok);assert(BossProtocol.ValidateClient({Action=action,SessionId="boss-1-1"}))end end)
 test("Boss scripted config is explicit",function()local tier=BossAvailability.Resolve({BossDebate={Enabled=true,ScriptedPracticeEnabled=true}});assert(tier=="SCRIPTED_PRACTICE")end)
+
+test("AI diagnostics normalize and omit sensitive fields",function()local d=AIDiagnostics.Failure("bad","bad",-1,-2,-3);local f=AIDiagnostics.LogFields(d,string.rep("v",40));assert(f.Stage=="GENERATE"and f.Category=="UNKNOWN_FAILURE"and #f.Build==32);assert(f.Prompt==nil and f.Response==nil and f.Exception==nil and f.Payload==nil and f.Player==nil and f.UserId==nil)end)
+test("strict parser rejects malformed and oversized output",function()local l={MaxOutputBytes=64,MaxReplyBytes=10};for _,text in ipairs({"","```\nTACTIC=verify\nSTRENGTH=normal\nREPLY=ok\n```","TACTIC=verify\nTACTIC=verify\nREPLY=ok","INTENT=verify\nSTRENGTH=normal\nREPLY=ok","TACTIC=verify\nSTRENGTH=normal\nREPLY=12345678901","preamble\nTACTIC=verify\nSTRENGTH=normal\nREPLY=ok"})do assert(Parser.Parse(text,l)==nil)end;assert(Parser.Parse(string.rep("x",65),l)==nil);assert(Parser.Parse("TACTIC=verify\nSTRENGTH=normal\nREPLY="..string.char(255),{MaxOutputBytes=2048,MaxReplyBytes=320})==nil)end)
 
 print(string.format("\n%d tests passed", total))

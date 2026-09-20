@@ -30,6 +30,7 @@ return table.freeze({
     AIProvider = "Roblox",
     AIRequestMaxTokens = 90,
     AIReplyMaxBytes = 320,
+    AIResponseMaxBytes = 2048,
 
     Entitlements = {
         VIPUserIds = {},
