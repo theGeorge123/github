@@ -14,6 +14,8 @@ local EntitlementPolicy = require("../src/ServerScriptService/Core/EntitlementPo
 local History = require("../src/ServerScriptService/Core/History")
 local DebateDiagnostics = require("../src/ServerScriptService/Core/DebateDiagnostics")
 
+local Protocol = require("../src/ServerScriptService/Core/DebateProtocol")
+
 local total = 0
 
 local function test(name, callback)
@@ -593,4 +595,21 @@ test("multiplayer product unlock thresholds are ordered and typed", function()
         assert(unlock.Kind == "chair" or unlock.Kind == "title")
         previous = unlock.Points
     end
+end)
+
+
+test("debate protocol start contains named players", function()
+ local m=Protocol.Start(1,{Id="hints"},{Name="Alice",UserId=1},{Name="Bob",UserId=2},"Opening","Rules")
+ assert(m.Kind=="Start" and m.Players[1].Name=="Alice" and m.Players[2].Name=="Bob")
+ assert(Protocol.Validate(m)==true)
+end)
+test("debate protocol rejects start with string players", function()
+ local ok,reason=Protocol.Validate({Kind="Start",Topic={Id="hints"},Players={"Alice","Bob"}})
+ assert(ok==false and reason=="Start player requires Name")
+end)
+test("debate protocol lobby preserves queue status", function()
+ local m=Protocol.Lobby("QUEUED",{Points=0},1);assert(m.Kind=="Lobby" and m.Status=="QUEUED" and m.QueueSize==1)
+end)
+test("debate protocol profile is not a lobby event", function()
+ local m=Protocol.Profile({Points=25});assert(m.Kind=="Profile" and m.Profile.Points==25)
 end)
