@@ -10,4 +10,6 @@ function TesterPolicy.IsTester(player)
     return player ~= nil and testerUserIds[player.UserId] == true
 end
 
+function TesterPolicy.CanRunLiveProbe(player) return TesterPolicy.IsTester(player) end
+
 return TesterPolicy
