@@ -1,0 +1,18 @@
+local Protocol={}
+local CLIENT_ACTIONS={GetAvailability=true,EnterPractice=true,SubmitArgument=true,LeavePractice=true,RestartPractice=true}
+function Protocol.ValidateClient(message)
+ if type(message)~="table"or not CLIENT_ACTIONS[message.Action]then return false,"INVALID_ACTION"end
+ if message.Action=="GetAvailability"or message.Action=="EnterPractice"then return true end
+ if message.Action=="SubmitArgument"then
+  if type(message.SessionId)~="string"or type(message.RoundGeneration)~="number"or type(message.TurnToken)~="number"or type(message.SubmissionId)~="number"or type(message.Text)~="string"then return false,"INVALID_SUBMISSION"end
+ end
+ return true
+end
+function Protocol.Availability(tier,reason,disclosure)
+ assert(tier=="LOCKED"or tier=="SCRIPTED_PRACTICE","Invalid Boss tier")
+ return {Kind="BossAvailability",Tier=tier,ReasonCode=reason,Disclosure=disclosure}
+end
+function Protocol.Rejected(code,message)
+ return {Kind="BossArgumentRejected",Code=code,Message=message,CanRetry=false,PreserveDraft=true}
+end
+return Protocol
