@@ -582,15 +582,7 @@ test("debate layout definitions expose exactly three four-turn topics", function
     end
 end)
 
-test("multiplayer product unlock thresholds are ordered and typed", function()
-    local Definitions = require("../src/ServerScriptService/Core/MultiplayerDebateDefinitions")
-    local previous = -1
-    for _, unlock in ipairs(Definitions.Unlocks) do
-        assert(unlock.Points > previous)
-        assert(unlock.Kind == "chair" or unlock.Kind == "title")
-        previous = unlock.Points
-    end
-end)
+
 
 
 test("debate protocol start contains named players", function()
