@@ -20,7 +20,7 @@ local function bot(root,name,x,color,shape)
  local l=Instance.new("TextLabel");l.Size=UDim2.fromScale(1,1);l.BackgroundColor3=C.navy;l.BackgroundTransparency=.15;l.Text=name;l.TextColor3=color;l.TextScaled=true;l.Font=Enum.Font.GothamBold;l.Parent=tag
 end
 function World.Init()
- local old=workspace:FindFirstChild("BeatTheBotWorld");if old then old:Destroy() end
+ for _,name in ipairs({"BeatTheBotWorld","BeatTheBotDebateStage"})do local old=workspace:FindFirstChild(name);if old then old:Destroy()end end
  local root=Instance.new("Folder");root.Name="BeatTheBotDebateStage";root.Parent=workspace
  part("Stage",Vector3.new(24,1,20),Vector3.new(0,0,0),Color3.fromRGB(100,118,132),root,Enum.Material.Slate)
  part("StageInset",Vector3.new(20,.15,16),Vector3.new(0,.58,0),Color3.fromRGB(42,58,74),root,Enum.Material.SmoothPlastic)
