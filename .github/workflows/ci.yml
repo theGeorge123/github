@@ -50,6 +50,12 @@ jobs:
       - name: Verify built script contents
         run: python3 scripts/verify_build.py build/BeatTheBot.rbxlx
 
+      - name: Build debate place
+        run: rojo build debate.project.json -o build/BeatTheBotDebate.rbxlx
+
+      - name: Verify debate build contents
+        run: python3 scripts/verify_build.py build/BeatTheBotDebate.rbxlx
+
       - name: Build Studio smoke place
         run: rojo build test.project.json -o build/BeatTheBotSmoke.rbxlx
 
@@ -59,6 +65,7 @@ jobs:
           name: BeatTheBot-v0.4-builds
           path: |
             build/BeatTheBot.rbxlx
+            build/BeatTheBotDebate.rbxlx
             build/BeatTheBotSmoke.rbxlx
 
       - name: Check whitespace errors
