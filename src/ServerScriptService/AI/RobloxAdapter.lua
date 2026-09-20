@@ -1,5 +1,6 @@
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 local ResponseParser = require(script.Parent.ResponseParser)
+local Diagnostics = require(script.Parent.Parent.Core.AIDiagnostics)
 
 local RobloxAdapter = {}
 
@@ -20,8 +21,16 @@ function RobloxAdapter.Decide(context)
     local opponent = context.Opponent or context.Guard
     assert(opponent and opponent.Persona, "Missing opponent definition")
 
-    local generator = Instance.new("TextGenerator")
-    generator.Name = "BeatTheBotTurnGenerator"
+    local generator
+    local response
+    local stage = "CREATE"
+    local started = os.clock()
+    local inputBytes = 0
+    local ok = pcall(function()
+        stage = "CREATE"
+        generator = Instance.new("TextGenerator")
+        stage = "CONFIGURE"
+        generator.Name = "BeatTheBotTurnGenerator"
     generator.SystemPrompt = table.concat({
         "You are the AI reasoning layer for a child-friendly Roblox persuasion game.",
         "This is a TEXT-ONLY persuasion match. There are no inventory items, document handovers, or physical proof mechanics.",
@@ -75,28 +84,21 @@ function RobloxAdapter.Decide(context)
         "LATEST PLAYER MESSAGE END",
     }, "\n")
 
-    local ok, response = pcall(function()
-        return generator:GenerateTextAsync({
-            UserPrompt = userPrompt,
-            MaxTokens = Config.AIRequestMaxTokens,
-        })
+        inputBytes = #userPrompt
+        stage = "GENERATE"
+        response = generator:GenerateTextAsync({UserPrompt = userPrompt, MaxTokens = Config.AIRequestMaxTokens})
     end)
-
-    generator:Destroy()
-
+    if generator then generator:Destroy();generator=nil end
+    local elapsed = math.floor((os.clock()-started)*1000)
     if not ok then
-        error("Text generation failed: " .. tostring(response))
+        local category = stage=="CREATE" and "CLASS_UNAVAILABLE" or stage=="CONFIGURE" and "CONFIGURE_FAILED" or "GENERATION_FAILED"
+        return {Ok=false,Diagnostics=Diagnostics.Failure(stage,category,elapsed,inputBytes,0)}
     end
-    if not response or not response.GeneratedText then
-        error("Text generation returned no response")
-    end
-
-    local parsed, parseError = ResponseParser.Parse(response.GeneratedText, Config.AIReplyMaxBytes)
-    if not parsed then
-        error("TextGenerator parse failed: " .. tostring(parseError))
-    end
-
-    return parsed
+    if type(response)~="table"then return {Ok=false,Diagnostics=Diagnostics.Failure("RESPONSE","INVALID_RESPONSE_SHAPE",elapsed,inputBytes,0)}end
+    if type(response.GeneratedText)~="string"or response.GeneratedText==""then return {Ok=false,Diagnostics=Diagnostics.Failure("RESPONSE","EMPTY_RESPONSE",elapsed,inputBytes,0)}end
+    local parsed,category=ResponseParser.Parse(response.GeneratedText,{MaxOutputBytes=Config.AIResponseMaxBytes,MaxReplyBytes=Config.AIReplyMaxBytes})
+    if not parsed then return {Ok=false,Diagnostics=Diagnostics.Failure("PARSE",category,elapsed,inputBytes,#response.GeneratedText)}end
+    parsed.Ok=true;parsed.Source="LIVE";parsed.Diagnostics=Diagnostics.Success("PARSE",elapsed,inputBytes,#response.GeneratedText,"LIVE");return parsed
 end
 
 return RobloxAdapter
