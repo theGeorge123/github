@@ -20,6 +20,7 @@ local DebateRoundState = require("../src/ServerScriptService/Core/DebateRoundSta
 local ArgumentValidation = require("../src/ServerScriptService/Core/ArgumentValidation")
 local WritingChecklist = require("../src/ServerScriptService/Core/WritingChecklist")
 local DebateStructure = require("../src/ServerScriptService/Core/DebateStructure")
+local DebateParticipation = require("../src/ServerScriptService/Services/DebateParticipationService")
 
 local total = 0
 
@@ -645,5 +646,9 @@ test("writing checklist stable ids",function()local _,_,c=WritingChecklist.Evalu
 test("debate sides swap independently each round",function() assert(DebateStructure.SideFor(1,1)=="Affirmative"and DebateStructure.SideFor(1,2)=="Negative"and DebateStructure.SideFor(2,1)=="Negative"and DebateStructure.SideFor(2,2)=="Affirmative")end)
 test("debate roles are deterministic",function()assert(DebateStructure.RoleForTurn(1)=="Opening"and DebateStructure.RoleForTurn(2)=="Rebuttal"and DebateStructure.RoleForTurn(3)=="Closing")end)
 test("scripted host prompt states limits",function()local topic={Sides={Affirmative={Label="FOR TEST",OpeningPrompt="Give a reason."}},TurnPrompts={Rebuttal="Address the other side."}};local x=DebateStructure.HostPrompt(topic,"Opening","Affirmative",{{Id="reason",Label="Gives a reason",Earned=true}});assert(string.find(x,"SCRIPTED HOST",1,true)and string.find(x,"does not judge",1,true)and string.find(x,"Gives a reason",1,true))end)
+
+test("participation prevents cross-mode ownership",function()DebateParticipation.ResetForTests();local p={};local ok,m=DebateParticipation.TryClaim(p,"MULTIPLAYER");assert(ok and m.Mode=="MULTIPLAYER");local boss,reason=DebateParticipation.TryClaim(p,"BOSS");assert(not boss and reason=="PLAYER_BUSY")end)
+test("participation release requires exact token",function()DebateParticipation.ResetForTests();local p={};local _,m=DebateParticipation.TryClaim(p,"MULTIPLAYER");assert(not DebateParticipation.Release(p,{Mode="BOSS",Generation=m.Generation}));assert(DebateParticipation.Get(p)==m);assert(DebateParticipation.Release(p,m));local _,b=DebateParticipation.TryClaim(p,"BOSS");assert(not DebateParticipation.Release(p,m)and DebateParticipation.Get(p)==b)end)
+test("participation disconnect clears ownership",function()DebateParticipation.ResetForTests();local p={};DebateParticipation.TryClaim(p,"BOSS");DebateParticipation.Disconnect(p);assert(DebateParticipation.Get(p)==nil)end)
 
 print(string.format("\n%d tests passed", total))
