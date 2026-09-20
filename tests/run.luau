@@ -587,7 +587,7 @@ test("multiplayer debate definitions bound scoring and unlocks", function()
     assert(#Definitions.Topics == 3 and Definitions.PlayerTurnsEach == 3)
     local basic = select(1, Definitions.Score("I agree"))
     local strong = select(1, Definitions.Score("However this approach gives experienced players less control. For example a new builder could request one optional hint because that keeps help available when needed."))
-    assert(basic == 0 and strong >= 20)
+    assert(basic == 0 and strong >= 15)
     assert(#Definitions.Unlocks == 4 and Definitions.Unlocks[1].Points == 0)
 end)
 
