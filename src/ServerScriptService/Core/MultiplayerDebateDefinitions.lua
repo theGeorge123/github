@@ -1,5 +1,6 @@
 local Definitions = {}
 Definitions.PlayerTurnsEach = 3
+Definitions.TurnSeconds = 45
 Definitions.MaxArgumentBytes = 500
 Definitions.Unlocks = table.freeze({
     { Points = 0, Id = "starter-chair", Label = "Starter Chair", Kind = "chair" },
