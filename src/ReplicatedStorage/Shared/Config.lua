@@ -19,6 +19,7 @@ return table.freeze({
     -- Private debate prototype gates. Both remain off until an authorized private test.
     DebateEnabled = true,
     DebateLiveEnabled = false,
+    DebateProbe = {Enabled=false,MaxOutputBytes=2048,MaxTextBytes=500,MaxTokens=120,SlowThresholdMs=12000},
     BossDebate = {
         Enabled = true,
         ScriptedPracticeEnabled = true,
