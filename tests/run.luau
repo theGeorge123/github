@@ -682,8 +682,8 @@ test("judge service maps only the three visible checklist dimensions",function()
  for _,reaction in ipairs(reactions)do assert(string.find(reaction.Commentary,"SCRIPTED CHECKLIST",1,true))end
 end)
 test("judge verdict is a checklist result and handles ties",function()
- local tie=JudgeService.Verdicts({{UserId=1,Points=30},{UserId=2,Points=30}});assert(tie.IsTie and tie.WinnerUserId==nil and #tie.Lines==3 and string.find(tie.Disclosure,"did not judge truth",1,true))
- local win=JudgeService.Verdicts({{UserId=1,Points=35},{UserId=2,Points=30}});assert(not win.IsTie and win.WinnerUserId==1)
+ local tie=JudgeService.Verdicts({{UserId=1,Points=30},{UserId=2,Points=30}});assert(tie.IsTie and tie.LeadingUserId==nil and #tie.Lines==3 and string.find(tie.Disclosure,"did not judge truth",1,true))
+ local lead=JudgeService.Verdicts({{UserId=1,Points=35},{UserId=2,Points=30}});assert(not lead.IsTie and lead.LeadingUserId==1)
 end)
 
 test("background matchmaking requires Boss ownership",function()assert(AntiEmptyPolicy.CanBackgroundSearch({Mode="BOSS"}));assert(not AntiEmptyPolicy.CanBackgroundSearch({Mode="MULTIPLAYER"}));assert(not AntiEmptyPolicy.CanBackgroundSearch(nil))end)

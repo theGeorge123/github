@@ -32,9 +32,9 @@ function World.SetActivePlayer(playerIndex)
  for index,podium in pairs(World.Podiums)do TweenService:Create(podium,TweenInfo.new(.32,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Position=Vector3.new(podium.Position.X,index==playerIndex and 1.3 or .65,podium.Position.Z),Color=index==playerIndex and C.gold or C.blue}):Play()end
  Lighting.ColorShift_Top=C.cyan;task.delay(.18,function()Lighting.ColorShift_Top=Color3.new(0,0,0)end);World.PlaySound("TurnStart")
 end
-function World.Celebrate(winnerUserId,players)
- Lighting.ColorShift_Top=C.gold;World.PlaySound("VerdictSting");local winnerIndex=nil;for index,player in ipairs(players or {})do if player.UserId==winnerUserId then winnerIndex=index end end
- if winnerIndex then local podium=World.Podiums[winnerIndex];if podium then local spot=Instance.new("SpotLight");spot.Name="WinnerSpotlight";spot.Color=C.gold;spot.Brightness=8;spot.Range=45;spot.Angle=70;spot.Face=Enum.NormalId.Top;spot.Parent=podium;task.delay(6,function()if spot.Parent then spot:Destroy()end end)end;World.PlaySound("MatchWin")end
+function World.Celebrate(leadingUserId,players)
+ Lighting.ColorShift_Top=C.gold;World.PlaySound("VerdictSting");local leadingIndex=nil;for index,player in ipairs(players or {})do if player.UserId==leadingUserId then leadingIndex=index end end
+ if leadingIndex then local podium=World.Podiums[leadingIndex];if podium then local rig=Instance.new("Part");rig.Name="ChecklistLeadSpotlight";rig.Size=Vector3.new(1,1,1);rig.CFrame=CFrame.new(podium.Position+Vector3.new(0,25,0));rig.Transparency=1;rig.Anchored=true;rig.CanCollide=false;rig.Parent=podium.Parent;local spot=Instance.new("SpotLight");spot.Color=C.gold;spot.Brightness=8;spot.Range=45;spot.Angle=70;spot.Face=Enum.NormalId.Bottom;spot.Parent=rig;task.delay(6,function()if rig.Parent then rig:Destroy()end end)end;World.PlaySound("MatchWin")end
  local emitter=Instance.new("ParticleEmitter");emitter.Name="ChecklistConfetti";emitter.Texture="rbxassetid://241837157";emitter.Color=ColorSequence.new({ColorSequenceKeypoint.new(0,C.cyan),ColorSequenceKeypoint.new(.5,C.gold),ColorSequenceKeypoint.new(1,C.green)});emitter.Lifetime=NumberRange.new(2,3);emitter.Speed=NumberRange.new(14,22);emitter.SpreadAngle=Vector2.new(80,80);emitter.Rate=0;emitter.Parent=World.Spawn;emitter:Emit(120);task.delay(5,function()if emitter.Parent then emitter:Destroy()end;Lighting.ColorShift_Top=Color3.new(0,0,0)end)
 end
 function World.Init()

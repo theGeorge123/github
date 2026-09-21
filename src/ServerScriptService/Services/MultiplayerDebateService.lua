@@ -27,7 +27,7 @@ local publishTurn
 local function completeRound(s,remote)
  s.Closed=true
  local scores={{Name=s.Players[1].DisplayName,UserId=s.Players[1].UserId,Points=s.Scores[s.Players[1]]or 0},{Name=s.Players[2].DisplayName,UserId=s.Players[2].UserId,Points=s.Scores[s.Players[2]]or 0}}
- local panel=JudgeService.Verdicts(scores);both(s,remote,{Kind="Complete",Round=s.Round,Scores=scores,Panel=panel,Message="Round complete. Points reflect the visible checklist, not debate truth."});DebateWorldService.Celebrate(panel.WinnerUserId,s.Players)
+ local panel=JudgeService.Verdicts(scores);both(s,remote,{Kind="Complete",Round=s.Round,Scores=scores,Panel=panel,Message="Round complete. Points reflect the visible checklist, not debate truth."});DebateWorldService.Celebrate(panel.LeadingUserId,s.Players)
 end
 publishTurn=function(s,remote)
  local turn=RoundState.beginTurn(s.RoundState);local player=s.Players[turn.PlayerIndex];local deadline=workspace:GetServerTimeNow()+Definitions.TurnSeconds;s.TurnDeadline=deadline

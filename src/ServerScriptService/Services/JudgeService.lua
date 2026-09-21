@@ -58,11 +58,11 @@ end
 function JudgeService.Verdicts(scores)
     assert(type(scores) == "table" and #scores == 2, "Two scores required")
     local first, second = scores[1], scores[2]
-    local winnerUserId = nil
-    if first.Points ~= second.Points then winnerUserId = first.Points > second.Points and first.UserId or second.UserId end
+    local leadingUserId = nil
+    if first.Points ~= second.Points then leadingUserId = first.Points > second.Points and first.UserId or second.UserId end
     return {
-        WinnerUserId = winnerUserId,
-        IsTie = winnerUserId == nil,
+        LeadingUserId = leadingUserId,
+        IsTie = leadingUserId == nil,
         Disclosure = "SCRIPTED PRACTICE — checklist totals only; the panel did not judge truth or argument quality.",
         Lines = {
             {Judge="Rivet", Text="SCRIPTED VERDICT — Structure points came from visible reason markers."},

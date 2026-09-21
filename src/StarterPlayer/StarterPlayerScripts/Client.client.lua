@@ -6,7 +6,7 @@ local function label(pa,t,z,col,b)local l=Instance.new("TextLabel");l.Background
 local function button(pa,t,col)local b=Instance.new("TextButton");b.Text=t;b.TextColor3=C.white;b.TextSize=14;b.Font=Enum.Font.GothamBold;b.BackgroundColor3=col or C.panel;b.Parent=pa;corner(b,9);return b end
 local g=Instance.new("ScreenGui");g.Name="MultiplayerDebateUI";g.ResetOnSpawn=false;g.Parent=p:WaitForChild("PlayerGui")
 local MAX_ARGUMENT_BYTES=500 -- mirrors authoritative server limit
-local badge=label(g,"2 PLAYERS • SCRIPTED AI • SESSION POINTS",12,C.gold,true);badge.Position=UDim2.fromOffset(14,8);badge.Size=UDim2.fromOffset(330,26)
+local badge=label(g,"SCRIPTED PRACTICE — NO WINNER OR SCORE • NOT A REAL OPPONENT",12,C.gold,true);badge.Position=UDim2.fromOffset(14,8);badge.Size=UDim2.fromOffset(480,26)
 local menu=Instance.new("Frame");menu.AnchorPoint=Vector2.new(1,.5);menu.Position=UDim2.new(1,-14,.5,0);menu.Size=UDim2.fromOffset(142,218);menu.BackgroundColor3=C.bg;menu.Parent=g;corner(menu,12)
 local ml=Instance.new("UIListLayout");ml.Padding=UDim.new(0,7);ml.HorizontalAlignment=Enum.HorizontalAlignment.Center;ml.VerticalAlignment=Enum.VerticalAlignment.Center;ml.Parent=menu
 local play=button(menu,"FIND DEBATE",C.blue);play.Size=UDim2.new(1,-16,0,44)
