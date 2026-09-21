@@ -8,6 +8,7 @@ local Participation=require(script.Parent.DebateParticipationService)
 local Structure=require(script.Parent.Parent.Core.DebateStructure)
 local AntiEmptyPolicy=require(script.Parent.Parent.Core.AntiEmptyLobbyPolicy)
 local JudgeService=require(script.Parent.JudgeService)
+local DebateWorldService=require(script.Parent.DebateWorldService)
 local Service={Queue={},Sessions={},Profiles={},LastSubmit={},Claims={},Background={},Offers={}}
 local nextSessionId=0
 local function profile(p)
@@ -26,12 +27,13 @@ local publishTurn
 local function completeRound(s,remote)
  s.Closed=true
  local scores={{Name=s.Players[1].DisplayName,UserId=s.Players[1].UserId,Points=s.Scores[s.Players[1]]or 0},{Name=s.Players[2].DisplayName,UserId=s.Players[2].UserId,Points=s.Scores[s.Players[2]]or 0}}
- both(s,remote,{Kind="Complete",Round=s.Round,Scores=scores,Panel=JudgeService.Verdicts(scores),Message="Round complete. Points reflect the visible checklist, not debate truth."})
+ local panel=JudgeService.Verdicts(scores);both(s,remote,{Kind="Complete",Round=s.Round,Scores=scores,Panel=panel,Message="Round complete. Points reflect the visible checklist, not debate truth."});DebateWorldService.Celebrate(panel.WinnerUserId,s.Players)
 end
 publishTurn=function(s,remote)
  local turn=RoundState.beginTurn(s.RoundState);local player=s.Players[turn.PlayerIndex];local deadline=workspace:GetServerTimeNow()+Definitions.TurnSeconds;s.TurnDeadline=deadline
  local side=Structure.SideFor(s.Round,turn.PlayerIndex);local role=Structure.RoleForTurn(turn.TurnNumber)
  both(s,remote,{Kind="Turn",UserId=player.UserId,Name=player.DisplayName,TurnNumber=turn.TurnNumber,Deadline=deadline,Side=side,Role=role,HostPrompt=Structure.HostPrompt(topicFor(s),role,side,s.PreviousCriteria)})
+ DebateWorldService.SetActivePlayer(turn.PlayerIndex)
  local sessionId=s.Id
  task.delay(Definitions.TurnSeconds,function()
   if s.Ended or Service.Sessions[player]~=s or s.Id~=sessionId then return end
@@ -87,6 +89,7 @@ function Service.Init(remote,submit)
    local role=Structure.RoleForTurn(s.RoundState.Turns[playerIndex]+1)
    local score,reasons,criteria,reactions=JudgeService.Evaluate(filtered,role,s.RoundState.Turns[playerIndex]+1,Definitions.Score);if score==0 then reject(remote,p,value.Id,"NO_MEANINGFUL_TEXT","Add a readable argument before sending.");return end;profile(p).Points+=score;s.Scores[p]=(s.Scores[p]or 0)+score
    both(s,remote,{Kind="PlayerTurn",UserId=p.UserId,SubmissionId=value.Id,Name=p.DisplayName,Text=filtered,Points=score,Reasons=reasons,Criteria=criteria,JudgeReactions=reactions,RoundTotal=s.Scores[p],Profile=publicProfile(p)})
+   DebateWorldService.React(reactions)
    s.PreviousCriteria=criteria
    local result=RoundState.completeTurn(s.RoundState,token.Generation,token.Turn,token.PlayerIndex);if result.Complete then completeRound(s,remote)else publishTurn(s,remote)end
 
