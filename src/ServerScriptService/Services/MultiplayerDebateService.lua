@@ -35,6 +35,7 @@ publishTurn=function(s,remote)
  both(s,remote,{Kind="Turn",UserId=player.UserId,Name=player.DisplayName,TurnNumber=turn.TurnNumber,Deadline=deadline,Side=side,Role=role,HostPrompt=Structure.HostPrompt(topicFor(s),role,side,s.PreviousCriteria)})
  DebateWorldService.SetActivePlayer(turn.PlayerIndex)
  local sessionId=s.Id
+ task.delay(Definitions.TurnSeconds-10,function()if not s.Ended and Service.Sessions[player]==s and s.Id==sessionId and RoundState.matches(s.RoundState,turn.RoundGeneration,turn.TurnToken,turn.PlayerIndex)then DebateWorldService.PlaySound("TenSecondWarning");both(s,remote,{Kind="TenSecondWarning",UserId=player.UserId})end end)
  task.delay(Definitions.TurnSeconds,function()
   if s.Ended or Service.Sessions[player]~=s or s.Id~=sessionId then return end
   local result=RoundState.completeTurn(s.RoundState,turn.RoundGeneration,turn.TurnToken,turn.PlayerIndex);if not result.Applied then return end
@@ -89,7 +90,7 @@ function Service.Init(remote,submit)
    local role=Structure.RoleForTurn(s.RoundState.Turns[playerIndex]+1)
    local score,reasons,criteria,reactions=JudgeService.Evaluate(filtered,role,s.RoundState.Turns[playerIndex]+1,Definitions.Score);if score==0 then reject(remote,p,value.Id,"NO_MEANINGFUL_TEXT","Add a readable argument before sending.");return end;profile(p).Points+=score;s.Scores[p]=(s.Scores[p]or 0)+score
    both(s,remote,{Kind="PlayerTurn",UserId=p.UserId,SubmissionId=value.Id,Name=p.DisplayName,Text=filtered,Points=score,Reasons=reasons,Criteria=criteria,JudgeReactions=reactions,RoundTotal=s.Scores[p],Profile=publicProfile(p)})
-   DebateWorldService.React(reactions)
+   DebateWorldService.React(reactions);DebateWorldService.PlaySound("ScoreTick")
    s.PreviousCriteria=criteria
    local result=RoundState.completeTurn(s.RoundState,token.Generation,token.Turn,token.PlayerIndex);if result.Complete then completeRound(s,remote)else publishTurn(s,remote)end
 
