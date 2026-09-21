@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local services = script.Parent.Services
 
 local DataService = require(services.DataService)
@@ -48,9 +49,10 @@ if startup.InitDebate then
     MultiplayerDebateService.Init(debateState, debateSubmit)
 
     local function placeDebater(character)
-        character:WaitForChild("HumanoidRootPart", 10)
-        if character.Parent and WorldService.Spawn and WorldService.Spawn.Parent then
-            character:PivotTo(WorldService.Spawn.CFrame + Vector3.new(0, 5, 0))
+        local rootPart=character:WaitForChild("HumanoidRootPart", 10)
+        if rootPart and character.Parent and WorldService.Spawn and WorldService.Spawn.Parent then
+            local target=WorldService.Spawn.CFrame+Vector3.new(0,5,0);character:PivotTo(target+Vector3.new(0,12,0));rootPart.Anchored=true
+            local tween=TweenService:Create(rootPart,TweenInfo.new(.7,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{CFrame=target});tween:Play();tween.Completed:Connect(function()if rootPart.Parent then rootPart.Anchored=false end end)
         end
     end
     local function joinDebater(player)

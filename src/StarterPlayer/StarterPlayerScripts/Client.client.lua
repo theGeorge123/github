@@ -6,7 +6,7 @@ local function label(pa,t,z,col,b)local l=Instance.new("TextLabel");l.Background
 local function button(pa,t,col)local b=Instance.new("TextButton");b.Text=t;b.TextColor3=C.white;b.TextSize=14;b.Font=Enum.Font.GothamBold;b.BackgroundColor3=col or C.panel;b.Parent=pa;corner(b,9);return b end
 local g=Instance.new("ScreenGui");g.Name="MultiplayerDebateUI";g.ResetOnSpawn=false;g.Parent=p:WaitForChild("PlayerGui")
 local MAX_ARGUMENT_BYTES=500 -- mirrors authoritative server limit
-local badge=label(g,"2 PLAYERS • SCRIPTED AI • SESSION POINTS",12,C.gold,true);badge.Position=UDim2.fromOffset(14,8);badge.Size=UDim2.fromOffset(330,26)
+local badge=label(g,"SCRIPTED PRACTICE — NO WINNER OR SCORE • NOT A REAL OPPONENT",12,C.gold,true);badge.Position=UDim2.fromOffset(14,8);badge.Size=UDim2.fromOffset(480,26)
 local menu=Instance.new("Frame");menu.AnchorPoint=Vector2.new(1,.5);menu.Position=UDim2.new(1,-14,.5,0);menu.Size=UDim2.fromOffset(142,218);menu.BackgroundColor3=C.bg;menu.Parent=g;corner(menu,12)
 local ml=Instance.new("UIListLayout");ml.Padding=UDim.new(0,7);ml.HorizontalAlignment=Enum.HorizontalAlignment.Center;ml.VerticalAlignment=Enum.VerticalAlignment.Center;ml.Parent=menu
 local play=button(menu,"FIND DEBATE",C.blue);play.Size=UDim2.new(1,-16,0,44)
@@ -14,6 +14,11 @@ local chairs=button(menu,"CHAIRS");chairs.Size=play.Size
 local titles=button(menu,"TITLES");titles.Size=play.Size
 local profileButton=button(menu,"PROFILE");profileButton.Size=play.Size
 BossController.Init(r,g,button,label,C)
+local onboarding=Instance.new("Frame");onboarding.Name="FirstSessionOnboarding";onboarding.AnchorPoint=Vector2.new(.5,.5);onboarding.Position=UDim2.fromScale(.5,.5);onboarding.Size=UDim2.new(.84,0,.72,0);onboarding.BackgroundColor3=C.bg;onboarding.ZIndex=20;onboarding.Parent=g;corner(onboarding,16)
+local oc=Instance.new("UISizeConstraint");oc.MaxSize=Vector2.new(680,520);oc.MinSize=Vector2.new(300,360);oc.Parent=onboarding
+local oh=label(onboarding,"WELCOME TO THE SCRIPTED CHECKLIST PANEL",24,C.gold,true);oh.Position=UDim2.fromOffset(24,22);oh.Size=UDim2.new(1,-48,0,66);oh.TextXAlignment=Enum.TextXAlignment.Center;oh.ZIndex=21
+local ob=label(onboarding,"1  YOU ARE ASSIGNED A SIDE\nArgue that position, even when it is not your personal view.\n\n2  THREE TURNS • 45 SECONDS EACH\nOpening, rebuttal, then closing.\n\n3  THREE VISIBLE CHECKS\nRIVET: reason words like because\nPIP: an example or scenario\nMOSS: a rebuttal marked by however or but\n\nSCRIPTED PRACTICE • NOT A REAL OPPONENT\nThe panel detects writing markers. It does not judge truth or argument quality.",16,C.white);ob.Position=UDim2.fromOffset(30,96);ob.Size=UDim2.new(1,-60,1,-170);ob.TextYAlignment=Enum.TextYAlignment.Top;ob.TextXAlignment=Enum.TextXAlignment.Center;ob.ZIndex=21
+local dismiss=button(onboarding,"ENTER ARENA",C.blue);dismiss.AnchorPoint=Vector2.new(.5,1);dismiss.Position=UDim2.new(.5,0,1,-22);dismiss.Size=UDim2.fromOffset(190,48);dismiss.ZIndex=21;dismiss.Activated:Connect(function()onboarding.Visible=false end);task.delay(30,function()if onboarding.Parent then onboarding.Visible=false end end)
 local panel=Instance.new("Frame");panel.AnchorPoint=Vector2.new(.5,.5);panel.Position=UDim2.fromScale(.46,.52);panel.Size=UDim2.new(.8,0,.82,0);panel.BackgroundColor3=C.bg;panel.Visible=false;panel.Parent=g;corner(panel,16)
 local pc=Instance.new("UISizeConstraint");pc.MaxSize=Vector2.new(820,700);pc.MinSize=Vector2.new(310,440);pc.Parent=panel
 local title=label(panel,"WAITING FOR ANOTHER PLAYER",22,C.white,true);title.Position=UDim2.fromOffset(18,12);title.Size=UDim2.new(1,-36,0,34)
@@ -37,6 +42,7 @@ titles.Activated:Connect(function()popup("TITLES","Debater — owned\nClear Thin
 profileButton.Activated:Connect(function()submit:FireServer("profile")end)
 rematch.Activated:Connect(function()submit:FireServer("rematch");rematch.Text="WAITING…";rematch.Active=false end)
 local function row(who,text,col)local x=label(log,who.."\n"..text,14,col,who~="SYSTEM");x.Size=UDim2.new(1,-18,0,68);x.AutomaticSize=Enum.AutomaticSize.Y;x.TextYAlignment=Enum.TextYAlignment.Top;x.Parent=log;return x end
+local function countScore(name,points)local x=row("SCORE",name..": 0 session points",C.green);task.spawn(function()for value=1,points do if not x.Parent then return end;x.Text="SCORE\n"..name..": "..value.." session points";task.wait(.035)end end)end
 play.Activated:Connect(function()panel.Visible=true;if queued then submit:FireServer("cancelQueue")else submit:FireServer("queue")end end)
 send.Activated:Connect(function()if not myTurn or pendingSubmissionId~=nil or box.Text==""then return end;nextSubmissionId+=1;pendingSubmissionId=nextSubmissionId;pendingText=box.Text;submit:FireServer("argument",{Id=pendingSubmissionId,Text=pendingText});send.Text="SENDING…";send.Active=false;send.AutoButtonColor=false end)
 state.OnClientEvent:Connect(function(m)
@@ -44,9 +50,10 @@ state.OnClientEvent:Connect(function(m)
  elseif m.Kind=="Profile"then local x=m.Profile;popup("PROFILE",("Session points: %d\nChair: %s\nTitle: %s\n\nProgress resets when this server closes."):format(x.Points,x.Chair,x.Title))
  elseif m.Kind=="Start"then rematch.Visible=false;rematch.Text="REMATCH";rematch.Active=true;queued=false;play.Text="FIND DEBATE";title.Text=m.Players[1].Name.."  vs  "..m.Players[2].Name;topic.Text=m.Topic.Topic.."\nYour assigned side appears with each turn.";for _,x in ipairs(log:GetChildren())do if x:IsA("TextLabel")then x:Destroy()end end;row("SCRIPTED HOST",m.Opening,C.gold);row("SCORING",m.Rules.." Base +10, reason +5, example +5, rebuttal +5.",C.muted)
  elseif m.Kind=="Turn"then myTurn=m.UserId==p.UserId;turn.Text=(myTurn and "YOUR TURN" or (m.Name.." IS THINKING")).." • "..m.Role.." • "..m.Side;if myTurn then row("SCRIPTED HOST",m.HostPrompt,C.gold)end;send.Text=myTurn and "SEND TURN" or "WAIT";send.Active=myTurn;send.AutoButtonColor=myTurn
- elseif m.Kind=="PlayerTurn"then if m.UserId==p.UserId and m.SubmissionId==pendingSubmissionId then pendingSubmissionId=nil;pendingText=nil;box.Text="";myTurn=false end;row(m.Name.."  +"..m.Points,m.Text.."\n"..table.concat(m.Reasons," • "),C.white)
+ elseif m.Kind=="PlayerTurn"then if m.UserId==p.UserId and m.SubmissionId==pendingSubmissionId then pendingSubmissionId=nil;pendingText=nil;box.Text="";myTurn=false end;row(m.Name.."  +"..m.Points,m.Text.."\n"..table.concat(m.Reasons," • "),C.white);for _,reaction in ipairs(m.JudgeReactions or {})do row(reaction.Judge.." • "..(reaction.Earned and "+5"or"NOT DETECTED"),reaction.Commentary.."\n"..reaction.Label,reaction.Earned and C.green or C.muted)end
  elseif m.Kind=="AIReply"then row(m.Label,m.Text,C.gold)
- elseif m.Kind=="Complete"then myTurn=false;send.Text="COMPLETE";turn.Text=m.Message;rematch.Visible=true;for _,s in ipairs(m.Scores)do row("SCORE",s.Name..": "..s.Points.." session points",C.green)end
+ elseif m.Kind=="Complete"then myTurn=false;send.Text="COMPLETE";turn.Text=m.Message;rematch.Visible=true;for index,verdict in ipairs((m.Panel and m.Panel.Lines)or{})do task.delay((index-1)*.7,function()row(verdict.Judge,verdict.Text,C.gold)end)end;task.delay(2.3,function()row("PANEL DISCLOSURE",m.Panel and m.Panel.Disclosure or "SCRIPTED PRACTICE — checklist totals only.",C.muted);for _,s in ipairs(m.Scores)do countScore(s.Name,s.Points)end end)
+ elseif m.Kind=="TenSecondWarning"then if m.UserId==p.UserId then row("10 SECONDS","Finish and send your current turn.",C.gold)end
  elseif m.Kind=="ArgumentRejected"then if m.SubmissionId==pendingSubmissionId or m.SubmissionId==nil then pendingSubmissionId=nil;if pendingText then box.Text=pendingText end;pendingText=nil;myTurn=m.CanRetry==true;send.Text=myTurn and "SEND TURN" or "WAIT";send.Active=myTurn;send.AutoButtonColor=myTurn;row("SYSTEM",m.Message,C.gold)end
  elseif m.Kind=="TurnTimedOut"then myTurn=false;row("SYSTEM",m.Message,C.gold)
  elseif m.Kind=="RematchStatus"then row("SYSTEM",m.Name.." wants another round.",C.green)

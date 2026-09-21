@@ -27,6 +27,8 @@ local BossProtocol = require("../src/ServerScriptService/Core/BossDebateProtocol
 local BossState = require("../src/ServerScriptService/Core/BossDebateRoundState")
 local BossDefinitions = require("../src/ServerScriptService/Core/BossDebateDefinitions")
 local BossLedger = require("../src/ServerScriptService/Core/BossDebateSubmissionLedger")
+local AntiEmptyPolicy = require("../src/ServerScriptService/Core/AntiEmptyLobbyPolicy")
+local JudgeService = require("../src/ServerScriptService/Services/JudgeService")
 
 local total = 0
 
@@ -670,5 +672,22 @@ test("AI diagnostics normalize and omit sensitive fields",function()local d=AIDi
 test("strict parser rejects malformed and oversized output",function()local l={MaxOutputBytes=64,MaxReplyBytes=10};for _,text in ipairs({"","```\nTACTIC=verify\nSTRENGTH=normal\nREPLY=ok\n```","TACTIC=verify\nTACTIC=verify\nREPLY=ok","INTENT=verify\nSTRENGTH=normal\nREPLY=ok","TACTIC=verify\nSTRENGTH=normal\nREPLY=12345678901","preamble\nTACTIC=verify\nSTRENGTH=normal\nREPLY=ok"})do assert(Parser.Parse(text,l)==nil)end;assert(Parser.Parse(string.rep("x",65),l)==nil);assert(Parser.Parse("TACTIC=verify\nSTRENGTH=normal\nREPLY="..string.char(255),{MaxOutputBytes=2048,MaxReplyBytes=320})==nil)end)
 
 test("probe config stays disabled",function()assert(Config.DebateLiveEnabled==false and Config.DebateProbe.Enabled==false)end)
+
+test("judge service maps only the three visible checklist dimensions",function()
+ local score,_,_,reactions=JudgeService.Evaluate("Because choices matter, for example new players learn; however fixed rules can frustrate them.","Rebuttal",2,WritingChecklist.Evaluate)
+ assert(score==25 and #reactions==3)
+ assert(reactions[1].Judge=="Rivet"and reactions[1].CriterionId=="reason"and reactions[1].Earned)
+ assert(reactions[2].Judge=="Pip"and reactions[2].CriterionId=="example"and reactions[2].Earned)
+ assert(reactions[3].Judge=="Moss"and reactions[3].CriterionId=="rebuttal_attempt"and reactions[3].Earned)
+ for _,reaction in ipairs(reactions)do assert(string.find(reaction.Commentary,"SCRIPTED CHECKLIST",1,true))end
+end)
+test("judge verdict is a checklist result and handles ties",function()
+ local tie=JudgeService.Verdicts({{UserId=1,Points=30},{UserId=2,Points=30}});assert(tie.IsTie and tie.LeadingUserId==nil and #tie.Lines==3 and string.find(tie.Disclosure,"did not judge truth",1,true))
+ local lead=JudgeService.Verdicts({{UserId=1,Points=35},{UserId=2,Points=30}});assert(not lead.IsTie and lead.LeadingUserId==1)
+end)
+
+test("background matchmaking requires Boss ownership",function()assert(AntiEmptyPolicy.CanBackgroundSearch({Mode="BOSS"}));assert(not AntiEmptyPolicy.CanBackgroundSearch({Mode="MULTIPLAYER"}));assert(not AntiEmptyPolicy.CanBackgroundSearch(nil))end)
+test("match offer never interrupts active Boss claim",function()local offer=AntiEmptyPolicy.NewOffer("o1",{}, {},100);local ok,code=AntiEmptyPolicy.CanAccept(offer,"o1",{Mode="BOSS",Generation=1});assert(not ok and code=="FINISH_CURRENT_TURN"and offer.Status=="OFFERED")end)
+test("match offer requires explicit exact acceptance",function()local offer=AntiEmptyPolicy.NewOffer("o1",{}, {},100);local ok,code=AntiEmptyPolicy.CanAccept(offer,"wrong",nil);assert(not ok and code=="STALE_OFFER");assert(AntiEmptyPolicy.CanAccept(offer,"o1",nil));assert(AntiEmptyPolicy.Resolve(offer,"ACCEPTED"));assert(not AntiEmptyPolicy.CanAccept(offer,"o1",nil))end)
 
 print(string.format("\n%d tests passed", total))
