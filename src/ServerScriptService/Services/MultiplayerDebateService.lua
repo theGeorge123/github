@@ -7,6 +7,7 @@ local ArgumentValidation=require(script.Parent.Parent.Core.ArgumentValidation)
 local Participation=require(script.Parent.DebateParticipationService)
 local Structure=require(script.Parent.Parent.Core.DebateStructure)
 local AntiEmptyPolicy=require(script.Parent.Parent.Core.AntiEmptyLobbyPolicy)
+local JudgeService=require(script.Parent.JudgeService)
 local Service={Queue={},Sessions={},Profiles={},LastSubmit={},Claims={},Background={},Offers={}}
 local nextSessionId=0
 local function profile(p)
@@ -23,7 +24,9 @@ local function publishProfile(remote,p)send(remote,p,Protocol.Profile(publicProf
 local function playerIndexFor(s,p)for i,q in ipairs(s.Players)do if q==p then return i end end end
 local publishTurn
 local function completeRound(s,remote)
- s.Closed=true;both(s,remote,{Kind="Complete",Round=s.Round,Scores={{Name=s.Players[1].DisplayName,Points=s.Scores[s.Players[1]]or 0},{Name=s.Players[2].DisplayName,Points=s.Scores[s.Players[2]]or 0}},Message="Round complete. Points reflect the visible checklist, not debate truth."})
+ s.Closed=true
+ local scores={{Name=s.Players[1].DisplayName,UserId=s.Players[1].UserId,Points=s.Scores[s.Players[1]]or 0},{Name=s.Players[2].DisplayName,UserId=s.Players[2].UserId,Points=s.Scores[s.Players[2]]or 0}}
+ both(s,remote,{Kind="Complete",Round=s.Round,Scores=scores,Panel=JudgeService.Verdicts(scores),Message="Round complete. Points reflect the visible checklist, not debate truth."})
 end
 publishTurn=function(s,remote)
  local turn=RoundState.beginTurn(s.RoundState);local player=s.Players[turn.PlayerIndex];local deadline=workspace:GetServerTimeNow()+Definitions.TurnSeconds;s.TurnDeadline=deadline
@@ -81,8 +84,9 @@ function Service.Init(remote,submit)
    local token={Generation=s.RoundState.RoundGeneration,Turn=s.RoundState.TurnToken,PlayerIndex=playerIndex,SessionId=s.Id}
    local ok,filtered=pcall(function()return TextService:FilterStringAsync(value.Text,p.UserId):GetNonChatStringForBroadcastAsync()end);if not ok or filtered==""then reject(remote,p,value.Id,"FILTER_FAILED","That turn could not be filtered. Edit it and try again.");return end
    if Service.Sessions[p]~=s or s.Id~=token.SessionId or not RoundState.matches(s.RoundState,token.Generation,token.Turn,token.PlayerIndex)then reject(remote,p,value.Id,"TURN_EXPIRED","That turn already ended. Your draft was kept.");return end
-   local score,reasons,criteria=Definitions.Score(filtered);if score==0 then reject(remote,p,value.Id,"NO_MEANINGFUL_TEXT","Add a readable argument before sending.");return end;profile(p).Points+=score;s.Scores[p]=(s.Scores[p]or 0)+score
-   both(s,remote,{Kind="PlayerTurn",UserId=p.UserId,SubmissionId=value.Id,Name=p.DisplayName,Text=filtered,Points=score,Reasons=reasons,Criteria=criteria,RoundTotal=s.Scores[p],Profile=publicProfile(p)})
+   local role=Structure.RoleForTurn(s.RoundState.Turns[playerIndex]+1)
+   local score,reasons,criteria,reactions=JudgeService.Evaluate(filtered,role,s.RoundState.Turns[playerIndex]+1,Definitions.Score);if score==0 then reject(remote,p,value.Id,"NO_MEANINGFUL_TEXT","Add a readable argument before sending.");return end;profile(p).Points+=score;s.Scores[p]=(s.Scores[p]or 0)+score
+   both(s,remote,{Kind="PlayerTurn",UserId=p.UserId,SubmissionId=value.Id,Name=p.DisplayName,Text=filtered,Points=score,Reasons=reasons,Criteria=criteria,JudgeReactions=reactions,RoundTotal=s.Scores[p],Profile=publicProfile(p)})
    s.PreviousCriteria=criteria
    local result=RoundState.completeTurn(s.RoundState,token.Generation,token.Turn,token.PlayerIndex);if result.Complete then completeRound(s,remote)else publishTurn(s,remote)end
 
