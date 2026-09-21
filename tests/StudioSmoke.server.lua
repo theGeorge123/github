@@ -10,7 +10,9 @@ local core = game:GetService("ServerScriptService").Core
 if Config.DebateEnabled then
     local player = Players:GetPlayers()[1] or Players.PlayerAdded:Wait()
     local deadline = os.clock() + 30
-    while (not workspace:FindFirstChild("BeatTheBotDebateStage") or not game:GetService("ReplicatedStorage"):FindFirstChild("BeatTheBotRemotes")) and os.clock() < deadline do
+    -- RespawnLocation is assigned by Bootstrap's deferred PlayerAdded handler,
+    -- so wait for it alongside the stage and remotes instead of racing it.
+    while (not workspace:FindFirstChild("BeatTheBotDebateStage") or not game:GetService("ReplicatedStorage"):FindFirstChild("BeatTheBotRemotes") or player.RespawnLocation == nil) and os.clock() < deadline do
         task.wait(0.1)
     end
     local stage = workspace:FindFirstChild("BeatTheBotDebateStage")
