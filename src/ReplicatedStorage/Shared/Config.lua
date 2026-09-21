@@ -1,6 +1,7 @@
 return table.freeze({
     GameName = "Beat the Bot",
-    Version = "0.4.0",
+    Version = "0.5.1",
+    -- v0.5.1: dark guardian-temple restyle, armored judges, and turn holograms.
     ProfileSchema = 2,
     OpponentRating = 1000,
     InitialRating = 1000,
