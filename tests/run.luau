@@ -26,9 +26,11 @@ local BossAvailability = require("../src/ServerScriptService/Core/BossDebateAvai
 local BossProtocol = require("../src/ServerScriptService/Core/BossDebateProtocol")
 local BossState = require("../src/ServerScriptService/Core/BossDebateRoundState")
 local BossDefinitions = require("../src/ServerScriptService/Core/BossDebateDefinitions")
+local DebateTopicBank = require("../src/ServerScriptService/Core/DebateTopicBank")
 local BossLedger = require("../src/ServerScriptService/Core/BossDebateSubmissionLedger")
 local AntiEmptyPolicy = require("../src/ServerScriptService/Core/AntiEmptyLobbyPolicy")
 local JudgeService = require("../src/ServerScriptService/Services/JudgeService")
+local GuardianTemple = require("../src/ServerScriptService/Core/GuardianTempleDefinitions")
 
 local total = 0
 
@@ -658,12 +660,14 @@ test("locked Boss rejects arbitrary submit",function()local ok=BossProtocol.Vali
 test("Boss state rejects illegal transition",function()local s=BossState.new(1,1,1);assert(not BossState.transition(s,"COMPLETE")and s.Phase=="READY")end)
 test("Boss filtering makes turn timeout stale",function()local s=BossState.new(1,1,1);local turn=BossState.startTurn(s);local filtering=BossState.beginFiltering(s,turn.TurnToken);assert(filtering and not BossState.matches(s,turn))end)
 test("Boss filter retry issues fresh turn token",function()local s=BossState.new(1,1,1);local turn=BossState.startTurn(s);local filtering=BossState.beginFiltering(s,turn.TurnToken);local retry=BossState.filterFailed(s,filtering);assert(retry and retry.TurnToken==turn.TurnToken+1 and not BossState.matches(s,filtering))end)
-test("Boss completes exactly after three authored turns",function()local s=BossState.new(1,1,1);local t=BossState.startTurn(s);for i=1,3 do local f=BossState.beginFiltering(s,t.TurnToken);assert(BossState.acceptFiltered(s,f));local result=BossState.finishReply(s,BossDefinitions.PlayerTurns);if i<3 then assert(type(result)=="table");t=result else assert(result=="COMPLETE"and s.Phase=="COMPLETE")end end;assert(BossState.finishReply(s,BossDefinitions.PlayerTurns)==nil)end)
+test("Boss completes exactly after six authored turns",function()local s=BossState.new(1,1,1);local t=BossState.startTurn(s);for i=1,6 do local f=BossState.beginFiltering(s,t.TurnToken);assert(BossState.acceptFiltered(s,f));local result=BossState.finishReply(s,BossDefinitions.PlayerTurns);if i<6 then assert(type(result)=="table");t=result else assert(result=="COMPLETE"and s.Phase=="COMPLETE")end end;assert(BossState.finishReply(s,BossDefinitions.PlayerTurns)==nil)end)
 test("Boss abort and close are explicit",function()local s=BossState.new(1,1,1);BossState.startTurn(s);assert(BossState.abort(s)and s.Phase=="ABORTED"and BossState.close(s)and s.Closed)end)
 test("Boss ledger deduplicates and replays ack",function()local l=BossLedger.new();assert(BossLedger.begin(l,1,"same")=="START");assert(BossLedger.begin(l,1,"same")=="IGNORE");assert(BossLedger.finish(l,1,"ACCEPTED",{Kind="Ack"}));local action,ack=BossLedger.begin(l,1,"same");assert(action=="REPLAY"and ack.Kind=="Ack");local bad,code=BossLedger.begin(l,1,"changed");assert(bad=="REJECT"and code=="SUBMISSION_ID_REUSED")end)
 test("Boss ledger rejects stale unknown IDs",function()local l=BossLedger.new();assert(BossLedger.begin(l,2,"new")=="START");local a,c=BossLedger.begin(l,1,"old");assert(a=="REJECT"and c=="STALE_SUBMISSION_ID")end)
 test("Boss ledger retains only eight terminal acknowledgements",function()local l=BossLedger.new();for i=1,10 do assert(BossLedger.begin(l,i,tostring(i))=="START");assert(BossLedger.finish(l,i,"REJECTED",{Id=i}))end;assert(#l.Order==8 and l.Records[1]==nil and l.Records[2]==nil and l.Records[10]~=nil)end)
-test("Boss practice has exactly three authored non-semantic replies",function()assert(BossDefinitions.PlayerTurns==3 and #BossDefinitions.ScriptedReplies==3);for _,text in ipairs(BossDefinitions.ScriptedReplies)do assert(string.find(text,"SCRIPTED PRACTICE",1,true))end;assert(BossDefinitions.Score==nil and BossDefinitions.Winner==nil and BossDefinitions.Reward==nil)end)
+test("Boss practice has six unique authored non-semantic replies",function()assert(BossDefinitions.PlayerTurns==6 and #BossDefinitions.ScriptedReplies==6);local seen={};for _,text in ipairs(BossDefinitions.ScriptedReplies)do assert(string.find(text,"SCRIPTED PRACTICE",1,true)and not seen[text]);seen[text]=true end;assert(BossDefinitions.Score==nil and BossDefinitions.Winner==nil and BossDefinitions.Reward==nil)end)
+test("topic bank has 100+ complete topics and unique three-topic offers",function()assert(#DebateTopicBank.Topics>=100);local ids={};for _,topic in ipairs(DebateTopicBank.Topics)do assert(not ids[topic.Id]);ids[topic.Id]=true;assert(type(topic.Topic)=="string"and topic.Topic~=""and topic.Sides.Affirmative.Label=="FOR"and topic.Sides.Negative.Label=="AGAINST"and topic.Sides.Affirmative.OpeningPrompt~=""and topic.Sides.Negative.OpeningPrompt~="")end;local offers=DebateTopicBank.Offers(37);assert(#offers==3 and offers[1].Id~=offers[2].Id and offers[2].Id~=offers[3].Id and offers[1].Id~=offers[3].Id)end)
+test("Boss topic selection accepts only an offered id shape",function()assert(BossProtocol.ValidateClient({Action="SelectTopic",SessionId="boss-1-1",TopicId="hints"}));assert(not BossProtocol.ValidateClient({Action="SelectTopic",SessionId="boss-1-1"}))end)
 
 test("Boss leave and restart require a session",function()for _,action in ipairs({"LeavePractice","RestartPractice"})do local ok=BossProtocol.ValidateClient({Action=action});assert(not ok);assert(BossProtocol.ValidateClient({Action=action,SessionId="boss-1-1"}))end end)
 test("Boss scripted config is explicit",function()local tier=BossAvailability.Resolve({BossDebate={Enabled=true,ScriptedPracticeEnabled=true}});assert(tier=="SCRIPTED_PRACTICE")end)
@@ -672,6 +676,16 @@ test("AI diagnostics normalize and omit sensitive fields",function()local d=AIDi
 test("strict parser rejects malformed and oversized output",function()local l={MaxOutputBytes=64,MaxReplyBytes=10};for _,text in ipairs({"","```\nTACTIC=verify\nSTRENGTH=normal\nREPLY=ok\n```","TACTIC=verify\nTACTIC=verify\nREPLY=ok","INTENT=verify\nSTRENGTH=normal\nREPLY=ok","TACTIC=verify\nSTRENGTH=normal\nREPLY=12345678901","preamble\nTACTIC=verify\nSTRENGTH=normal\nREPLY=ok"})do assert(Parser.Parse(text,l)==nil)end;assert(Parser.Parse(string.rep("x",65),l)==nil);assert(Parser.Parse("TACTIC=verify\nSTRENGTH=normal\nREPLY="..string.char(255),{MaxOutputBytes=2048,MaxReplyBytes=320})==nil)end)
 
 test("probe config stays disabled",function()assert(Config.DebateLiveEnabled==false and Config.DebateProbe.Enabled==false)end)
+test("guardian temple keeps the intentional large arena and inward spawn",function()
+ assert(GuardianTemple.Arena.SizeX==90 and GuardianTemple.Arena.SizeZ==62)
+ local minZ=GuardianTemple.Arena.CenterZ-GuardianTemple.Arena.SizeZ/2;local maxZ=GuardianTemple.Arena.CenterZ+GuardianTemple.Arena.SizeZ/2
+ assert(GuardianTemple.Spawn.Z>minZ and GuardianTemple.Spawn.Z<maxZ and GuardianTemple.Spawn.LookZ<GuardianTemple.Spawn.Z)
+ for _,judge in pairs(GuardianTemple.Judges)do assert(math.abs(judge.X)<GuardianTemple.Arena.SizeX/2 and judge.Z>minZ and judge.Z<maxZ and judge.Y>judge.Height/2)end
+end)
+test("PIP asset applies the corrective stage-facing yaw",function()assert(GuardianTemple.Judges.PIP.YawDegrees==180 and GuardianTemple.Judges.RIVET.YawDegrees==0 and GuardianTemple.Judges.MOSS.YawDegrees==0)end)
+test("unverified ceremony audio stays blank instead of guessing asset types",function()
+ assert(GuardianTemple.Sounds.ScoreTick==""and GuardianTemple.Sounds.VerdictSting==""and GuardianTemple.Sounds.MatchWin=="")
+end)
 
 test("judge service maps only the three visible checklist dimensions",function()
  local score,_,_,reactions=JudgeService.Evaluate("Because choices matter, for example new players learn; however fixed rules can frustrate them.","Rebuttal",2,WritingChecklist.Evaluate)

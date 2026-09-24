@@ -18,8 +18,8 @@ local function send(remote,p,data) if p and p.Parent then remote:FireClient(p,da
 local function reject(remote,p,id,code,message)send(remote,p,{Kind="ArgumentRejected",SubmissionId=id,Code=code,Message=message,CanRetry=true})end
 local function both(s,remote,data) for _,p in ipairs(s.Players) do send(remote,p,data) end end
 local function unlocks(points)local owned={};for _,u in ipairs(Definitions.Unlocks)do if points>=u.Points then owned[u.Id]=true end end;return owned end
-local function publicProfile(p)local x=profile(p);return {Points=x.Points,Chair=x.Chair,Title=x.Title,Unlocks=unlocks(x.Points)}end
-local function topicFor(s)return Definitions.Topics[((s.Round-1)%#Definitions.Topics)+1]end
+local function publicProfile(p)local x=profile(p);return {Points=x.Points,Chair=x.Chair,Title=x.Title,Unlocks=unlocks(x.Points),Catalog=Definitions.Unlocks}end
+local function topicFor(s)return s.Topic end
 local function publishLobby(remote,p,status)send(remote,p,Protocol.Lobby(status,publicProfile(p),#Service.Queue))end
 local function publishProfile(remote,p)send(remote,p,Protocol.Profile(publicProfile(p)))end
 local function playerIndexFor(s,p)for i,q in ipairs(s.Players)do if q==p then return i end end end
@@ -43,9 +43,16 @@ publishTurn=function(s,remote)
   if result.Complete then completeRound(s,remote)else publishTurn(s,remote)end
  end)
 end
-local function beginRound(s,remote)
+local function beginSelectedRound(s,remote,selectedTopic)
+ s.ChoosingTopic=false;s.Topic=selectedTopic
  s.RoundGeneration=(s.RoundGeneration or 0)+1;s.RoundState=RoundState.new(s.RoundGeneration,Definitions.PlayerTurnsEach,(s.Round%2)+1);s.Closed=false;s.Rematch={};s.PreviousCriteria=nil;s.Scores={[s.Players[1]]=0,[s.Players[2]]=0};local t=topicFor(s)
  both(s,remote,Protocol.Start(s.Round,t,{Name=s.Players[1].DisplayName,UserId=s.Players[1].UserId,Profile=publicProfile(s.Players[1])},{Name=s.Players[2].DisplayName,UserId=s.Players[2].UserId,Profile=publicProfile(s.Players[2])},t.ScriptedOpening,"Session points use a visible writing checklist; they are not an AI judgment."));publishTurn(s,remote)
+end
+local function beginRound(s,remote)
+ s.Closed=false;s.Rematch={};s.Topic=nil;s.TopicOffers=Definitions.TopicOffers(s.Id*37+s.Round);s.TopicPickerIndex=((s.Round-1)%2)+1;s.ChoosingTopic=true;s.TopicChoiceToken=(s.TopicChoiceToken or 0)+1
+ local picker=s.Players[s.TopicPickerIndex];local token=s.TopicChoiceToken
+ both(s,remote,{Kind="TopicOffer",Topics=Definitions.TopicSummaries(s.TopicOffers),PickerUserId=picker.UserId,PickerName=picker.DisplayName,Round=s.Round,Deadline=workspace:GetServerTimeNow()+Definitions.TopicChoiceSeconds,Message=picker.DisplayName.." chooses the topic. Sides are assigned after the choice."})
+ task.delay(Definitions.TopicChoiceSeconds,function()if Service.Sessions[picker]==s and s.ChoosingTopic and s.TopicChoiceToken==token then beginSelectedRound(s,remote,s.TopicOffers[1])end end)
 end
 
 local function start(remote,a,b)nextSessionId=nextSessionId+1;local s={Id=nextSessionId,Players={a,b},Round=1,RoundGeneration=0,Scores={},Ended=false};Service.Sessions[a]=s;Service.Sessions[b]=s;beginRound(s,remote)end
@@ -77,11 +84,16 @@ function Service.Init(remote,submit)
    if offer.QueuedPlayer.Parent==Players and Service.Claims[offer.QueuedPlayer]then start(remote,p,offer.QueuedPlayer)else releaseClaim(p);send(remote,p,{Kind="Error",Code="OPPONENT_LEFT",Message="That player left. Background matchmaking can continue."})end
   elseif action=="cancelQueue"then removeQueued(p);releaseClaim(p);publishLobby(remote,p,"READY")
   elseif action=="profile"then publishProfile(remote,p)
-  elseif action=="equip"and type(value)=="table"then local x=profile(p);local owned=unlocks(x.Points);if value.Kind=="chair"and owned[value.Id]then x.Chair=value.Id elseif value.Kind=="title"and owned[value.Id]then x.Title=value.Id end;publishLobby(remote,p,"READY")
+  elseif action=="equip"and type(value)=="table"then local x=profile(p);local owned=unlocks(x.Points);if value.Kind=="chair"and owned[value.Id]then x.Chair=value.Id elseif value.Kind=="title"and(owned[value.Id]or value.Id=="Debater")then x.Title=value.Id end;publishLobby(remote,p,"READY")
+  elseif action=="topic"then
+   local s=Service.Sessions[p];if not s or not s.ChoosingTopic then send(remote,p,{Kind="Error",Code="NO_TOPIC_CHOICE",Message="There is no topic choice waiting."});return end
+   if s.Players[s.TopicPickerIndex]~=p then send(remote,p,{Kind="Error",Code="NOT_TOPIC_PICKER",Message=s.Players[s.TopicPickerIndex].DisplayName.." is choosing this round's topic."});return end
+   local selected=Definitions.FindOfferedTopic(s.TopicOffers,type(value)=="table"and value.TopicId or nil);if not selected then send(remote,p,{Kind="Error",Code="INVALID_TOPIC",Message="Choose one of the three offered topics."});return end
+   s.TopicChoiceToken+=1;beginSelectedRound(s,remote,selected)
   elseif action=="argument"then
    local submissionId=type(value)=="table"and value.Id or nil
    local valid,code,message=ArgumentValidation.Validate(value,Definitions.MaxArgumentBytes);if not valid then reject(remote,p,submissionId,code,message);return end
-   local s=Service.Sessions[p];if not s or s.Closed then reject(remote,p,value.Id,"NO_ACTIVE_ROUND","There is no active debate round.");return end
+   local s=Service.Sessions[p];if not s or s.Closed or s.ChoosingTopic then reject(remote,p,value.Id,"NO_ACTIVE_ROUND","There is no active debate round.");return end
    local playerIndex=playerIndexFor(s,p);if not playerIndex or s.RoundState.PlayerIndex~=playerIndex then reject(remote,p,value.Id,"NOT_YOUR_TURN","Wait for your turn before sending.");return end
    local now=os.clock();if now-(Service.LastSubmit[p]or 0)<1 then reject(remote,p,value.Id,"RATE_LIMITED","Wait a moment before trying again.");return end;Service.LastSubmit[p]=now
    local token={Generation=s.RoundState.RoundGeneration,Turn=s.RoundState.TurnToken,PlayerIndex=playerIndex,SessionId=s.Id}
