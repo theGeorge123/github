@@ -17,7 +17,7 @@ local function finish(remote,player,session,message)
 end
 local function publishTurn(remote,player,session,token)
  local deadline=workspace:GetServerTimeNow()+Definitions.PlayerTurnSeconds
- send(remote,player,{Kind="BossPlayerTurn",SessionId=session.Id,RoundGeneration=session.State.RoundGeneration,TurnToken=token.TurnToken,Deadline=deadline})
+ send(remote,player,{Kind="BossPlayerTurn",SessionId=session.Id,RoundGeneration=session.State.RoundGeneration,TurnToken=token.TurnToken,Deadline=deadline,TurnNumber=session.State.Turn+1,PlayerTurns=Definitions.PlayerTurns})
  task.delay(Definitions.PlayerTurnSeconds,function()
   if Service.Sessions[player]~=session or not State.matches(session.State,token)then return end
   State.abort(session.State);finish(remote,player,session,"Practice ended because the player turn timed out. No score, winner, or rewards were created.")

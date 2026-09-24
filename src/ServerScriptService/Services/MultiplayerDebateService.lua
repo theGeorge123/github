@@ -18,7 +18,7 @@ local function send(remote,p,data) if p and p.Parent then remote:FireClient(p,da
 local function reject(remote,p,id,code,message)send(remote,p,{Kind="ArgumentRejected",SubmissionId=id,Code=code,Message=message,CanRetry=true})end
 local function both(s,remote,data) for _,p in ipairs(s.Players) do send(remote,p,data) end end
 local function unlocks(points)local owned={};for _,u in ipairs(Definitions.Unlocks)do if points>=u.Points then owned[u.Id]=true end end;return owned end
-local function publicProfile(p)local x=profile(p);return {Points=x.Points,Chair=x.Chair,Title=x.Title,Unlocks=unlocks(x.Points)}end
+local function publicProfile(p)local x=profile(p);return {Points=x.Points,Chair=x.Chair,Title=x.Title,Unlocks=unlocks(x.Points),Catalog=Definitions.Unlocks}end
 local function topicFor(s)return s.Topic end
 local function publishLobby(remote,p,status)send(remote,p,Protocol.Lobby(status,publicProfile(p),#Service.Queue))end
 local function publishProfile(remote,p)send(remote,p,Protocol.Profile(publicProfile(p)))end
@@ -84,7 +84,7 @@ function Service.Init(remote,submit)
    if offer.QueuedPlayer.Parent==Players and Service.Claims[offer.QueuedPlayer]then start(remote,p,offer.QueuedPlayer)else releaseClaim(p);send(remote,p,{Kind="Error",Code="OPPONENT_LEFT",Message="That player left. Background matchmaking can continue."})end
   elseif action=="cancelQueue"then removeQueued(p);releaseClaim(p);publishLobby(remote,p,"READY")
   elseif action=="profile"then publishProfile(remote,p)
-  elseif action=="equip"and type(value)=="table"then local x=profile(p);local owned=unlocks(x.Points);if value.Kind=="chair"and owned[value.Id]then x.Chair=value.Id elseif value.Kind=="title"and owned[value.Id]then x.Title=value.Id end;publishLobby(remote,p,"READY")
+  elseif action=="equip"and type(value)=="table"then local x=profile(p);local owned=unlocks(x.Points);if value.Kind=="chair"and owned[value.Id]then x.Chair=value.Id elseif value.Kind=="title"and(owned[value.Id]or value.Id=="Debater")then x.Title=value.Id end;publishLobby(remote,p,"READY")
   elseif action=="topic"then
    local s=Service.Sessions[p];if not s or not s.ChoosingTopic then send(remote,p,{Kind="Error",Code="NO_TOPIC_CHOICE",Message="There is no topic choice waiting."});return end
    if s.Players[s.TopicPickerIndex]~=p then send(remote,p,{Kind="Error",Code="NOT_TOPIC_PICKER",Message=s.Players[s.TopicPickerIndex].DisplayName.." is choosing this round's topic."});return end
