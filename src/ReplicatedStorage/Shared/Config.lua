@@ -1,6 +1,7 @@
 return table.freeze({
     GameName = "Beat the Bot",
-    Version = "0.4.0",
+    -- 0.5.2: guardian-temple presentation; live debate and probe remain disabled.
+    Version = "0.5.2",
     ProfileSchema = 2,
     OpponentRating = 1000,
     InitialRating = 1000,
@@ -25,7 +26,7 @@ return table.freeze({
         ScriptedPracticeEnabled = true,
         MaxArgumentBytes = 500,
         PlayerTurnSeconds = 45,
-        PlayerTurns = 3,
+        PlayerTurns = 6,
     },
 
     AIProvider = "Roblox",
