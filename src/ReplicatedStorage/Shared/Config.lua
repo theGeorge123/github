@@ -17,9 +17,9 @@ return table.freeze({
     StoreName = "BeatTheBot_Profiles_v1",
     StudioPersistence = false,
 
-    -- Live AI remains limited to Studio or an allowlisted tester in a private server.
+    -- Public live debate stays disabled. BossDebate.LiveBetaEnabled is separately limited to Studio/private testers.
     DebateEnabled = true,
-    DebateLiveEnabled = true,
+    DebateLiveEnabled = false,
     DebateProbe = {Enabled=false,MaxOutputBytes=2048,MaxTextBytes=500,MaxTokens=120,SlowThresholdMs=12000},
     BossDebate = {
         Enabled = true,
