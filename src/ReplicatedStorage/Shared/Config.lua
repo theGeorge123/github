@@ -1,7 +1,7 @@
 return table.freeze({
     GameName = "Beat the Bot",
-    -- 0.6.2: visual rescue for exposure, fallback judges, and UI obstruction; live debate and probe remain disabled.
-    Version = "0.6.2",
+    -- 0.6.4: private/Studio live AI debate beta with scripted fallback; probe remains disabled.
+    Version = "0.6.4",
     ProfileSchema = 2,
     OpponentRating = 1000,
     InitialRating = 1000,
@@ -17,13 +17,17 @@ return table.freeze({
     StoreName = "BeatTheBot_Profiles_v1",
     StudioPersistence = false,
 
-    -- Private debate prototype gates. Both remain off until an authorized private test.
+    -- Live AI remains limited to Studio or an allowlisted tester in a private server.
     DebateEnabled = true,
-    DebateLiveEnabled = false,
+    DebateLiveEnabled = true,
     DebateProbe = {Enabled=false,MaxOutputBytes=2048,MaxTextBytes=500,MaxTokens=120,SlowThresholdMs=12000},
     BossDebate = {
         Enabled = true,
         ScriptedPracticeEnabled = true,
+        LiveBetaEnabled = true,
+        LiveMaxTokens = 90,
+        LiveMaxOutputBytes = 768,
+        LiveMaxReplyBytes = 320,
         MaxArgumentBytes = 500,
         PlayerTurnSeconds = 45,
         PlayerTurns = 6,
