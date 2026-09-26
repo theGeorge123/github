@@ -1,4 +1,4 @@
--- DebateWorldService — bright marble guardian debate arena visual overhaul (v0.6.0).
+-- DebateWorldService — bright marble guardian debate arena + distinct hero judges (v0.6.1).
 -- Public API preserved: Init, Refresh, PlaySound, React, SetActivePlayer, Celebrate.
 -- Public names preserved: BeatTheBotDebateStage, DebateSpawn, <NAME>Judge models, PlayerPodiumA/B.
 -- v0.5.2: Clones sanitized Creator Store assets from ServerStorage.TempleAssets with primitive fallback.
@@ -7,13 +7,13 @@ local ServerStorage = game:GetService("ServerStorage")
 local TweenService = game:GetService("TweenService")
 local Definitions=require(script.Parent.Parent.Core.GuardianTempleDefinitions)
 local World = {Spawn=nil, Judges={}, Podiums={}, PodRunes={}, Sounds={}, Hologram=nil, HoloBase=nil, HoloPlayerIndex=nil, LightingPulseToken=0, MissingTemplates={}}
-local C = {stone=Color3.fromRGB(218,221,224),darkstone=Color3.fromRGB(89,101,118),navy=Color3.fromRGB(16,35,70),blue=Color3.fromRGB(46,128,255),cyan=Color3.fromRGB(74,211,255),teal=Color3.fromRGB(55,188,202),pale=Color3.fromRGB(215,247,255),gold=Color3.fromRGB(246,184,55),orange=Color3.fromRGB(255,143,49),white=Color3.fromRGB(248,249,250),purple=Color3.fromRGB(151,190,255),green=Color3.fromRGB(82,174,104),red=Color3.fromRGB(235,68,82),leaf=Color3.fromRGB(54,132,72),water=Color3.fromRGB(92,203,255),wood=Color3.fromRGB(96,68,47)}
+local C = {stone=Color3.fromRGB(181,186,194),darkstone=Color3.fromRGB(58,66,78),navy=Color3.fromRGB(16,30,52),blue=Color3.fromRGB(42,114,220),cyan=Color3.fromRGB(68,174,220),teal=Color3.fromRGB(55,154,172),pale=Color3.fromRGB(194,220,226),gold=Color3.fromRGB(218,159,50),orange=Color3.fromRGB(224,123,43),white=Color3.fromRGB(216,219,224),purple=Color3.fromRGB(133,163,213),green=Color3.fromRGB(72,144,88),red=Color3.fromRGB(196,55,65),leaf=Color3.fromRGB(48,108,62),water=Color3.fromRGB(78,155,191),wood=Color3.fromRGB(84,63,48)}
 local function part(name,size,cframe,color,parent,material)local p=Instance.new("Part");p.Name=name;p.Size=size;p.CFrame=cframe;p.Anchored=true;p.Color=color;p.Material=material or Enum.Material.Slate;p.TopSurface=Enum.SurfaceType.Smooth;p.BottomSurface=Enum.SurfaceType.Smooth;p.Parent=parent;return p end
 local function text(target,value,color)local g=Instance.new("SurfaceGui");g.Face=Enum.NormalId.Front;g.CanvasSize=Vector2.new(900,300);g.Parent=target;local l=Instance.new("TextLabel");l.Size=UDim2.fromScale(1,1);l.BackgroundTransparency=1;l.Text=value;l.TextColor3=color or C.white;l.TextScaled=true;l.TextWrapped=true;l.Font=Enum.Font.GothamBold;l.Parent=g end
 local function sound(parent,name,id,volume)
  local s=Instance.new("Sound");s.Name=name;s.SoundId=type(id)=="string"and id~=""and("rbxassetid://"..id)or"";s.Volume=volume;s.RollOffMaxDistance=90;s.Parent=parent;World.Sounds[name]=s;return s
 end
-local function glow(parent,color,range,brightness)local light=Instance.new("PointLight");light.Color=color;light.Range=range or 18;light.Brightness=brightness or 2;light.Shadows=true;light.Parent=parent;return light end
+local function glow(parent,color,range,brightness)local light=Instance.new("PointLight");light.Color=color;light.Range=range or 18;light.Brightness=brightness or 1.2;light.Shadows=true;light.Parent=parent;return light end
 local function rune(parent,name,size,cframe,color)local r=part(name,size,cframe,color or C.cyan,parent,Enum.Material.Neon);r.CanCollide=false;r.Transparency=.24;return r end
 local function stageLight(root,name,position,color,brightness,range)
  local anchor=part(name,Vector3.new(.2,.2,.2),CFrame.new(position),C.white,root,Enum.Material.SmoothPlastic);anchor.Transparency=1;anchor.CanCollide=false;anchor.CanTouch=false;anchor.CanQuery=false
@@ -30,6 +30,21 @@ local function judgeBackdrop(root,name,x,z,color,width,height)
 end
 local function cylinder(name,diameter,height,cframe,color,parent,material)
  local p=part(name,Vector3.new(height,diameter,diameter),cframe*CFrame.Angles(0,0,math.rad(90)),color,parent,material);p.Shape=Enum.PartType.Cylinder;return p
+end
+local function ringSegments(root,name,radius,y,color,segments,thickness,width)
+ local count=segments or 28;local circumference=2*math.pi*radius;local length=(circumference/count)*1.05
+ for i=0,count-1 do
+  local angle=(i/count)*math.pi*2;local x=math.sin(angle)*radius;local z=math.cos(angle)*radius+5
+  local seg=part(name,Vector3.new(length,thickness or .12,width or .34),CFrame.new(x,y,z)*CFrame.Angles(0,angle,0),color,root,Enum.Material.Metal);seg.CanCollide=false
+ end
+end
+local function heroNiche(root,name,x,z,color,width,height)
+ local back=part(name.."NicheBack",Vector3.new(width,height,.8),CFrame.new(x,height*.5+8,z),Color3.fromRGB(106,116,132),root,Enum.Material.Marble);back.CanCollide=false
+ part(name.."NicheLeft",Vector3.new(2.2,height+2,2.4),CFrame.new(x-width*.5-1,height*.5+8,z+1),C.stone,root,Enum.Material.Marble)
+ part(name.."NicheRight",Vector3.new(2.2,height+2,2.4),CFrame.new(x+width*.5+1,height*.5+8,z+1),C.stone,root,Enum.Material.Marble)
+ part(name.."NicheTop",Vector3.new(width+4,2.1,2.4),CFrame.new(x,height+8.8,z+1),C.stone,root,Enum.Material.Marble)
+ trimBlock(root,name.."NicheGold",Vector3.new(width+4.2,.28,2.55),CFrame.new(x,height+7.7,z+1))
+ stageLight(root,name.."NicheLight",Vector3.new(x,18,z+5),color,.75,24)
 end
 local function trimBlock(root,name,size,cframe)
  return part(name,size,cframe,C.gold,root,Enum.Material.Metal)
@@ -72,12 +87,12 @@ local function terrace(root,side)
  end
 end
 local function judgePlinth(root,name,x,z,color,role)
- local base=part(name.."Plinth",Vector3.new(18,4.8,11),CFrame.new(x,7.8,z),C.white,root,Enum.Material.Marble)
- trimBlock(root,name.."PlinthGold",Vector3.new(18.5,.5,11.5),CFrame.new(x,10.25,z))
- local plaque=part(name.."Plaque",Vector3.new(13.8,3.3,.5),CFrame.new(x,7.3,z+5.75),C.navy,root,Enum.Material.Metal);plaque.CanCollide=false
- local gui=Instance.new("SurfaceGui");gui.Face=Enum.NormalId.Front;gui.CanvasSize=Vector2.new(760,220);gui.Parent=plaque
- local label=Instance.new("TextLabel");label.BackgroundTransparency=1;label.Size=UDim2.fromScale(1,1);label.Text=name.."\n"..role;label.TextColor3=color;label.TextScaled=true;label.TextWrapped=true;label.Font=Enum.Font.GothamBold;label.Parent=gui
- stageLight(root,name.."HeroLight",Vector3.new(x,17,z+7),color,2.2,32)
+ local base=part(name.."Plinth",Vector3.new(16,4.2,10),CFrame.new(x,7.5,z),C.stone,root,Enum.Material.Marble)
+ trimBlock(root,name.."PlinthGold",Vector3.new(16.4,.28,10.4),CFrame.new(x,9.72,z))
+ local plaque=part(name.."Plaque",Vector3.new(9.6,1.9,.34),CFrame.new(x,6.85,z+5.18),C.navy,root,Enum.Material.Metal);plaque.CanCollide=false
+ local gui=Instance.new("SurfaceGui");gui.Face=Enum.NormalId.Front;gui.CanvasSize=Vector2.new(640,150);gui.Parent=plaque
+ local label=Instance.new("TextLabel");label.BackgroundTransparency=1;label.Size=UDim2.fromScale(1,1);label.Text=name.."  •  "..role;label.TextColor3=color;label.TextScaled=true;label.TextWrapped=true;label.Font=Enum.Font.GothamBold;label.Parent=gui
+ stageLight(root,name.."HeroLight",Vector3.new(x,17,z+7),color,.9,26)
  return base
 end
 local function worldModeSign(root,x,z,titleText,subtitleText,color)
@@ -108,10 +123,8 @@ local function sanitizeDecorative(model)
  end
 end
 local function judgeTag(model,name,color,boxCFrame,boxSize)
- local anchor=part("JudgeTagAnchor",Vector3.new(.2,.2,.2),CFrame.new(boxCFrame.Position+Vector3.new(0,boxSize.Y*.5+2.2,0)),C.navy,model,Enum.Material.SmoothPlastic);anchor.Transparency=1;anchor.CanCollide=false
- local tag=Instance.new("BillboardGui");tag.Name="JudgeNameTag";tag.Size=UDim2.fromOffset(210,50);tag.AlwaysOnTop=true;tag.MaxDistance=130;tag.Parent=anchor
- local label=Instance.new("TextLabel");label.Size=UDim2.fromScale(1,1);label.BackgroundColor3=C.navy;label.BackgroundTransparency=.12;label.Text=name.." • SCRIPTED JUDGE";label.TextColor3=color;label.TextScaled=true;label.TextWrapped=true;label.Font=Enum.Font.GothamBold;label.Parent=tag
- local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,8);corner.Parent=label
+ -- Names/roles are already shown on the judge plinths. Avoid screen-space billboard overlap.
+ return nil
 end
 local function placeByBoundingCenter(model,targetCenter,rotation)
  model:PivotTo(CFrame.new(targetCenter)*rotation)
@@ -147,21 +160,99 @@ local function pillar(root,x,z)
  part("PillarCap",Vector3.new(6.5,1.2,6.5),CFrame.new(x,24.6,z),C.darkstone,root,Enum.Material.Slate)
  local band=rune(root,"PillarRune",Vector3.new(6,.5,6),CFrame.new(x,20,z),C.cyan);glow(band,C.cyan,15,1.1)
 end
+local function heroPart(model,name,size,cframe,color,material)
+ local p=part(name,size,cframe,color,model,material or Enum.Material.Metal);p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;return p
+end
+local function heroBall(model,name,size,cframe,color,material)
+ local p=heroPart(model,name,Vector3.new(size,size,size),cframe,color,material);p.Shape=Enum.PartType.Ball;return p
+end
+local function heroWedge(model,name,size,cframe,color,material)
+ local p=Instance.new("WedgePart");p.Name=name;p.Size=size;p.CFrame=cframe;p.Anchored=true;p.CanCollide=false;p.CanTouch=false;p.CanQuery=false;p.Color=color;p.Material=material or Enum.Material.Metal;p.TopSurface=Enum.SurfaceType.Smooth;p.BottomSurface=Enum.SurfaceType.Smooth;p.Parent=model;return p
+end
+local function reactionEmitter(parent,color,speed,spread)
+ local emitter=Instance.new("ParticleEmitter");emitter.Name="HeroReaction";emitter.Enabled=false;emitter.Rate=0;emitter.Color=ColorSequence.new(color);emitter.LightEmission=.8;emitter.Lifetime=NumberRange.new(.45,.8);emitter.Speed=NumberRange.new(speed*.7,speed);emitter.SpreadAngle=Vector2.new(spread,spread);emitter.Size=NumberSequence.new({NumberSequenceKeypoint.new(0,.42),NumberSequenceKeypoint.new(.5,.22),NumberSequenceKeypoint.new(1,0)});emitter.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,.05),NumberSequenceKeypoint.new(1,1)});emitter.Parent=parent;return emitter
+end
+local function decorateHero(model,name,boxCFrame,boxSize,color)
+ local center=boxCFrame.Position;local w,h,d=boxSize.X,boxSize.Y,boxSize.Z;local front=center.Z+d*.5+.35
+ local signature={Parts={},IdleParts={}}
+ local function keep(p)table.insert(signature.Parts,p);return p end
+ local core=keep(heroBall(model,name.."HeroCore",math.clamp(w*.16,1.6,3),CFrame.new(center.X,center.Y+h*.02,front),color,Enum.Material.Neon));core.Transparency=.05;signature.Core=core;signature.Emitter=reactionEmitter(core,color,name=="RIVET"and 12 or 8,name=="MOSS"and 85 or 55);glow(core,color,22,2.2)
+ if name=="PIP"then
+  local white=Color3.fromRGB(242,246,250)
+  keep(heroPart(model,"PIPChestPlate",Vector3.new(w*.58,h*.16,.45),CFrame.new(center.X,center.Y+h*.06,front-.1),white,Enum.Material.Metal))
+  keep(heroPart(model,"PIPGoldSash",Vector3.new(w*.62,.38,.5),CFrame.new(center.X,center.Y+h*.13,front),C.gold,Enum.Material.Metal))
+  local halo=keep(heroBall(model,"PIPHalo",math.clamp(w*.48,4.5,8),CFrame.new(center.X,center.Y+h*.39,center.Z-d*.15),C.blue,Enum.Material.Neon));halo.Transparency=.78;signature.Halo=halo
+  local beam=keep(heroPart(model,"PIPBalanceBeam",Vector3.new(w*.72,.32,.32),CFrame.new(center.X,center.Y+h*.17,front+1.3),C.gold,Enum.Material.Metal));signature.Beam=beam
+  local left=keep(heroPart(model,"PIPScaleLeft",Vector3.new(w*.22,.28,d*.26),CFrame.new(center.X-w*.25,center.Y+h*.08,front+1.15),C.blue,Enum.Material.Neon));left.Transparency=.12
+  local right=keep(heroPart(model,"PIPScaleRight",Vector3.new(w*.22,.28,d*.26),CFrame.new(center.X+w*.25,center.Y+h*.08,front+1.15),C.blue,Enum.Material.Neon));right.Transparency=.12
+  signature.LeftScale=left;signature.RightScale=right
+  keep(heroPart(model,"PIPLeftWing",Vector3.new(w*.18,h*.32,.5),CFrame.new(center.X-w*.43,center.Y+h*.15,center.Z)*CFrame.Angles(0,0,math.rad(-18)),C.gold,Enum.Material.Metal))
+  keep(heroPart(model,"PIPRightWing",Vector3.new(w*.18,h*.32,.5),CFrame.new(center.X+w*.43,center.Y+h*.15,center.Z)*CFrame.Angles(0,0,math.rad(18)),C.gold,Enum.Material.Metal))
+  signature.IdleStyle="BALANCE";signature.IdleParts={left,right};signature.ReactionDuration=.46;signature.ReactionPitch=math.rad(-3)
+ elseif name=="RIVET"then
+  keep(heroPart(model,"RIVETChestPlate",Vector3.new(w*.64,h*.2,.55),CFrame.new(center.X,center.Y+h*.03,front-.05),Color3.fromRGB(47,48,56),Enum.Material.Metal))
+  for index,offset in ipairs({-.16,0,.16})do
+   local crack=keep(heroPart(model,"RIVETCrack"..index,Vector3.new(.34,h*.26,.28),CFrame.new(center.X+offset*w,center.Y+h*.02,front+.25)*CFrame.Angles(0,0,math.rad(index==2 and -22 or 22)),C.red,Enum.Material.Neon));crack.Transparency=.08
+  end
+  local fist=keep(heroPart(model,"RIVETPowerFist",Vector3.new(w*.38,h*.25,d*.72),CFrame.new(center.X+w*.42,center.Y-h*.08,front+.8),C.red,Enum.Material.Metal));signature.PowerFist=fist
+  local knuckle=keep(heroPart(model,"RIVETKnuckleGlow",Vector3.new(w*.32,.7,d*.6),CFrame.new(center.X+w*.42,center.Y-h*.02,front+1.2),C.red,Enum.Material.Neon));knuckle.Transparency=.08;signature.Knuckle=knuckle
+  keep(heroWedge(model,"RIVETHornLeft",Vector3.new(w*.18,h*.24,d*.2),CFrame.new(center.X-w*.24,center.Y+h*.48,center.Z)*CFrame.Angles(0,math.rad(90),math.rad(-18)),Color3.fromRGB(35,36,43),Enum.Material.Metal))
+  keep(heroWedge(model,"RIVETHornRight",Vector3.new(w*.18,h*.24,d*.2),CFrame.new(center.X+w*.24,center.Y+h*.48,center.Z)*CFrame.Angles(0,math.rad(-90),math.rad(18)),Color3.fromRGB(35,36,43),Enum.Material.Metal))
+  keep(heroPart(model,"RIVETLeftShoulder",Vector3.new(w*.3,h*.18,d*.58),CFrame.new(center.X-w*.48,center.Y+h*.2,center.Z),Color3.fromRGB(49,50,58),Enum.Material.Metal))
+  keep(heroPart(model,"RIVETRightShoulder",Vector3.new(w*.3,h*.18,d*.58),CFrame.new(center.X+w*.48,center.Y+h*.2,center.Z),Color3.fromRGB(49,50,58),Enum.Material.Metal))
+  signature.IdleStyle="POWER";signature.IdleParts={knuckle};signature.ReactionDuration=.34;signature.ReactionPitch=math.rad(-9)
+ elseif name=="MOSS"then
+  keep(heroPart(model,"MOSSChestBark",Vector3.new(w*.58,h*.22,.52),CFrame.new(center.X,center.Y+h*.02,front-.08),C.wood,Enum.Material.Wood))
+  local staff=keep(heroPart(model,"MOSSStaff",Vector3.new(.7,h*.78,.7),CFrame.new(center.X+w*.46,center.Y-h*.02,center.Z),C.wood,Enum.Material.Wood));signature.Staff=staff
+  local staffOrb=keep(heroBall(model,"MOSSStaffOrb",math.clamp(w*.2,1.8,3.3),CFrame.new(center.X+w*.46,center.Y+h*.4,center.Z),color,Enum.Material.Neon));signature.StaffOrb=staffOrb;glow(staffOrb,color,18,1.6)
+  for index,spec in ipairs({
+   {-1,w*.18,h*.47,-22},{-1,w*.3,h*.56,-42},{-1,w*.38,h*.43,-62},
+   {1,w*.18,h*.47,22},{1,w*.3,h*.56,42},{1,w*.38,h*.43,62}
+  })do
+   local side,xoff,yoff,angle=spec[1],spec[2],spec[3],spec[4]
+   keep(heroPart(model,"MOSSAntler"..index,Vector3.new(.5,h*.23,.5),CFrame.new(center.X+side*xoff,center.Y+yoff,center.Z)*CFrame.Angles(0,0,math.rad(angle)),C.wood,Enum.Material.Wood))
+  end
+  for index,pos in ipairs({Vector3.new(-w*.4,h*.18,0),Vector3.new(-w*.28,h*.27,.1),Vector3.new(w*.38,h*.17,0),Vector3.new(w*.26,h*.29,.05),Vector3.new(0,h*.32,-.15)})do
+   local leaf=keep(heroBall(model,"MOSSLeaf"..index,math.clamp(w*.18,1.5,2.8),CFrame.new(center+pos),index%2==0 and C.green or C.leaf,Enum.Material.Grass));leaf.Transparency=.03;table.insert(signature.IdleParts,leaf)
+  end
+  signature.IdleStyle="GROWTH";signature.ReactionDuration=.7;signature.ReactionPitch=math.rad(-4)
+ end
+ for _,p in ipairs(signature.Parts)do p:SetAttribute("HeroBaseSizeX",p.Size.X);p:SetAttribute("HeroBaseSizeY",p.Size.Y);p:SetAttribute("HeroBaseSizeZ",p.Size.Z);p:SetAttribute("HeroBaseColor",p.Color)end
+ if signature.LeftScale then signature.LeftScaleOffset=model:GetPivot():ToObjectSpace(signature.LeftScale.CFrame)end
+ if signature.RightScale then signature.RightScaleOffset=model:GetPivot():ToObjectSpace(signature.RightScale.CFrame)end
+ return signature
+end
+local function baseSize(p)
+ if not p then return nil end
+ return Vector3.new(p:GetAttribute("HeroBaseSizeX")or p.Size.X,p:GetAttribute("HeroBaseSizeY")or p.Size.Y,p:GetAttribute("HeroBaseSizeZ")or p.Size.Z)
+end
 local function judge(root,name,x,y,z,color,headShape)
  local m=Instance.new("Model");m.Name=name.."Judge";m.Parent=root
- local body=part("Body",Vector3.new(9,10,6),CFrame.new(x,y,z),C.darkstone,m,Enum.Material.Metal)
- part("Chest",Vector3.new(6.4,3,6.3),CFrame.new(x,y+1.2,z-.1),color,m,Enum.Material.Metal)
- part("LeftPauldron",Vector3.new(3.4,2.4,3.4),CFrame.new(x-5.6,y+4.2,z),color,m,Enum.Material.Metal);part("RightPauldron",Vector3.new(3.4,2.4,3.4),CFrame.new(x+5.6,y+4.2,z),color,m,Enum.Material.Metal)
- part("LeftArm",Vector3.new(2.2,8,2.2),CFrame.new(x-5.2,y-1,z),C.darkstone,m,Enum.Material.Metal);part("RightArm",Vector3.new(2.2,8,2.2),CFrame.new(x+5.2,y-1,z),C.darkstone,m,Enum.Material.Metal)
- part("LeftGauntlet",Vector3.new(2.7,2,2.7),CFrame.new(x-5.2,y-4.8,z),color,m,Enum.Material.Metal);part("RightGauntlet",Vector3.new(2.7,2,2.7),CFrame.new(x+5.2,y-4.8,z),color,m,Enum.Material.Metal)
- local head=part("Head",Vector3.new(6.5,5.5,6),CFrame.new(x,y+7.5,z),C.darkstone,m,Enum.Material.Metal);if headShape=="round"then head.Shape=Enum.PartType.Ball end
- local eye=part("Eyes",Vector3.new(4,.8,.4),CFrame.new(x,y+7.6,z+3.05),color,m,Enum.Material.Neon);eye.CanCollide=false
- rune(m,"ChestRune",Vector3.new(1.1,4.2,.35),CFrame.new(x,y+1.2,z+3.2),color)
- local base=part("HoverCore",Vector3.new(.8,7.5,7.5),CFrame.new(x,y-6.2,z)*CFrame.Angles(0,0,math.rad(90)),C.navy,m,Enum.Material.Metal)
- rune(m,"HoverRune",Vector3.new(.5,8.4,8.4),CFrame.new(x,y-6.2,z)*CFrame.Angles(0,0,math.rad(90)),color)
- local light=glow(base,color,24,2.2)
- judgeTag(m,name,color,CFrame.new(x,y+.65,z),Vector3.new(12,16.3,7.5))
- m.PrimaryPart=body;World.Judges[name]={Model=m,BaseCFrame=body.CFrame,Eye=eye,Light=light,ReactionStarted=0,ReactionUntil=0,ReactionPitch=0}
+ local baseMetal=name=="MOSS"and C.wood or Color3.fromRGB(48,54,66)
+ local torsoWidth=name=="RIVET"and 8.4 or(name=="MOSS"and 7.8 or 7.2)
+ local torso=part("Body",Vector3.new(torsoWidth,8.2,4.8),CFrame.new(x,y,z),baseMetal,m,name=="MOSS"and Enum.Material.Wood or Enum.Material.Metal)
+ local chestColor=name=="PIP"and Color3.fromRGB(205,211,220)or(name=="RIVET"and Color3.fromRGB(66,68,76)or C.wood)
+ local chest=heroWedge(m,"ChestArmor",Vector3.new(torsoWidth*.82,3.2,1.8),CFrame.new(x,y+1.3,z+2.6)*CFrame.Angles(math.rad(180),0,0),chestColor,name=="MOSS"and Enum.Material.Wood or Enum.Material.Metal)
+ local waist=part("Waist",Vector3.new(torsoWidth*.58,2.1,4),CFrame.new(x,y-4.6,z),C.darkstone,m,Enum.Material.Metal)
+ for side=-1,1,2 do
+  local sx=x+side*(torsoWidth*.58)
+  local shoulder=heroBall(m,side<0 and"LeftShoulder"or"RightShoulder",2.7,CFrame.new(sx,y+2.7,z),color,Enum.Material.Metal)
+  local upper=part(side<0 and"LeftArm"or"RightArm",Vector3.new(1.7,4.6,1.8),CFrame.new(sx+side*.15,y-.1,z)*CFrame.Angles(0,0,math.rad(side*7)),baseMetal,m,Enum.Material.Metal)
+  local hand=heroBall(m,side<0 and"LeftHand"or"RightHand",2.15,CFrame.new(sx+side*.42,y-3.2,z+.1),color,Enum.Material.Metal)
+ end
+ local headColor=name=="PIP"and Color3.fromRGB(205,211,220)or baseMetal
+ local head=part("Head",Vector3.new(5,4.6,4.5),CFrame.new(x,y+6.7,z),headColor,m,name=="MOSS"and Enum.Material.Wood or Enum.Material.Metal)
+ if headShape=="round"then head.Shape=Enum.PartType.Ball end
+ local brow=part("Brow",Vector3.new(5.2,.8,4.7),CFrame.new(x,y+7.65,z),C.darkstone,m,Enum.Material.Metal)
+ local eye=part("Eyes",Vector3.new(3.1,.55,.28),CFrame.new(x,y+6.75,z+2.38),color,m,Enum.Material.Neon);eye.CanCollide=false
+ local core=heroBall(m,"BaseCore",3.2,CFrame.new(x,y-6,z),C.navy,Enum.Material.Metal)
+ local ring=cylinder("HoverRing",5.2,.35,CFrame.new(x,y-6.2,z),color,m,Enum.Material.Neon);ring.CanCollide=false
+ glow(core,color,18,1.1)
+ local boxCFrame,boxSize=m:GetBoundingBox()
+ judgeTag(m,name,color,boxCFrame,boxSize)
+ local signature=decorateHero(m,name,boxCFrame,boxSize,color)
+ m.PrimaryPart=torso
+ World.Judges[name]={Model=m,BaseCFrame=torso.CFrame,Eye=eye,Light=core:FindFirstChildOfClass("PointLight"),Signature=signature,ReactionStarted=0,ReactionUntil=0,ReactionPitch=signature.ReactionPitch or 0,IdleAmplitude=name=="RIVET"and .08 or(name=="MOSS"and .13 or .11)}
 end
 -- v0.5.2: Asset-based guardian with primitive fallback
 local function guardian(root,name,x,y,z,color,headShape,statueHeight)
@@ -183,12 +274,13 @@ local function guardian(root,name,x,y,z,color,headShape,statueHeight)
   rune(m,"ChestRune",Vector3.new(1.1,4.2,.35),CFrame.new(chestPosition),color)
   local light = glow(m:FindFirstChildWhichIsA("BasePart", true) or m.PrimaryPart or m:GetChildren()[1], color, 24, 2.2)
   judgeTag(m,name,color,boxCFrame,scaledSize)
-  local highlight=Instance.new("Highlight");highlight.Name="GuardianOutline";highlight.FillColor=color;highlight.FillTransparency=.9;highlight.OutlineColor=color;highlight.OutlineTransparency=.12;highlight.DepthMode=Enum.HighlightDepthMode.Occluded;highlight.Parent=m
+  local signature=decorateHero(m,name,boxCFrame,scaledSize,color)
+  local highlight=Instance.new("Highlight");highlight.Name="GuardianOutline";highlight.FillColor=color;highlight.FillTransparency=.9;highlight.OutlineColor=color;highlight.OutlineTransparency=.08;highlight.DepthMode=Enum.HighlightDepthMode.Occluded;highlight.Parent=m
   -- Set PrimaryPart for float animation
   if not m.PrimaryPart then
    m.PrimaryPart = m:FindFirstChildWhichIsA("BasePart", true)
   end
-  World.Judges[name]={Model=m,BaseCFrame=m:GetPivot(),Eye=eye,Light=light,ReactionStarted=0,ReactionUntil=0,ReactionPitch=0}
+  World.Judges[name]={Model=m,BaseCFrame=m:GetPivot(),Eye=eye,Light=light,Signature=signature,ReactionStarted=0,ReactionUntil=0,ReactionPitch=signature.ReactionPitch or 0,IdleAmplitude=name=="RIVET"and .12 or(name=="MOSS"and .18 or .16)}
   return
  end
  -- Fallback to primitive judge
@@ -229,9 +321,36 @@ function World.PlaySound(name)local s=World.Sounds[name];if s and s.SoundId~=""t
 function World.React(reactions)
  local now=os.clock()
  for _,reaction in ipairs(reactions or {})do local data=World.Judges[reaction.Judge];if data then
-  data.ReactionStarted=now;data.ReactionUntil=now+.38;data.ReactionPitch=math.rad(reaction.Earned and -5 or 2)
-  TweenService:Create(data.Eye,TweenInfo.new(.16),{Transparency=reaction.Earned and 0 or .45,Size=reaction.Earned and Vector3.new(5,1.1,.5)or Vector3.new(3.2,.7,.35)}):Play()
-  task.delay(.3,function()if data.Eye.Parent then TweenService:Create(data.Eye,TweenInfo.new(.25),{Transparency=0,Size=Vector3.new(4,.8,.4)}):Play()end end)
+  local signature=data.Signature or{};local duration=signature.ReactionDuration or .4
+  data.ReactionStarted=now;data.ReactionUntil=now+duration;data.ReactionPitch=reaction.Earned and(signature.ReactionPitch or math.rad(-4))or math.rad(2)
+  TweenService:Create(data.Eye,TweenInfo.new(.14),{Transparency=reaction.Earned and 0 or .52,Size=reaction.Earned and Vector3.new(5.2,1.15,.55)or Vector3.new(3.1,.65,.35)}):Play()
+  if reaction.Earned then
+   if signature.Emitter then signature.Emitter:Emit(reaction.Judge=="RIVET"and 34 or(reaction.Judge=="MOSS"and 24 or 18))end
+   if reaction.Judge=="PIP"then
+    if signature.Halo then TweenService:Create(signature.Halo,TweenInfo.new(.22,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Transparency=.52,Size=baseSize(signature.Halo)*1.14}):Play()end
+    if signature.LeftScale then TweenService:Create(signature.LeftScale,TweenInfo.new(.22),{Color=C.gold,Transparency=0}):Play()end
+    if signature.RightScale then TweenService:Create(signature.RightScale,TweenInfo.new(.22),{Color=C.gold,Transparency=0}):Play()end
+   elseif reaction.Judge=="RIVET"then
+    if signature.PowerFist then TweenService:Create(signature.PowerFist,TweenInfo.new(.16,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Size=baseSize(signature.PowerFist)*1.16}):Play()end
+    if signature.Knuckle then TweenService:Create(signature.Knuckle,TweenInfo.new(.12),{Transparency=0,Color=C.orange}):Play()end
+   elseif reaction.Judge=="MOSS"then
+    if signature.StaffOrb then TweenService:Create(signature.StaffOrb,TweenInfo.new(.3,Enum.EasingStyle.Sine,Enum.EasingDirection.Out),{Size=baseSize(signature.StaffOrb)*1.22,Color=C.pale}):Play()end
+    for _,leaf in ipairs(signature.IdleParts or{})do if leaf and leaf.Parent then TweenService:Create(leaf,TweenInfo.new(.32),{Color=C.green,Size=baseSize(leaf)*1.08}):Play()end end
+   end
+  end
+  task.delay(duration,function()
+   if data.Eye.Parent then TweenService:Create(data.Eye,TweenInfo.new(.25),{Transparency=0,Size=Vector3.new(4,.8,.4)}):Play()end
+   if reaction.Judge=="PIP"then
+    if signature.Halo and signature.Halo.Parent then TweenService:Create(signature.Halo,TweenInfo.new(.3),{Transparency=.78,Size=baseSize(signature.Halo)}):Play()end
+    for _,scale in ipairs({signature.LeftScale,signature.RightScale})do if scale and scale.Parent then TweenService:Create(scale,TweenInfo.new(.3),{Color=C.blue,Transparency=.12}):Play()end end
+   elseif reaction.Judge=="RIVET"then
+    if signature.PowerFist and signature.PowerFist.Parent then TweenService:Create(signature.PowerFist,TweenInfo.new(.28),{Size=baseSize(signature.PowerFist)}):Play()end
+    if signature.Knuckle and signature.Knuckle.Parent then TweenService:Create(signature.Knuckle,TweenInfo.new(.25),{Transparency=.08,Color=C.red}):Play()end
+   elseif reaction.Judge=="MOSS"then
+    if signature.StaffOrb and signature.StaffOrb.Parent then TweenService:Create(signature.StaffOrb,TweenInfo.new(.35),{Size=baseSize(signature.StaffOrb),Color=C.green}):Play()end
+    for _,leaf in ipairs(signature.IdleParts or{})do if leaf and leaf.Parent then TweenService:Create(leaf,TweenInfo.new(.35),{Size=baseSize(leaf),Color=leaf:GetAttribute("HeroBaseColor")or C.green}):Play()end end
+   end
+  end)
  end end
 end
 function World.SetActivePlayer(playerIndex)
@@ -270,33 +389,34 @@ function World.Init()
  -- Bright marble foundation and ceremonial center.
  part("ArenaFloor",Vector3.new(Definitions.Arena.SizeX,1,Definitions.Arena.SizeZ),CFrame.new(0,0,Definitions.Arena.CenterZ),C.stone,root,Enum.Material.Marble)
  part("ArenaApron",Vector3.new(84,.22,56),CFrame.new(0,.61,-4),C.white,root,Enum.Material.Marble)
- local arenaDisc=cylinder("ArenaDisc",39,.42,CFrame.new(0,.86,5),C.white,root,Enum.Material.Marble)
+ local arenaDisc=cylinder("ArenaDisc",39,.42,CFrame.new(0,.86,5),Color3.fromRGB(198,202,209),root,Enum.Material.Marble)
  arenaDisc.CanCollide=true
- local goldRing=cylinder("ArenaGoldRing",41,.16,CFrame.new(0,1.09,5),C.gold,root,Enum.Material.Metal);goldRing.CanCollide=false
- local innerDisc=cylinder("ArenaInnerDisc",31,.2,CFrame.new(0,1.2,5),Color3.fromRGB(235,239,244),root,Enum.Material.Marble);innerDisc.CanCollide=false
- local innerRing=cylinder("ArenaInnerGoldRing",32.5,.12,CFrame.new(0,1.33,5),C.gold,root,Enum.Material.Metal);innerRing.CanCollide=false
- rune(root,"ArenaAxisN",Vector3.new(.35,.08,25),CFrame.new(0,1.38,-1),C.blue)
- rune(root,"ArenaAxisE",Vector3.new(25,.08,.35),CFrame.new(0,1.39,5),C.blue)
+ local innerDisc=cylinder("ArenaInnerDisc",30,.18,CFrame.new(0,1.12,5),Color3.fromRGB(174,180,190),root,Enum.Material.Marble);innerDisc.CanCollide=false
+ ringSegments(root,"ArenaGoldRing",20.1,1.33,C.gold,32,.12,.34)
+ ringSegments(root,"ArenaInnerGoldRing",14.7,1.34,C.gold,28,.1,.26)
+ ringSegments(root,"ArenaBlueRing",17.1,1.35,C.blue,28,.08,.18)
+ rune(root,"ArenaAxisN",Vector3.new(.18,.06,21),CFrame.new(0,1.38,5),C.blue)
+ rune(root,"ArenaAxisE",Vector3.new(21,.06,.18),CFrame.new(0,1.39,5),C.blue)
 
- -- Grand entrance path and staircase.
- part("EntryPath",Vector3.new(16,.3,17),CFrame.new(0,.72,24),C.white,root,Enum.Material.Marble)
- for i=0,6 do
-  local y=.8+i*.55;local z=17-i*1.65;local width=24-i*.9
-  part("GrandStair",Vector3.new(width,1.1,2),CFrame.new(0,y,z),C.white,root,Enum.Material.Marble)
-  trimBlock(root,"GrandStairGold",Vector3.new(width+.15,.16,.22),CFrame.new(0,y+.62,z+1.02))
- end
- rune(root,"EntryPathLeft",Vector3.new(.3,.12,16.5),CFrame.new(-7.6,.92,24),C.gold)
- rune(root,"EntryPathRight",Vector3.new(.3,.12,16.5),CFrame.new(7.6,.92,24),C.gold)
+ -- Low approach keeps the circular debate floor unobstructed.
+ part("EntryPath",Vector3.new(14,.22,16),CFrame.new(0,.7,24),Color3.fromRGB(188,192,199),root,Enum.Material.Marble)
+ part("EntryStep",Vector3.new(18,.65,2.2),CFrame.new(0,.32,17.8),C.stone,root,Enum.Material.Marble)
+ trimBlock(root,"EntryStepGold",Vector3.new(18.2,.12,.22),CFrame.new(0,.68,18.85))
+ rune(root,"EntryPathLeft",Vector3.new(.18,.08,15.5),CFrame.new(-6.5,.84,24),C.gold)
+ rune(root,"EntryPathRight",Vector3.new(.18,.08,15.5),CFrame.new(6.5,.84,24),C.gold)
 
  -- Monumental back wall, columns and royal banners.
  part("TempleWall",Vector3.new(90,38,3),CFrame.new(0,20,-36.5),C.white,root,Enum.Material.Marble)
  part("TempleWallInset",Vector3.new(72,30,.8),CFrame.new(0,19,-34.55),Color3.fromRGB(202,210,221),root,Enum.Material.Marble)
  for _,x in ipairs({-40,-28,28,40})do marbleColumn(root,x,-31,28)end
  for _,x in ipairs({-34,34})do marbleColumn(root,x,8,22)end
- bannerPanel(root,-31,20,-34,"PIP")
+ bannerPanel(root,-31,20,-34,"RIVET")
  bannerPanel(root,31,20,-34,"MOSS")
- bannerPanel(root,-12,22,-34,"RIVET")
+ bannerPanel(root,-12,22,-34,"PIP")
  bannerPanel(root,12,22,-34,"ARENA")
+ heroNiche(root,"RIVET",-23,-35.2,C.red,15,23)
+ heroNiche(root,"PIP",0,-35.2,C.blue,16,27)
+ heroNiche(root,"MOSS",23,-35.2,C.green,15,23)
  waterfall(root,-42,-34,29);waterfall(root,42,-34,29)
 
  -- Side terraces and gardens keep the arena rich without blocking play.
@@ -360,14 +480,14 @@ function World.Init()
  local cameraAnchor=part("ArenaCameraAnchor",Vector3.new(1,1,1),CFrame.lookAt(Vector3.new(0,21,43),cameraFocus.Position),C.navy,root);cameraAnchor.Transparency=1;cameraAnchor.CanCollide=false;cameraAnchor.CanTouch=false;cameraAnchor.CanQuery=false
 
  -- Bright sky-temple grade.
- Lighting.ClockTime=14.2;Lighting.Brightness=3;Lighting.ExposureCompensation=.34;Lighting.Ambient=Color3.fromRGB(145,154,170);Lighting.OutdoorAmbient=Color3.fromRGB(188,197,211);Lighting.FogColor=Color3.fromRGB(202,224,242);Lighting.FogStart=220;Lighting.FogEnd=820;Lighting.EnvironmentDiffuseScale=1;Lighting.EnvironmentSpecularScale=.9;Lighting.GlobalShadows=true;Lighting.ShadowSoftness=.38
- local bloom=Lighting:FindFirstChild("BeatTheBotBloom");if not bloom then bloom=Instance.new("BloomEffect");bloom.Name="BeatTheBotBloom";bloom.Parent=Lighting end;bloom.Intensity=.18;bloom.Size=20;bloom.Threshold=1.35
- local grade=Lighting:FindFirstChild("BeatTheBotColorGrade");if not grade then grade=Instance.new("ColorCorrectionEffect");grade.Name="BeatTheBotColorGrade";grade.Parent=Lighting end;grade.Brightness=.06;grade.Contrast=.08;grade.Saturation=.12;grade.TintColor=Color3.fromRGB(251,248,238)
- local rays=Lighting:FindFirstChild("BeatTheBotSunRays");if not rays then rays=Instance.new("SunRaysEffect");rays.Name="BeatTheBotSunRays";rays.Parent=Lighting end;rays.Intensity=.06;rays.Spread=.74
- local atmosphere=Lighting:FindFirstChild("BeatTheBotAtmosphere");if not atmosphere then atmosphere=Instance.new("Atmosphere");atmosphere.Name="BeatTheBotAtmosphere";atmosphere.Parent=Lighting end;atmosphere.Density=.18;atmosphere.Offset=.1;atmosphere.Color=Color3.fromRGB(215,232,246);atmosphere.Decay=Color3.fromRGB(143,164,190);atmosphere.Glare=.08;atmosphere.Haze=1.2
+ Lighting.ClockTime=14.2;Lighting.Brightness=1.65;Lighting.ExposureCompensation=-.18;Lighting.Ambient=Color3.fromRGB(72,78,90);Lighting.OutdoorAmbient=Color3.fromRGB(104,112,126);Lighting.FogColor=Color3.fromRGB(168,186,202);Lighting.FogStart=260;Lighting.FogEnd=900;Lighting.EnvironmentDiffuseScale=.72;Lighting.EnvironmentSpecularScale=.58;Lighting.GlobalShadows=true;Lighting.ShadowSoftness=.32
+ local bloom=Lighting:FindFirstChild("BeatTheBotBloom");if not bloom then bloom=Instance.new("BloomEffect");bloom.Name="BeatTheBotBloom";bloom.Parent=Lighting end;bloom.Intensity=.05;bloom.Size=14;bloom.Threshold=1.8
+ local grade=Lighting:FindFirstChild("BeatTheBotColorGrade");if not grade then grade=Instance.new("ColorCorrectionEffect");grade.Name="BeatTheBotColorGrade";grade.Parent=Lighting end;grade.Brightness=-.03;grade.Contrast=.12;grade.Saturation=.05;grade.TintColor=Color3.fromRGB(237,239,242)
+ local rays=Lighting:FindFirstChild("BeatTheBotSunRays");if not rays then rays=Instance.new("SunRaysEffect");rays.Name="BeatTheBotSunRays";rays.Parent=Lighting end;rays.Intensity=.015;rays.Spread=.68
+ local atmosphere=Lighting:FindFirstChild("BeatTheBotAtmosphere");if not atmosphere then atmosphere=Instance.new("Atmosphere");atmosphere.Name="BeatTheBotAtmosphere";atmosphere.Parent=Lighting end;atmosphere.Density=.11;atmosphere.Offset=.05;atmosphere.Color=Color3.fromRGB(190,205,219);atmosphere.Decay=Color3.fromRGB(122,139,159);atmosphere.Glare=0;atmosphere.Haze=.65
 
- stageLight(root,"ArenaWarmFill",Vector3.new(0,18,17),Color3.fromRGB(255,230,185),1.2,55)
- stageLight(root,"ArenaCoolFill",Vector3.new(0,15,-3),Color3.fromRGB(190,225,255),1.3,48)
+ stageLight(root,"ArenaWarmFill",Vector3.new(0,18,17),Color3.fromRGB(228,205,168),.55,46)
+ stageLight(root,"ArenaCoolFill",Vector3.new(0,15,-3),Color3.fromRGB(162,192,218),.62,42)
 
  task.spawn(function()
   local elapsed=0
@@ -377,7 +497,19 @@ function World.Init()
    for id,data in pairs(World.Judges)do if data.Model.Parent then
     local phase=id=="RIVET"and 0 or(id=="PIP"and 2 or 4);local pitch=0
     if now<data.ReactionUntil then local progress=(now-data.ReactionStarted)/(data.ReactionUntil-data.ReactionStarted);pitch=math.sin(math.clamp(progress,0,1)*math.pi)*data.ReactionPitch end
-    data.Model:PivotTo(data.BaseCFrame*CFrame.new(0,math.sin(elapsed+phase)*.22,0)*CFrame.Angles(pitch,0,0))
+    local amplitude=data.IdleAmplitude or .16
+    data.Model:PivotTo(data.BaseCFrame*CFrame.new(0,math.sin(elapsed+phase)*amplitude,0)*CFrame.Angles(pitch,0,0))
+    local signature=data.Signature
+    if signature and signature.IdleStyle=="BALANCE"and signature.LeftScale and signature.RightScale and signature.LeftScaleOffset and signature.RightScaleOffset then
+     local sway=math.sin(elapsed*1.25+phase)*.045
+     local pivot=data.Model:GetPivot()
+     signature.LeftScale.CFrame=pivot*signature.LeftScaleOffset*CFrame.Angles(0,0,sway)
+     signature.RightScale.CFrame=pivot*signature.RightScaleOffset*CFrame.Angles(0,0,-sway)
+    elseif signature and signature.IdleStyle=="GROWTH"and signature.StaffOrb then
+     signature.StaffOrb.Transparency=.06+math.abs(math.sin(elapsed*1.3))*.12
+    elseif signature and signature.IdleStyle=="POWER"and signature.Knuckle then
+     signature.Knuckle.Transparency=.05+math.abs(math.sin(elapsed*2.6))*.12
+    end
    end end
    if World.Hologram and World.Hologram.Parent and World.HoloBase and World.HoloPlayerIndex then
     local podium=World.Podiums[World.HoloPlayerIndex]

@@ -5,13 +5,13 @@ function Controller.Init(remotes,parent,buttonFactory,labelFactory,colors)
   local grad=Instance.new("UIGradient");grad.Color=ColorSequence.new(frame.BackgroundColor3:Lerp(colors.white,.05),frame.BackgroundColor3:Lerp(Color3.new(0,0,0),.15));grad.Rotation=90;grad.Parent=frame
  end
  local state=remotes:WaitForChild("BossDebateState");local submit=remotes:WaitForChild("BossDebateSubmit");local multiplayerState=remotes:WaitForChild("MultiplayerDebateState");local multiplayerSubmit=remotes:WaitForChild("MultiplayerDebateSubmit")
- local card=Instance.new("Frame");card.AnchorPoint=Vector2.new(0,.5);card.Position=UDim2.new(0,18,.5,0);card.Size=UDim2.fromOffset(224,258);card.BackgroundColor3=colors.bg;card.Parent=parent
+ local card=Instance.new("Frame");card.AnchorPoint=Vector2.new(0,.5);card.Position=UDim2.new(0,10,.5,0);card.Size=UDim2.fromOffset(158,196);card.BackgroundColor3=colors.bg;card.Parent=parent
  local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,14);corner.Parent=card;style(card,colors.gold)
- local title=labelFactory(card,"SOLO PRACTICE",19,colors.gold,true);title.Position=UDim2.fromOffset(14,12);title.Size=UDim2.new(1,-28,0,30);title.TextXAlignment=Enum.TextXAlignment.Center
- local mode=labelFactory(card,"SCRIPTED BOT • NO WINNER",11,colors.white,true);mode.Position=UDim2.fromOffset(14,44);mode.Size=UDim2.new(1,-28,0,24);mode.TextXAlignment=Enum.TextXAlignment.Center
- local disclosure=labelFactory(card,"Checking server availability...",11,colors.muted);disclosure.Position=UDim2.fromOffset(14,72);disclosure.Size=UDim2.new(1,-28,0,82);disclosure.TextYAlignment=Enum.TextYAlignment.Top;disclosure.TextXAlignment=Enum.TextXAlignment.Center
- local cta=buttonFactory(card,"LOCKED",colors.gold);cta.Position=UDim2.fromOffset(14,160);cta.Size=UDim2.new(1,-28,0,46);cta.Active=false;cta.AutoButtonColor=false
- local friend=buttonFactory(card,"INVITE FRIEND / PRIVATE",colors.panel);friend.Position=UDim2.fromOffset(14,214);friend.Size=UDim2.new(1,-28,0,32)
+ local title=labelFactory(card,"SOLO PRACTICE",13,colors.gold,true);title.Position=UDim2.fromOffset(10,9);title.Size=UDim2.new(1,-20,0,24);title.TextXAlignment=Enum.TextXAlignment.Center
+ local mode=labelFactory(card,"SCRIPTED BOT • NO WINNER",8,colors.white,true);mode.Position=UDim2.fromOffset(10,32);mode.Size=UDim2.new(1,-20,0,18);mode.TextXAlignment=Enum.TextXAlignment.Center
+ local disclosure=labelFactory(card,"Checking server availability...",8,colors.muted);disclosure.Position=UDim2.fromOffset(10,54);disclosure.Size=UDim2.new(1,-20,0,58);disclosure.TextYAlignment=Enum.TextYAlignment.Top;disclosure.TextXAlignment=Enum.TextXAlignment.Center
+ local cta=buttonFactory(card,"LOCKED",colors.gold);cta.Position=UDim2.fromOffset(10,120);cta.Size=UDim2.new(1,-20,0,34);cta.TextSize=10;cta.Active=false;cta.AutoButtonColor=false
+ local friend=buttonFactory(card,"INVITE FRIEND / PRIVATE",colors.panel);friend.Position=UDim2.fromOffset(10,160);friend.Size=UDim2.new(1,-20,0,24);friend.TextSize=8
  local practice=Instance.new("Frame");practice.AnchorPoint=Vector2.new(.5,.5);practice.Position=UDim2.fromScale(.42,.61);practice.Size=UDim2.fromOffset(460,600);practice.BackgroundColor3=colors.bg;practice.Visible=false;practice.Parent=parent
  local pc=Instance.new("UICorner");pc.CornerRadius=UDim.new(0,16);pc.Parent=practice;style(practice,colors.gold)
  local pt=labelFactory(practice,"SOLO ARGUMENT PRACTICE",20,colors.gold,true);pt.Position=UDim2.fromOffset(16,12);pt.Size=UDim2.new(1,-32,0,30);pt.TextXAlignment=Enum.TextXAlignment.Center
@@ -51,7 +51,7 @@ function Controller.Init(remotes,parent,buttonFactory,labelFactory,colors)
  multiplayerState.OnClientEvent:Connect(function(message)
   if message.Kind=="BackgroundQueue"then backgroundSearching=message.Status=="SEARCHING";background.Text=backgroundSearching and"CANCEL BACKGROUND SEARCH"or"FIND REAL PLAYER IN BACKGROUND";status.Text=message.Message
   elseif message.Kind=="MatchOffer"then offerId=message.OfferId;status.Text=message.Message;if turnToken then switch.Visible=true;switch.Active=true;switch.Text="SWITCH TO "..string.upper(message.OpponentName)end
-  elseif message.Kind=="Start"then offerId=nil;backgroundSearching=false;switch.Visible=false
+  elseif message.Kind=="Start"then card.Visible=false;offerId=nil;backgroundSearching=false;switch.Visible=false\n  elseif message.Kind=="Ended"then card.Visible=true
   elseif message.Kind=="Error"and message.Code=="STALE_OFFER"then offerId=nil;switch.Visible=false;status.Text=message.Message end
  end)
  task.spawn(function()while card.Parent do if turnDeadline and turnToken and not pending and os.clock()>=flashUntil then local left=math.max(0,math.ceil(turnDeadline-workspace:GetServerTimeNow()));send.Text=("SEND TURN %d/%d • %ds"):format(turnNumber,turnTotal,left)end;task.wait(.25)end end)
