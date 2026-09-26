@@ -7,9 +7,9 @@ local Definitions={
         MOSS=table.freeze({X=23,Y=18.5,Z=-27,Height=22,YawDegrees=0}),
     }),
     Collectibles=table.freeze({
-        BLIP=table.freeze({X=-34,Y=2,Z=17}),
-        ZAPP=table.freeze({X=34,Y=2,Z=17}),
-        CHOMP=table.freeze({X=0,Y=2,Z=-5}),
+        BLIP=table.freeze({X=-36,Y=2.2,Z=18}),
+        ZAPP=table.freeze({X=36,Y=2.2,Z=18}),
+        CHOMP=table.freeze({X=38,Y=2.2,Z=-8}),
     }),
     Sounds=table.freeze({
         TurnStart="6026984224",

@@ -1,24 +1,32 @@
 local Controller={}
 function Controller.Init(remotes,parent,buttonFactory,labelFactory,colors)
+ local function style(frame,accent)
+  local stroke=Instance.new("UIStroke");stroke.Color=accent or colors.gold;stroke.Transparency=.32;stroke.Thickness=1.4;stroke.Parent=frame
+  local grad=Instance.new("UIGradient");grad.Color=ColorSequence.new(frame.BackgroundColor3:Lerp(colors.white,.05),frame.BackgroundColor3:Lerp(Color3.new(0,0,0),.15));grad.Rotation=90;grad.Parent=frame
+ end
  local state=remotes:WaitForChild("BossDebateState");local submit=remotes:WaitForChild("BossDebateSubmit");local multiplayerState=remotes:WaitForChild("MultiplayerDebateState");local multiplayerSubmit=remotes:WaitForChild("MultiplayerDebateSubmit")
- local card=Instance.new("Frame");card.AnchorPoint=Vector2.new(0,.5);card.Position=UDim2.new(0,14,.5,0);card.Size=UDim2.fromOffset(210,224);card.BackgroundColor3=colors.bg;card.Parent=parent
- local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,12);corner.Parent=card
- local title=labelFactory(card,"SOLO PRACTICE",18,colors.gold,true);title.Position=UDim2.fromOffset(14,10);title.Size=UDim2.new(1,-28,0,28)
- local disclosure=labelFactory(card,"Checking server availability...",11,colors.muted);disclosure.Position=UDim2.fromOffset(14,40);disclosure.Size=UDim2.new(1,-28,0,90);disclosure.TextYAlignment=Enum.TextYAlignment.Top
- local cta=buttonFactory(card,"LOCKED",colors.panel);cta.Position=UDim2.fromOffset(14,136);cta.Size=UDim2.new(1,-28,0,32);cta.Active=false;cta.AutoButtonColor=false
- local friend=buttonFactory(card,"INVITE FRIEND / PRIVATE",colors.panel);friend.Position=UDim2.fromOffset(14,174);friend.Size=UDim2.new(1,-28,0,32)
- local practice=Instance.new("Frame");practice.AnchorPoint=Vector2.new(.5,.5);practice.Position=UDim2.fromScale(.5,.5);practice.Size=UDim2.fromOffset(400,420);practice.BackgroundColor3=colors.bg;practice.Visible=false;practice.Parent=parent
- local pc=Instance.new("UICorner");pc.CornerRadius=UDim.new(0,14);pc.Parent=practice
- local pt=labelFactory(practice,"SCRIPTED PRACTICE",20,colors.gold,true);pt.Position=UDim2.fromOffset(16,12);pt.Size=UDim2.new(1,-32,0,28)
- local status=labelFactory(practice,"Authored prompts only. No score, winner, or rewards.",12,colors.muted);status.Position=UDim2.fromOffset(16,44);status.Size=UDim2.new(1,-32,0,116);status.TextYAlignment=Enum.TextYAlignment.Top
- local logFrame=Instance.new("Frame");logFrame.Name="PracticeLog";logFrame.BackgroundTransparency=1;logFrame.ClipsDescendants=true;logFrame.Position=UDim2.fromOffset(16,164);logFrame.Size=UDim2.new(1,-32,0,150);logFrame.Parent=practice;local log=labelFactory(logFrame,"",13,colors.white);log.AnchorPoint=Vector2.new(0,1);log.Position=UDim2.fromScale(0,1);log.Size=UDim2.new(1,0,0,0);log.AutomaticSize=Enum.AutomaticSize.Y;log.TextYAlignment=Enum.TextYAlignment.Bottom
- local box=Instance.new("TextBox");box.MultiLine=true;box.TextWrapped=true;box.PlaceholderText="Write your assigned position...";box.TextColor3=colors.white;box.PlaceholderColor3=colors.muted;box.BackgroundColor3=colors.panel;box.Position=UDim2.fromOffset(16,322);box.Size=UDim2.new(1,-32,0,76);box.Parent=practice;local bc=Instance.new("UICorner");bc.CornerRadius=UDim.new(0,8);bc.Parent=box
- local send=buttonFactory(practice,"SEND TURN",colors.blue);send.Position=UDim2.fromOffset(16,406);send.Size=UDim2.new(.62,-20,0,46);send.Active=true
- local leave=buttonFactory(practice,"LEAVE",colors.panel);leave.Position=UDim2.new(.62,4,0,406);leave.Size=UDim2.new(.38,-20,0,46)
- local background=buttonFactory(practice,"FIND REAL PLAYER IN BACKGROUND",colors.green);background.Position=UDim2.fromOffset(16,456);background.Size=UDim2.new(1,-32,0,38)
- local switch=buttonFactory(practice,"",colors.gold);switch.Position=UDim2.fromOffset(16,500);switch.Size=UDim2.new(1,-32,0,42);switch.Visible=false
- practice.Size=UDim2.fromOffset(400,560)
- local topicPicker=Instance.new("Frame");topicPicker.Position=UDim2.fromOffset(16,160);topicPicker.Size=UDim2.new(1,-32,0,286);topicPicker.BackgroundColor3=colors.bg;topicPicker.Visible=false;topicPicker.ZIndex=5;topicPicker.Parent=practice
+ local card=Instance.new("Frame");card.AnchorPoint=Vector2.new(0,.5);card.Position=UDim2.new(0,18,.5,0);card.Size=UDim2.fromOffset(224,258);card.BackgroundColor3=colors.bg;card.Parent=parent
+ local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,14);corner.Parent=card;style(card,colors.gold)
+ local title=labelFactory(card,"SOLO PRACTICE",19,colors.gold,true);title.Position=UDim2.fromOffset(14,12);title.Size=UDim2.new(1,-28,0,30);title.TextXAlignment=Enum.TextXAlignment.Center
+ local mode=labelFactory(card,"SCRIPTED BOT • NO WINNER",11,colors.white,true);mode.Position=UDim2.fromOffset(14,44);mode.Size=UDim2.new(1,-28,0,24);mode.TextXAlignment=Enum.TextXAlignment.Center
+ local disclosure=labelFactory(card,"Checking server availability...",11,colors.muted);disclosure.Position=UDim2.fromOffset(14,72);disclosure.Size=UDim2.new(1,-28,0,82);disclosure.TextYAlignment=Enum.TextYAlignment.Top;disclosure.TextXAlignment=Enum.TextXAlignment.Center
+ local cta=buttonFactory(card,"LOCKED",colors.gold);cta.Position=UDim2.fromOffset(14,160);cta.Size=UDim2.new(1,-28,0,46);cta.Active=false;cta.AutoButtonColor=false
+ local friend=buttonFactory(card,"INVITE FRIEND / PRIVATE",colors.panel);friend.Position=UDim2.fromOffset(14,214);friend.Size=UDim2.new(1,-28,0,32)
+ local practice=Instance.new("Frame");practice.AnchorPoint=Vector2.new(.5,.5);practice.Position=UDim2.fromScale(.42,.61);practice.Size=UDim2.fromOffset(460,600);practice.BackgroundColor3=colors.bg;practice.Visible=false;practice.Parent=parent
+ local pc=Instance.new("UICorner");pc.CornerRadius=UDim.new(0,16);pc.Parent=practice;style(practice,colors.gold)
+ local pt=labelFactory(practice,"SOLO ARGUMENT PRACTICE",20,colors.gold,true);pt.Position=UDim2.fromOffset(16,12);pt.Size=UDim2.new(1,-32,0,30);pt.TextXAlignment=Enum.TextXAlignment.Center
+ local status=labelFactory(practice,"Authored prompts only. No score, winner, or rewards.",12,colors.muted);status.Position=UDim2.fromOffset(16,46);status.Size=UDim2.new(1,-32,0,120);status.TextYAlignment=Enum.TextYAlignment.Top;status.TextXAlignment=Enum.TextXAlignment.Center
+ local logFrame=Instance.new("Frame");logFrame.Name="PracticeLog";logFrame.BackgroundColor3=colors.panel;logFrame.BackgroundTransparency=.08;logFrame.ClipsDescendants=true;logFrame.Position=UDim2.fromOffset(16,170);logFrame.Size=UDim2.new(1,-32,0,150);logFrame.Parent=practice;local lc=Instance.new("UICorner");lc.CornerRadius=UDim.new(0,10);lc.Parent=logFrame;style(logFrame,colors.blue);local log=labelFactory(logFrame,"",13,colors.white);log.AnchorPoint=Vector2.new(0,1);log.Position=UDim2.new(0,10,1,-10);log.Size=UDim2.new(1,-20,0,0);log.AutomaticSize=Enum.AutomaticSize.Y;log.TextYAlignment=Enum.TextYAlignment.Bottom
+ local assist=Instance.new("Frame");assist.BackgroundTransparency=1;assist.Position=UDim2.fromOffset(16,328);assist.Size=UDim2.new(1,-32,0,36);assist.Parent=practice
+ local al=Instance.new("UIListLayout");al.FillDirection=Enum.FillDirection.Horizontal;al.Padding=UDim.new(0,7);al.Parent=assist
+ local box=Instance.new("TextBox");box.MultiLine=true;box.TextWrapped=true;box.PlaceholderText="Write your assigned position...";box.TextColor3=colors.white;box.PlaceholderColor3=colors.muted;box.BackgroundColor3=colors.panel;box.Position=UDim2.fromOffset(16,372);box.Size=UDim2.new(1,-32,0,76);box.Parent=practice;local bc=Instance.new("UICorner");bc.CornerRadius=UDim.new(0,10);bc.Parent=box;style(box,colors.blue)
+ local function starter(labelText,textValue)local b=buttonFactory(assist,labelText,colors.panel);b.Size=UDim2.new(.32,-4,1,0);b.TextSize=11;b.Activated:Connect(function()local prefix=box.Text==""and""or(box.Text:sub(-1)==" "and""or" ");box.Text=box.Text..prefix..textValue;box.CursorPosition=#box.Text+1;box:CaptureFocus()end)end
+ starter("REASON","Because ");starter("EXAMPLE","For example, ");starter("REBUTTAL","However, ")
+ local send=buttonFactory(practice,"SEND TURN",colors.blue);send.Position=UDim2.fromOffset(16,456);send.Size=UDim2.new(.62,-20,0,46);send.Active=true
+ local leave=buttonFactory(practice,"LEAVE",colors.panel);leave.Position=UDim2.new(.62,4,0,456);leave.Size=UDim2.new(.38,-20,0,46)
+ local background=buttonFactory(practice,"FIND REAL PLAYER IN BACKGROUND",colors.green);background.Position=UDim2.fromOffset(16,510);background.Size=UDim2.new(1,-32,0,38)
+ local switch=buttonFactory(practice,"",colors.gold);switch.Position=UDim2.fromOffset(16,554);switch.Size=UDim2.new(1,-32,0,34);switch.Visible=false
+ local topicPicker=Instance.new("Frame");topicPicker.Position=UDim2.fromOffset(16,166);topicPicker.Size=UDim2.new(1,-32,0,294);topicPicker.BackgroundColor3=colors.bg;topicPicker.Visible=false;topicPicker.ZIndex=5;topicPicker.Parent=practice;local tc=Instance.new("UICorner");tc.CornerRadius=UDim.new(0,12);tc.Parent=topicPicker;style(topicPicker,colors.gold)
  local topicPickerTitle=labelFactory(topicPicker,"CHOOSE A TOPIC — YOUR SIDE IS ASSIGNED NEXT",15,colors.gold,true);topicPickerTitle.Size=UDim2.new(1,0,0,42);topicPickerTitle.TextXAlignment=Enum.TextXAlignment.Center;topicPickerTitle.ZIndex=6
  local bossTopicButtons={};local offeredBossTopics={};for index=1,3 do local topicButton=buttonFactory(topicPicker,"",colors.blue);topicButton.Position=UDim2.new(0,0,0,48+(index-1)*78);topicButton.Size=UDim2.new(1,0,0,66);topicButton.TextWrapped=true;topicButton.ZIndex=6;bossTopicButtons[index]=topicButton end
  local session=nil;local round=nil;local turnToken=nil;local submission=0;local pending=nil;local turnDeadline=nil;local turnNumber=0;local turnTotal=6;local flashUntil=0;local offerId=nil;local acceptAfterLeave=false;local backgroundSearching=false
