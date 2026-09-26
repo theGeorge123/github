@@ -35,13 +35,18 @@ end)
 local panel=Instance.new("Frame");panel.AnchorPoint=Vector2.new(.5,.5);panel.Position=UDim2.fromScale(.46,.52);panel.Size=UDim2.new(.8,0,.82,0);panel.BackgroundColor3=C.bg;panel.Visible=false;panel.Parent=g;corner(panel,16)
 local pc=Instance.new("UISizeConstraint");pc.MaxSize=Vector2.new(820,700);pc.MinSize=Vector2.new(310,440);pc.Parent=panel
 local title=label(panel,"WAITING FOR ANOTHER PLAYER",22,C.white,true);title.Position=UDim2.fromOffset(18,12);title.Size=UDim2.new(1,-140,0,34);local panelLeave=button(panel,"LEAVE",C.panel);panelLeave.Name="LeaveDebate";panelLeave.AnchorPoint=Vector2.new(1,0);panelLeave.Position=UDim2.new(1,-14,0,12);panelLeave.Size=UDim2.fromOffset(110,34);panelLeave.ZIndex=10
-local topic=label(panel,"Two players take turns responding to the AI.",13,C.gold,true);topic.Position=UDim2.fromOffset(18,48);topic.Size=UDim2.new(1,-36,0,48)
+local topic=label(panel,"Two players take turns making and answering arguments.",13,C.gold,true);topic.Position=UDim2.fromOffset(18,48);topic.Size=UDim2.new(1,-36,0,48)
 local turn=label(panel,"",14,C.green,true);turn.Position=UDim2.fromOffset(18,96);turn.Size=UDim2.new(1,-36,0,28)
 local scoreline=label(panel,"PANEL SIGNALS • RIVET reason • PIP example • MOSS rebuttal",11,C.muted,true);scoreline.Position=UDim2.fromOffset(18,122);scoreline.Size=UDim2.new(1,-36,0,24)
 local log=Instance.new("ScrollingFrame");log.Position=UDim2.fromOffset(18,150);log.Size=UDim2.new(1,-36,1,-318);log.BackgroundColor3=C.panel;log.AutomaticCanvasSize=Enum.AutomaticSize.Y;log.CanvasSize=UDim2.new();log.BorderSizePixel=0;log.Parent=panel;corner(log,10);stroke(log,C.blue,.82,1)
 local ll=Instance.new("UIListLayout");ll.Padding=UDim.new(0,8);ll.Parent=log
 local box=Instance.new("TextBox");box.PlaceholderText="Give a reason, example, or rebuttal…";box.Text="";box.MultiLine=true;box.TextWrapped=true;box.TextColor3=C.white;box.PlaceholderColor3=C.muted;box.TextSize=14;box.Font=Enum.Font.Gotham;box.BackgroundColor3=C.panel;box.Position=UDim2.new(0,18,1,-98);box.Size=UDim2.new(1,-146,0,78);box.Parent=panel;corner(box,10)
-local queued=false\nlocal nextSubmissionId=0\nlocal pendingSubmissionId=nil\nlocal pendingText=nil\nlocal myTurn=false\nlocal assist=Instance.new("Frame");assist.Name="ArgumentAssist";assist.BackgroundTransparency=1;assist.Position=UDim2.new(0,18,1,-162);assist.Size=UDim2.new(1,-36,0,34);assist.Parent=panel
+local queued=false
+local nextSubmissionId=0
+local pendingSubmissionId=nil
+local pendingText=nil
+local myTurn=false
+local assist=Instance.new("Frame");assist.Name="ArgumentAssist";assist.BackgroundTransparency=1;assist.Position=UDim2.new(0,18,1,-162);assist.Size=UDim2.new(1,-36,0,34);assist.Parent=panel
 local assistLayout=Instance.new("UIListLayout");assistLayout.FillDirection=Enum.FillDirection.Horizontal;assistLayout.Padding=UDim.new(0,7);assistLayout.HorizontalAlignment=Enum.HorizontalAlignment.Left;assistLayout.Parent=assist
 local assistButtons={}
 local function addAssist(textValue,starter)
