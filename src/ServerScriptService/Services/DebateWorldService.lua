@@ -1,4 +1,4 @@
--- DebateWorldService — dark fantasy guardian temple build (v0.5.2).
+-- DebateWorldService — bright monumental guardian temple build (v0.5.3).
 -- Public API preserved: Init, Refresh, PlaySound, React, SetActivePlayer, Celebrate.
 -- Public names preserved: BeatTheBotDebateStage, DebateSpawn, <NAME>Judge models, PlayerPodiumA/B.
 -- v0.5.2: Clones sanitized Creator Store assets from ServerStorage.TempleAssets with primitive fallback.
@@ -7,14 +7,27 @@ local ServerStorage = game:GetService("ServerStorage")
 local TweenService = game:GetService("TweenService")
 local Definitions=require(script.Parent.Parent.Core.GuardianTempleDefinitions)
 local World = {Spawn=nil, Judges={}, Podiums={}, PodRunes={}, Sounds={}, Hologram=nil, HoloBase=nil, HoloPlayerIndex=nil, LightingPulseToken=0, MissingTemplates={}}
-local C = {stone=Color3.fromRGB(56,60,72),darkstone=Color3.fromRGB(36,40,52),navy=Color3.fromRGB(14,20,34),cyan=Color3.fromRGB(80,220,232),teal=Color3.fromRGB(48,178,190),pale=Color3.fromRGB(168,240,248),gold=Color3.fromRGB(255,194,82),orange=Color3.fromRGB(255,138,48),white=Color3.fromRGB(222,238,246),purple=Color3.fromRGB(140,190,255),green=Color3.fromRGB(95,205,175)}
+local C = {stone=Color3.fromRGB(92,99,114),darkstone=Color3.fromRGB(58,66,82),navy=Color3.fromRGB(25,36,54),cyan=Color3.fromRGB(80,220,232),teal=Color3.fromRGB(66,194,202),pale=Color3.fromRGB(190,244,249),gold=Color3.fromRGB(255,194,82),orange=Color3.fromRGB(255,148,62),white=Color3.fromRGB(240,246,250),purple=Color3.fromRGB(157,201,255),green=Color3.fromRGB(105,214,180)}
 local function part(name,size,cframe,color,parent,material)local p=Instance.new("Part");p.Name=name;p.Size=size;p.CFrame=cframe;p.Anchored=true;p.Color=color;p.Material=material or Enum.Material.Slate;p.TopSurface=Enum.SurfaceType.Smooth;p.BottomSurface=Enum.SurfaceType.Smooth;p.Parent=parent;return p end
 local function text(target,value,color)local g=Instance.new("SurfaceGui");g.Face=Enum.NormalId.Front;g.CanvasSize=Vector2.new(900,300);g.Parent=target;local l=Instance.new("TextLabel");l.Size=UDim2.fromScale(1,1);l.BackgroundTransparency=1;l.Text=value;l.TextColor3=color or C.white;l.TextScaled=true;l.TextWrapped=true;l.Font=Enum.Font.GothamBold;l.Parent=g end
 local function sound(parent,name,id,volume)
  local s=Instance.new("Sound");s.Name=name;s.SoundId=type(id)=="string"and id~=""and("rbxassetid://"..id)or"";s.Volume=volume;s.RollOffMaxDistance=90;s.Parent=parent;World.Sounds[name]=s;return s
 end
 local function glow(parent,color,range,brightness)local light=Instance.new("PointLight");light.Color=color;light.Range=range or 18;light.Brightness=brightness or 2;light.Shadows=true;light.Parent=parent;return light end
-local function rune(parent,name,size,cframe,color)local r=part(name,size,cframe,color or C.cyan,parent,Enum.Material.Neon);r.CanCollide=false;r.Transparency=.3;return r end
+local function rune(parent,name,size,cframe,color)local r=part(name,size,cframe,color or C.cyan,parent,Enum.Material.Neon);r.CanCollide=false;r.Transparency=.24;return r end
+local function stageLight(root,name,position,color,brightness,range)
+ local anchor=part(name,Vector3.new(.2,.2,.2),CFrame.new(position),C.white,root,Enum.Material.SmoothPlastic);anchor.Transparency=1;anchor.CanCollide=false;anchor.CanTouch=false;anchor.CanQuery=false
+ local light=Instance.new("PointLight");light.Color=color;light.Brightness=brightness or 2;light.Range=range or 30;light.Shadows=true;light.Parent=anchor
+ return anchor
+end
+local function judgeBackdrop(root,name,x,z,color,width,height)
+ local panel=part(name.."Backdrop",Vector3.new(width,height,1.1),CFrame.new(x,height*.5+5,z),C.darkstone,root,Enum.Material.Slate)
+ panel.CanCollide=false
+ rune(root,name.."BackdropLeft",Vector3.new(.45,height+.8,.2),CFrame.new(x-width*.5+.55,height*.5+5,z+.62),color)
+ rune(root,name.."BackdropRight",Vector3.new(.45,height+.8,.2),CFrame.new(x+width*.5-.55,height*.5+5,z+.62),color)
+ rune(root,name.."BackdropTop",Vector3.new(width-.8,.45,.2),CFrame.new(x,height+4.6,z+.62),color)
+ stageLight(root,name.."KeyLight",Vector3.new(x,19,z+7),color,1.8,30)
+end
 local function fireBowl(root,x,z)
  local bowl=part("FireBowl",Vector3.new(3.6,1.6,3.6),CFrame.new(x,1.3,z),C.stone,root,Enum.Material.Slate)
  local ember=part("Ember",Vector3.new(2,2,2),CFrame.new(x,2.2,z),C.orange,root,Enum.Material.Neon);ember.Shape=Enum.PartType.Ball;ember.CanCollide=false
@@ -192,6 +205,8 @@ function World.Init()
  destroyHologram();World.Judges={};World.Podiums={};World.PodRunes={};World.Sounds={};World.MissingTemplates={};World.LightingPulseToken+=1
  local root=Instance.new("Folder");root.Name="BeatTheBotDebateStage";root.Parent=workspace
  part("ArenaFloor",Vector3.new(Definitions.Arena.SizeX,1,Definitions.Arena.SizeZ),CFrame.new(0,0,Definitions.Arena.CenterZ),C.stone,root,Enum.Material.Slate)
+ part("EntryPath",Vector3.new(14,.18,22),CFrame.new(0,.6,18),Color3.fromRGB(116,122,136),root,Enum.Material.Slate)
+ rune(root,"EntryPathLeft",Vector3.new(.25,.14,22),CFrame.new(-6.7,.71,18),C.gold);rune(root,"EntryPathRight",Vector3.new(.25,.14,22),CFrame.new(6.7,.71,18),C.gold)
  part("StageInset",Vector3.new(36,.2,26),CFrame.new(0,.59,4),C.darkstone,root,Enum.Material.Slate)
  rune(root,"StageRuneN",Vector3.new(36.6,.15,.5),CFrame.new(0,.7,-8.9));rune(root,"StageRuneS",Vector3.new(36.6,.15,.5),CFrame.new(0,.7,16.9));rune(root,"StageRuneE",Vector3.new(.5,.15,26.6),CFrame.new(18.3,.7,4));rune(root,"StageRuneW",Vector3.new(.5,.15,26.6),CFrame.new(-18.3,.7,4))
  local circle=rune(root,"StageRuneCircle",Vector3.new(.15,13,13),CFrame.new(0,.7,4)*CFrame.Angles(0,0,math.rad(90)),C.teal);circle.Transparency=.45
@@ -202,15 +217,20 @@ function World.Init()
  for _,px in ipairs({-27,27})do for _,pz in ipairs({-18,2,22})do pillar(root,px,pz) end end
  -- v0.5.2: Fire bowls using Creator Store asset (falls back to primitive)
  torchBowl(root,-42,-27);torchBowl(root,-24,-27);torchBowl(root,24,-27);torchBowl(root,42,-27)
- local sign=part("DebateSign",Vector3.new(24,3,.5),CFrame.new(0,10,-11.8),C.navy,root,Enum.Material.Metal);text(sign,"THE SCRIPTED CHECKLIST PANEL",C.gold)
+ local sign=part("DebateSign",Vector3.new(26,3.4,.5),CFrame.new(0,10,-11.8),C.navy,root,Enum.Material.Metal);text(sign,"GUARDIAN DEBATE ARENA",C.gold)
  local function podium(name,cframe)local p=part(name,Vector3.new(8,1.2,7),cframe,C.darkstone,root,Enum.Material.Slate);local r=rune(root,name.."Rune",Vector3.new(8.4,.2,7.4),CFrame.new(cframe.X,.72,cframe.Z),C.teal);return p,r end
  World.Podiums[1],World.PodRunes[1]=podium("PlayerPodiumA",CFrame.new(-9,.65,6));World.Podiums[2],World.PodRunes[2]=podium("PlayerPodiumB",CFrame.new(9,.65,6))
  -- v0.5.2: Guardians using Creator Store assets (falls back to primitives)
  -- GuardianSentinel natively faces -Z; template already rotated 180° on Y so clones face +Z
  local rivet=Definitions.Judges.RIVET;local pip=Definitions.Judges.PIP;local moss=Definitions.Judges.MOSS
+ judgeBackdrop(root,"RIVET",rivet.X,-34.2,C.cyan,18,27)
+ judgeBackdrop(root,"PIP",pip.X,-34.6,C.gold,20,31)
+ judgeBackdrop(root,"MOSS",moss.X,-34.2,C.pale,18,27)
  guardian(root,"RIVET",rivet.X,rivet.Y,rivet.Z,C.cyan,"square",rivet.Height)
- guardian(root,"PIP",pip.X,pip.Y,pip.Z,C.teal,"square",pip.Height)
+ guardian(root,"PIP",pip.X,pip.Y,pip.Z,C.gold,"square",pip.Height)
  guardian(root,"MOSS",moss.X,moss.Y,moss.Z,C.pale,"round",moss.Height)
+ stageLight(root,"ArenaFill",Vector3.new(0,18,8),Color3.fromRGB(225,238,255),2.3,52)
+ stageLight(root,"WarmEntry",Vector3.new(0,10,24),Color3.fromRGB(255,214,154),1.4,34)
  -- v0.5.2: Temple banners flanking the guardians
  banner(root,-31,-34.5,22);banner(root,31,-34.5,22)
  local blip=Definitions.Collectibles.BLIP;local zapp=Definitions.Collectibles.ZAPP;local chomp=Definitions.Collectibles.CHOMP
@@ -221,7 +241,9 @@ function World.Init()
  local spawnDefinition=Definitions.Spawn;local spawn=Instance.new("SpawnLocation");spawn.Name="DebateSpawn";spawn.Size=Vector3.new(8,1,5);spawn.CFrame=CFrame.lookAt(Vector3.new(spawnDefinition.X,spawnDefinition.Y,spawnDefinition.Z),Vector3.new(spawnDefinition.LookX,spawnDefinition.LookY,spawnDefinition.LookZ));spawn.Anchored=true;spawn.Neutral=true;spawn.Duration=0;spawn.Transparency=1;spawn.Parent=root;World.Spawn=spawn
  local cameraFocus=part("ArenaCameraFocus",Vector3.new(1,1,1),CFrame.new(0,14,-22),C.navy,root);cameraFocus.Transparency=1;cameraFocus.CanCollide=false;cameraFocus.CanTouch=false;cameraFocus.CanQuery=false
  local cameraAnchor=part("ArenaCameraAnchor",Vector3.new(1,1,1),CFrame.lookAt(Vector3.new(0,18,35),cameraFocus.Position),C.navy,root);cameraAnchor.Transparency=1;cameraAnchor.CanCollide=false;cameraAnchor.CanTouch=false;cameraAnchor.CanQuery=false
- Lighting.ClockTime=0;Lighting.Brightness=1.1;Lighting.Ambient=Color3.fromRGB(28,32,46);Lighting.OutdoorAmbient=Color3.fromRGB(38,44,60);Lighting.FogColor=Color3.fromRGB(10,13,22);Lighting.FogStart=50;Lighting.FogEnd=240;Lighting.EnvironmentDiffuseScale=.55;Lighting.EnvironmentSpecularScale=.4
+ Lighting.ClockTime=14.5;Lighting.Brightness=2.6;Lighting.ExposureCompensation=.22;Lighting.Ambient=Color3.fromRGB(112,120,138);Lighting.OutdoorAmbient=Color3.fromRGB(152,160,178);Lighting.FogColor=Color3.fromRGB(176,192,210);Lighting.FogStart=150;Lighting.FogEnd=620;Lighting.EnvironmentDiffuseScale=.9;Lighting.EnvironmentSpecularScale=.75;Lighting.GlobalShadows=true;Lighting.ShadowSoftness=.45
+ local bloom=Lighting:FindFirstChild("BeatTheBotBloom");if not bloom then bloom=Instance.new("BloomEffect");bloom.Name="BeatTheBotBloom";bloom.Parent=Lighting end;bloom.Intensity=.22;bloom.Size=18;bloom.Threshold=1.25
+ local grade=Lighting:FindFirstChild("BeatTheBotColorGrade");if not grade then grade=Instance.new("ColorCorrectionEffect");grade.Name="BeatTheBotColorGrade";grade.Parent=Lighting end;grade.Brightness=.04;grade.Contrast=.06;grade.Saturation=.08;grade.TintColor=Color3.fromRGB(244,248,255)
  task.spawn(function()
   local elapsed=0
   while root.Parent do
