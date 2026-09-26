@@ -41,7 +41,7 @@ local scoreline=label(panel,"PANEL SIGNALS • RIVET reason • PIP example • 
 local log=Instance.new("ScrollingFrame");log.Position=UDim2.fromOffset(18,150);log.Size=UDim2.new(1,-36,1,-318);log.BackgroundColor3=C.panel;log.AutomaticCanvasSize=Enum.AutomaticSize.Y;log.CanvasSize=UDim2.new();log.BorderSizePixel=0;log.Parent=panel;corner(log,10);stroke(log,C.blue,.82,1)
 local ll=Instance.new("UIListLayout");ll.Padding=UDim.new(0,8);ll.Parent=log
 local box=Instance.new("TextBox");box.PlaceholderText="Give a reason, example, or rebuttal…";box.Text="";box.MultiLine=true;box.TextWrapped=true;box.TextColor3=C.white;box.PlaceholderColor3=C.muted;box.TextSize=14;box.Font=Enum.Font.Gotham;box.BackgroundColor3=C.panel;box.Position=UDim2.new(0,18,1,-98);box.Size=UDim2.new(1,-146,0,78);box.Parent=panel;corner(box,10)
-local assist=Instance.new("Frame");assist.Name="ArgumentAssist";assist.BackgroundTransparency=1;assist.Position=UDim2.new(0,18,1,-162);assist.Size=UDim2.new(1,-36,0,34);assist.Parent=panel
+local queued=false\nlocal nextSubmissionId=0\nlocal pendingSubmissionId=nil\nlocal pendingText=nil\nlocal myTurn=false\nlocal assist=Instance.new("Frame");assist.Name="ArgumentAssist";assist.BackgroundTransparency=1;assist.Position=UDim2.new(0,18,1,-162);assist.Size=UDim2.new(1,-36,0,34);assist.Parent=panel
 local assistLayout=Instance.new("UIListLayout");assistLayout.FillDirection=Enum.FillDirection.Horizontal;assistLayout.Padding=UDim.new(0,7);assistLayout.HorizontalAlignment=Enum.HorizontalAlignment.Left;assistLayout.Parent=assist
 local assistButtons={}
 local function addAssist(textValue,starter)
@@ -54,11 +54,6 @@ box:GetPropertyChangedSignal("Text"):Connect(function()local bytes=#box.Text;cou
 local send=button(panel,"SEND TURN",C.blue);send.Position=UDim2.new(1,-116,1,-98);send.Size=UDim2.fromOffset(98,78);send.Active=false;send.AutoButtonColor=false
 addAssist("REASON","Because ");addAssist("EXAMPLE","For example, ");addAssist("REBUTTAL","However, ")
 local function setAssistEnabled(enabled)for _,b in ipairs(assistButtons)do b.Active=enabled;b.AutoButtonColor=enabled;b.BackgroundColor3=enabled and C.card or C.panel end end
-local queued=false
-local nextSubmissionId=0
-local pendingSubmissionId=nil
-local pendingText=nil
-local myTurn=false
 local rematch=button(panel,"REMATCH",C.green);rematch.Position=UDim2.new(0,18,1,-138);rematch.Size=UDim2.fromOffset(112,34);rematch.Visible=false
 local topicChoice=Instance.new("Frame");topicChoice.Name="TopicChoice";topicChoice.Position=UDim2.fromOffset(18,96);topicChoice.Size=UDim2.new(1,-36,1,-116);topicChoice.BackgroundColor3=C.bg;topicChoice.ZIndex=8;topicChoice.Visible=false;topicChoice.Parent=panel;corner(topicChoice,12)
 local topicChoiceTitle=label(topicChoice,"CHOOSE THE TOPIC",18,C.gold,true);topicChoiceTitle.Position=UDim2.fromOffset(14,12);topicChoiceTitle.Size=UDim2.new(1,-28,0,52);topicChoiceTitle.TextXAlignment=Enum.TextXAlignment.Center;topicChoiceTitle.ZIndex=9
