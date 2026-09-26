@@ -7,13 +7,13 @@ local ServerStorage = game:GetService("ServerStorage")
 local TweenService = game:GetService("TweenService")
 local Definitions=require(script.Parent.Parent.Core.GuardianTempleDefinitions)
 local World = {Spawn=nil, Judges={}, Podiums={}, PodRunes={}, Sounds={}, Hologram=nil, HoloBase=nil, HoloPlayerIndex=nil, LightingPulseToken=0, MissingTemplates={}}
-local C = {stone=Color3.fromRGB(218,221,224),darkstone=Color3.fromRGB(89,101,118),navy=Color3.fromRGB(16,35,70),blue=Color3.fromRGB(46,128,255),cyan=Color3.fromRGB(74,211,255),teal=Color3.fromRGB(55,188,202),pale=Color3.fromRGB(215,247,255),gold=Color3.fromRGB(246,184,55),orange=Color3.fromRGB(255,143,49),white=Color3.fromRGB(248,249,250),purple=Color3.fromRGB(151,190,255),green=Color3.fromRGB(82,174,104),red=Color3.fromRGB(235,68,82),leaf=Color3.fromRGB(54,132,72),water=Color3.fromRGB(92,203,255),wood=Color3.fromRGB(96,68,47)}
+local C = {stone=Color3.fromRGB(181,186,194),darkstone=Color3.fromRGB(58,66,78),navy=Color3.fromRGB(16,30,52),blue=Color3.fromRGB(42,114,220),cyan=Color3.fromRGB(68,174,220),teal=Color3.fromRGB(55,154,172),pale=Color3.fromRGB(194,220,226),gold=Color3.fromRGB(218,159,50),orange=Color3.fromRGB(224,123,43),white=Color3.fromRGB(216,219,224),purple=Color3.fromRGB(133,163,213),green=Color3.fromRGB(72,144,88),red=Color3.fromRGB(196,55,65),leaf=Color3.fromRGB(48,108,62),water=Color3.fromRGB(78,155,191),wood=Color3.fromRGB(84,63,48)}
 local function part(name,size,cframe,color,parent,material)local p=Instance.new("Part");p.Name=name;p.Size=size;p.CFrame=cframe;p.Anchored=true;p.Color=color;p.Material=material or Enum.Material.Slate;p.TopSurface=Enum.SurfaceType.Smooth;p.BottomSurface=Enum.SurfaceType.Smooth;p.Parent=parent;return p end
 local function text(target,value,color)local g=Instance.new("SurfaceGui");g.Face=Enum.NormalId.Front;g.CanvasSize=Vector2.new(900,300);g.Parent=target;local l=Instance.new("TextLabel");l.Size=UDim2.fromScale(1,1);l.BackgroundTransparency=1;l.Text=value;l.TextColor3=color or C.white;l.TextScaled=true;l.TextWrapped=true;l.Font=Enum.Font.GothamBold;l.Parent=g end
 local function sound(parent,name,id,volume)
  local s=Instance.new("Sound");s.Name=name;s.SoundId=type(id)=="string"and id~=""and("rbxassetid://"..id)or"";s.Volume=volume;s.RollOffMaxDistance=90;s.Parent=parent;World.Sounds[name]=s;return s
 end
-local function glow(parent,color,range,brightness)local light=Instance.new("PointLight");light.Color=color;light.Range=range or 18;light.Brightness=brightness or 2;light.Shadows=true;light.Parent=parent;return light end
+local function glow(parent,color,range,brightness)local light=Instance.new("PointLight");light.Color=color;light.Range=range or 18;light.Brightness=brightness or 1.2;light.Shadows=true;light.Parent=parent;return light end
 local function rune(parent,name,size,cframe,color)local r=part(name,size,cframe,color or C.cyan,parent,Enum.Material.Neon);r.CanCollide=false;r.Transparency=.24;return r end
 local function stageLight(root,name,position,color,brightness,range)
  local anchor=part(name,Vector3.new(.2,.2,.2),CFrame.new(position),C.white,root,Enum.Material.SmoothPlastic);anchor.Transparency=1;anchor.CanCollide=false;anchor.CanTouch=false;anchor.CanQuery=false
@@ -77,7 +77,7 @@ local function judgePlinth(root,name,x,z,color,role)
  local plaque=part(name.."Plaque",Vector3.new(13.8,3.3,.5),CFrame.new(x,7.3,z+5.75),C.navy,root,Enum.Material.Metal);plaque.CanCollide=false
  local gui=Instance.new("SurfaceGui");gui.Face=Enum.NormalId.Front;gui.CanvasSize=Vector2.new(760,220);gui.Parent=plaque
  local label=Instance.new("TextLabel");label.BackgroundTransparency=1;label.Size=UDim2.fromScale(1,1);label.Text=name.."\n"..role;label.TextColor3=color;label.TextScaled=true;label.TextWrapped=true;label.Font=Enum.Font.GothamBold;label.Parent=gui
- stageLight(root,name.."HeroLight",Vector3.new(x,17,z+7),color,2.2,32)
+ stageLight(root,name.."HeroLight",Vector3.new(x,17,z+7),color,1.1,28)
  return base
 end
 local function worldModeSign(root,x,z,titleText,subtitleText,color)
@@ -108,10 +108,8 @@ local function sanitizeDecorative(model)
  end
 end
 local function judgeTag(model,name,color,boxCFrame,boxSize)
- local anchor=part("JudgeTagAnchor",Vector3.new(.2,.2,.2),CFrame.new(boxCFrame.Position+Vector3.new(0,boxSize.Y*.5+2.2,0)),C.navy,model,Enum.Material.SmoothPlastic);anchor.Transparency=1;anchor.CanCollide=false
- local tag=Instance.new("BillboardGui");tag.Name="JudgeNameTag";tag.Size=UDim2.fromOffset(210,50);tag.AlwaysOnTop=true;tag.MaxDistance=130;tag.Parent=anchor
- local label=Instance.new("TextLabel");label.Size=UDim2.fromScale(1,1);label.BackgroundColor3=C.navy;label.BackgroundTransparency=.12;label.Text=name.." • SCRIPTED JUDGE";label.TextColor3=color;label.TextScaled=true;label.TextWrapped=true;label.Font=Enum.Font.GothamBold;label.Parent=tag
- local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,8);corner.Parent=label
+ -- Names/roles are already shown on the judge plinths. Avoid screen-space billboard overlap.
+ return nil
 end
 local function placeByBoundingCenter(model,targetCenter,rotation)
  model:PivotTo(CFrame.new(targetCenter)*rotation)
@@ -456,14 +454,14 @@ function World.Init()
  local cameraAnchor=part("ArenaCameraAnchor",Vector3.new(1,1,1),CFrame.lookAt(Vector3.new(0,21,43),cameraFocus.Position),C.navy,root);cameraAnchor.Transparency=1;cameraAnchor.CanCollide=false;cameraAnchor.CanTouch=false;cameraAnchor.CanQuery=false
 
  -- Bright sky-temple grade.
- Lighting.ClockTime=14.2;Lighting.Brightness=3;Lighting.ExposureCompensation=.34;Lighting.Ambient=Color3.fromRGB(145,154,170);Lighting.OutdoorAmbient=Color3.fromRGB(188,197,211);Lighting.FogColor=Color3.fromRGB(202,224,242);Lighting.FogStart=220;Lighting.FogEnd=820;Lighting.EnvironmentDiffuseScale=1;Lighting.EnvironmentSpecularScale=.9;Lighting.GlobalShadows=true;Lighting.ShadowSoftness=.38
- local bloom=Lighting:FindFirstChild("BeatTheBotBloom");if not bloom then bloom=Instance.new("BloomEffect");bloom.Name="BeatTheBotBloom";bloom.Parent=Lighting end;bloom.Intensity=.18;bloom.Size=20;bloom.Threshold=1.35
- local grade=Lighting:FindFirstChild("BeatTheBotColorGrade");if not grade then grade=Instance.new("ColorCorrectionEffect");grade.Name="BeatTheBotColorGrade";grade.Parent=Lighting end;grade.Brightness=.06;grade.Contrast=.08;grade.Saturation=.12;grade.TintColor=Color3.fromRGB(251,248,238)
- local rays=Lighting:FindFirstChild("BeatTheBotSunRays");if not rays then rays=Instance.new("SunRaysEffect");rays.Name="BeatTheBotSunRays";rays.Parent=Lighting end;rays.Intensity=.06;rays.Spread=.74
- local atmosphere=Lighting:FindFirstChild("BeatTheBotAtmosphere");if not atmosphere then atmosphere=Instance.new("Atmosphere");atmosphere.Name="BeatTheBotAtmosphere";atmosphere.Parent=Lighting end;atmosphere.Density=.18;atmosphere.Offset=.1;atmosphere.Color=Color3.fromRGB(215,232,246);atmosphere.Decay=Color3.fromRGB(143,164,190);atmosphere.Glare=.08;atmosphere.Haze=1.2
+ Lighting.ClockTime=14.2;Lighting.Brightness=1.65;Lighting.ExposureCompensation=-.18;Lighting.Ambient=Color3.fromRGB(72,78,90);Lighting.OutdoorAmbient=Color3.fromRGB(104,112,126);Lighting.FogColor=Color3.fromRGB(168,186,202);Lighting.FogStart=260;Lighting.FogEnd=900;Lighting.EnvironmentDiffuseScale=.72;Lighting.EnvironmentSpecularScale=.58;Lighting.GlobalShadows=true;Lighting.ShadowSoftness=.32
+ local bloom=Lighting:FindFirstChild("BeatTheBotBloom");if not bloom then bloom=Instance.new("BloomEffect");bloom.Name="BeatTheBotBloom";bloom.Parent=Lighting end;bloom.Intensity=.05;bloom.Size=14;bloom.Threshold=1.8
+ local grade=Lighting:FindFirstChild("BeatTheBotColorGrade");if not grade then grade=Instance.new("ColorCorrectionEffect");grade.Name="BeatTheBotColorGrade";grade.Parent=Lighting end;grade.Brightness=-.03;grade.Contrast=.12;grade.Saturation=.05;grade.TintColor=Color3.fromRGB(237,239,242)
+ local rays=Lighting:FindFirstChild("BeatTheBotSunRays");if not rays then rays=Instance.new("SunRaysEffect");rays.Name="BeatTheBotSunRays";rays.Parent=Lighting end;rays.Intensity=.015;rays.Spread=.68
+ local atmosphere=Lighting:FindFirstChild("BeatTheBotAtmosphere");if not atmosphere then atmosphere=Instance.new("Atmosphere");atmosphere.Name="BeatTheBotAtmosphere";atmosphere.Parent=Lighting end;atmosphere.Density=.11;atmosphere.Offset=.05;atmosphere.Color=Color3.fromRGB(190,205,219);atmosphere.Decay=Color3.fromRGB(122,139,159);atmosphere.Glare=0;atmosphere.Haze=.65
 
- stageLight(root,"ArenaWarmFill",Vector3.new(0,18,17),Color3.fromRGB(255,230,185),1.2,55)
- stageLight(root,"ArenaCoolFill",Vector3.new(0,15,-3),Color3.fromRGB(190,225,255),1.3,48)
+ stageLight(root,"ArenaWarmFill",Vector3.new(0,18,17),Color3.fromRGB(228,205,168),.55,46)
+ stageLight(root,"ArenaCoolFill",Vector3.new(0,15,-3),Color3.fromRGB(162,192,218),.62,42)
 
  task.spawn(function()
   local elapsed=0
