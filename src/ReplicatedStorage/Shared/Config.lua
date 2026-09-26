@@ -1,7 +1,7 @@
 return table.freeze({
     GameName = "Beat the Bot",
-    -- 0.5.3: brighter guardian-temple presentation and more interactive debate UX; live debate and probe remain disabled.
-    Version = "0.5.3",
+    -- 0.6.0: bright marble arena rebuild and premium debate HUD; live debate and probe remain disabled.
+    Version = "0.6.0",
     ProfileSchema = 2,
     OpponentRating = 1000,
     InitialRating = 1000,
