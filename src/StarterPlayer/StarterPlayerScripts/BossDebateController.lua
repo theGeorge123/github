@@ -38,12 +38,33 @@ function Controller.Init(remotes,parent,buttonFactory,labelFactory,colors)
  leave.Activated:Connect(function()if session then submit:FireServer({Action="LeavePractice",SessionId=session})end;practice.Visible=false end)
  for index,topicButton in ipairs(bossTopicButtons)do topicButton.Activated:Connect(function()local offered=offeredBossTopics[index];if session and offered and topicPicker.Visible then for _,other in ipairs(bossTopicButtons)do other.Active=false;other.AutoButtonColor=false end;topicPickerTitle.Text="TOPIC LOCKED — ASSIGNING YOUR SIDE…";submit:FireServer({Action="SelectTopic",SessionId=session,TopicId=offered.Id})end end)end
  state.OnClientEvent:Connect(function(message)
-  if message.Kind=="BossAvailability"then disclosure.Text=message.Disclosure;cta.Text=message.Tier=="SCRIPTED_PRACTICE"and"PRACTICE VS SCRIPTED BOT"or message.Tier;cta.Active=message.Tier=="SCRIPTED_PRACTICE";cta.AutoButtonColor=cta.Active
+  if message.Kind=="BossAvailability"then
+   disclosure.Text=message.Disclosure
+   local live=message.Tier=="LIVE_AI_BETA"
+   title.Text=live and"AI DEBATE BETA"or"SOLO PRACTICE"
+   mode.Text=live and"ROBLOX AI • PRIVATE TEST"or"SCRIPTED BOT • NO WINNER"
+   cta.Text=live and"DEBATE AI • BETA"or(message.Tier=="SCRIPTED_PRACTICE"and"PRACTICE VS SCRIPTED BOT"or"LOCKED")
+   cta.Active=live or message.Tier=="SCRIPTED_PRACTICE"
+   cta.AutoButtonColor=cta.Active
   elseif message.Kind=="BossTopicOffer"then session=message.SessionId;round=nil;turnToken=nil;practice.Visible=true;topicPicker.Visible=true;status.Text=message.Message;log.Text="";offeredBossTopics=message.Topics;for index,topicButton in ipairs(bossTopicButtons)do local offered=offeredBossTopics[index];topicButton.Text=(offered.Category or"TOPIC").." • "..offered.Topic;topicButton.Active=true;topicButton.AutoButtonColor=true end
-  elseif message.Kind=="BossPracticeStarted"then session=message.SessionId;turnNumber=0;turnDeadline=nil;leave.Text="LEAVE";round=message.RoundGeneration;topicPicker.Visible=false;practice.Visible=true;status.Text=message.Disclosure.."\nYOU ("..message.PlayerSide.."): "..message.PlayerPosition.."\nAUTHORED OPPOSITION ("..message.BossSide.."): "..message.BossPosition.."\n6 turns • 45 seconds each";log.Text=message.Topic.Question.."\n\nOPENING HINT: "..message.OpeningPrompt
+  elseif message.Kind=="BossPracticeStarted"then
+   session=message.SessionId;turnNumber=0;turnDeadline=nil;leave.Text="LEAVE";round=message.RoundGeneration;topicPicker.Visible=false;practice.Visible=true
+   local live=message.Mode=="LIVE_AI_BETA"
+   pt.Text=live and"AI DEBATE BETA"or"SOLO ARGUMENT PRACTICE"
+   status.Text=message.Disclosure.."\nYOU ("..message.PlayerSide.."): "..message.PlayerPosition.."\n"..(live and"AI OPPONENT"or"AUTHORED OPPOSITION").." ("..message.BossSide.."): "..message.BossPosition.."\n6 turns • 45 seconds each"
+   log.Text=message.Topic.Question.."\n\nOPENING HINT: "..message.OpeningPrompt
   elseif message.Kind=="BossPlayerTurn"then turnToken=message.TurnToken;turnNumber=message.TurnNumber or(turnNumber+1);turnTotal=message.PlayerTurns or turnTotal;turnDeadline=message.Deadline;send.Active=true;flashUntil=0;send.Text="SEND TURN";if offerId then switch.Visible=true;switch.Active=true;switch.Text="SWITCH TO REAL PLAYER"end
-  elseif message.Kind=="BossArgumentAccepted"then if message.SubmissionId==pending then pending=nil;box.Text=""end;turnDeadline=nil;send.Text="SCRIPTED REPLY…";log.Text=log.Text.."\n\nYOU: "..message.FilteredText
-  elseif message.Kind=="BossScriptedReply"then log.Text=log.Text.."\n\n"..message.Label..": "..(string.gsub(message.Text,"^SCRIPTED PRACTICE:%s*",""))
+  elseif message.Kind=="BossArgumentAccepted"then
+   if message.SubmissionId==pending then pending=nil;box.Text=""end
+   turnDeadline=nil;send.Text="OPPONENT THINKING…";log.Text=log.Text.."\n\nYOU: "..message.FilteredText
+  elseif message.Kind=="BossAIThinking"then
+   send.Text="AI THINKING…";status.Text="Roblox TextGenerator is creating the opponent reply."
+  elseif message.Kind=="BossAIReply"then
+   send.Text="YOUR TURN SOON";status.Text="Live AI reply received. No score, winner, or rewards."
+   log.Text=log.Text.."\n\n"..message.Label..": "..message.Text
+  elseif message.Kind=="BossScriptedReply"then
+   if message.Label and string.find(message.Label,"AI UNAVAILABLE",1,true)then status.Text="Live AI was unavailable for this turn, so the authored fallback was used."end
+   log.Text=log.Text.."\n\n"..message.Label..": "..(string.gsub(message.Text,"^SCRIPTED PRACTICE:%s*",""))
   elseif message.Kind=="BossArgumentRejected"then if message.SubmissionId==pending or message.SubmissionId==nil then pending=nil;send.Text=message.CanRetry and "TRY AGAIN"or"UNAVAILABLE";status.Text=message.Message end
   elseif message.Kind=="BossPracticeComplete"then turnToken=nil;turnDeadline=nil;pending=nil;send.Text="PRACTICE OVER";leave.Text="CLOSE";status.Text=message.Message;log.Text=log.Text.."\n\nCOMPLETE: No score, winner, or rewards."
   elseif message.Kind=="BossPracticeEnded"then session=nil;round=nil;turnToken=nil;pending=nil;practice.Visible=false;if acceptAfterLeave and offerId then acceptAfterLeave=false;multiplayerSubmit:FireServer("acceptOffer",{OfferId=offerId})end end
@@ -51,7 +72,8 @@ function Controller.Init(remotes,parent,buttonFactory,labelFactory,colors)
  multiplayerState.OnClientEvent:Connect(function(message)
   if message.Kind=="BackgroundQueue"then backgroundSearching=message.Status=="SEARCHING";background.Text=backgroundSearching and"CANCEL BACKGROUND SEARCH"or"FIND REAL PLAYER IN BACKGROUND";status.Text=message.Message
   elseif message.Kind=="MatchOffer"then offerId=message.OfferId;status.Text=message.Message;if turnToken then switch.Visible=true;switch.Active=true;switch.Text="SWITCH TO "..string.upper(message.OpponentName)end
-  elseif message.Kind=="Start"then card.Visible=false;offerId=nil;backgroundSearching=false;switch.Visible=false\n  elseif message.Kind=="Ended"then card.Visible=true
+  elseif message.Kind=="Start"then card.Visible=false;offerId=nil;backgroundSearching=false;switch.Visible=false
+  elseif message.Kind=="Ended"then card.Visible=true
   elseif message.Kind=="Error"and message.Code=="STALE_OFFER"then offerId=nil;switch.Visible=false;status.Text=message.Message end
  end)
  task.spawn(function()while card.Parent do if turnDeadline and turnToken and not pending and os.clock()>=flashUntil then local left=math.max(0,math.ceil(turnDeadline-workspace:GetServerTimeNow()));send.Text=("SEND TURN %d/%d • %ds"):format(turnNumber,turnTotal,left)end;task.wait(.25)end end)

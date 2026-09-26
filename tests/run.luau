@@ -28,6 +28,7 @@ local BossState = require("../src/ServerScriptService/Core/BossDebateRoundState"
 local BossDefinitions = require("../src/ServerScriptService/Core/BossDebateDefinitions")
 local DebateTopicBank = require("../src/ServerScriptService/Core/DebateTopicBank")
 local BossLedger = require("../src/ServerScriptService/Core/BossDebateSubmissionLedger")
+local BossLiveParser = require("../src/ServerScriptService/AI/BossDebateLiveParser")
 local AntiEmptyPolicy = require("../src/ServerScriptService/Core/AntiEmptyLobbyPolicy")
 local JudgeService = require("../src/ServerScriptService/Services/JudgeService")
 local GuardianTemple = require("../src/ServerScriptService/Core/GuardianTempleDefinitions")
@@ -548,8 +549,9 @@ test("expired owners cannot release a newer session lock", function()
 end)
 
 
-test("debate prototype flags default off", function()
+test("debate live beta is enabled only behind server-side eligibility", function()
     assert(Config.DebateEnabled == true and Config.DebateLiveEnabled == false)
+    assert(Config.BossDebate.LiveBetaEnabled == true and Config.DebateProbe.Enabled == false)
 end)
 
 test("debate diagnostics expose only allowlisted metadata", function()
@@ -653,7 +655,17 @@ test("participation release requires exact token",function()DebateParticipation.
 test("participation disconnect clears ownership",function()DebateParticipation.ResetForTests();local p={};DebateParticipation.TryClaim(p,"BOSS");DebateParticipation.Disconnect(p);assert(DebateParticipation.Get(p)==nil)end)
 
 test("Boss availability defaults locked",function()local tier,reason,text=BossAvailability.Resolve({BossDebate={Enabled=false,ScriptedPracticeEnabled=false}});assert(tier=="LOCKED"and reason=="BOSS_DISABLED"and string.find(text,"No live AI",1,true))end)
-test("Boss availability has no live tier",function()local tier=BossAvailability.Resolve({BossDebate={Enabled=true,ScriptedPracticeEnabled=true}});assert(tier=="SCRIPTED_PRACTICE")end)
+test("Boss availability defaults to scripted without private live eligibility",function()
+ local tier=BossAvailability.Resolve({DebateLiveEnabled=true,BossDebate={Enabled=true,ScriptedPracticeEnabled=true,LiveBetaEnabled=true}})
+ assert(tier=="SCRIPTED_PRACTICE")
+end)
+test("Boss live AI tier is Studio or allowlisted-private only",function()
+ local config={DebateLiveEnabled=false,BossDebate={Enabled=true,ScriptedPracticeEnabled=true,LiveBetaEnabled=true}}
+ assert(BossAvailability.Resolve(config,{IsStudio=true})=="LIVE_AI_BETA")
+ assert(BossAvailability.Resolve(config,{IsTester=true,IsPrivateServer=true})=="LIVE_AI_BETA")
+ assert(BossAvailability.Resolve(config,{IsTester=true,IsPrivateServer=false})=="SCRIPTED_PRACTICE")
+ assert(BossAvailability.Resolve(config,{IsTester=false,IsPrivateServer=true})=="SCRIPTED_PRACTICE")
+end)
 test("Boss protocol rejects authority actions",function()for _,action in ipairs({"BeginLive","SetTier","SelectProvider","Judge","Complete","AwardResult"})do local ok=BossProtocol.ValidateClient({Action=action});assert(not ok)end end)
 test("locked Boss rejects arbitrary submit",function()local ok=BossProtocol.ValidateClient({Action="SubmitArgument"});assert(not ok)end)
 
@@ -675,7 +687,21 @@ test("Boss scripted config is explicit",function()local tier=BossAvailability.Re
 test("AI diagnostics normalize and omit sensitive fields",function()local d=AIDiagnostics.Failure("bad","bad",-1,-2,-3);local f=AIDiagnostics.LogFields(d,string.rep("v",40));assert(f.Stage=="GENERATE"and f.Category=="UNKNOWN_FAILURE"and #f.Build==32);assert(f.Prompt==nil and f.Response==nil and f.Exception==nil and f.Payload==nil and f.Player==nil and f.UserId==nil)end)
 test("strict parser rejects malformed and oversized output",function()local l={MaxOutputBytes=64,MaxReplyBytes=10};for _,text in ipairs({"","```\nTACTIC=verify\nSTRENGTH=normal\nREPLY=ok\n```","TACTIC=verify\nTACTIC=verify\nREPLY=ok","INTENT=verify\nSTRENGTH=normal\nREPLY=ok","TACTIC=verify\nSTRENGTH=normal\nREPLY=12345678901","preamble\nTACTIC=verify\nSTRENGTH=normal\nREPLY=ok"})do assert(Parser.Parse(text,l)==nil)end;assert(Parser.Parse(string.rep("x",65),l)==nil);assert(Parser.Parse("TACTIC=verify\nSTRENGTH=normal\nREPLY="..string.char(255),{MaxOutputBytes=2048,MaxReplyBytes=320})==nil)end)
 
-test("probe config stays disabled",function()assert(Config.DebateLiveEnabled==false and Config.DebateProbe.Enabled==false)end)
+test("probe stays disabled while live Boss beta is independently gated",function()
+ assert(Config.DebateLiveEnabled==false and Config.BossDebate.LiveBetaEnabled==true and Config.DebateProbe.Enabled==false)
+end)
+test("Boss live reply parser accepts only one bounded reply field",function()
+ local parsed=BossLiveParser.Parse("REPLY=Because the trade-off matters, the other side still needs to explain the cost.",{MaxOutputBytes=200,MaxReplyBytes=160})
+ assert(parsed and string.find(parsed.Reply,"trade-off",1,true))
+ for _,bad in ipairs({
+  "",
+  "Here is my reply",
+  "REPLY=You win this debate",
+  "REPLY=See https://example.com",
+  "REPLY=one\nREPLY=two",
+  "SCORE=10",
+ })do assert(BossLiveParser.Parse(bad,{MaxOutputBytes=200,MaxReplyBytes=160})==nil)end
+end)
 test("guardian temple keeps the intentional large arena and inward spawn",function()
  assert(GuardianTemple.Arena.SizeX==90 and GuardianTemple.Arena.SizeZ==62)
  local minZ=GuardianTemple.Arena.CenterZ-GuardianTemple.Arena.SizeZ/2;local maxZ=GuardianTemple.Arena.CenterZ+GuardianTemple.Arena.SizeZ/2
