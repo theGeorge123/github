@@ -1,4 +1,4 @@
--- DebateWorldService — bright monumental guardian temple build (v0.5.3).
+-- DebateWorldService — bright marble guardian debate arena visual overhaul (v0.6.0).
 -- Public API preserved: Init, Refresh, PlaySound, React, SetActivePlayer, Celebrate.
 -- Public names preserved: BeatTheBotDebateStage, DebateSpawn, <NAME>Judge models, PlayerPodiumA/B.
 -- v0.5.2: Clones sanitized Creator Store assets from ServerStorage.TempleAssets with primitive fallback.
@@ -7,7 +7,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local TweenService = game:GetService("TweenService")
 local Definitions=require(script.Parent.Parent.Core.GuardianTempleDefinitions)
 local World = {Spawn=nil, Judges={}, Podiums={}, PodRunes={}, Sounds={}, Hologram=nil, HoloBase=nil, HoloPlayerIndex=nil, LightingPulseToken=0, MissingTemplates={}}
-local C = {stone=Color3.fromRGB(92,99,114),darkstone=Color3.fromRGB(58,66,82),navy=Color3.fromRGB(25,36,54),cyan=Color3.fromRGB(80,220,232),teal=Color3.fromRGB(66,194,202),pale=Color3.fromRGB(190,244,249),gold=Color3.fromRGB(255,194,82),orange=Color3.fromRGB(255,148,62),white=Color3.fromRGB(240,246,250),purple=Color3.fromRGB(157,201,255),green=Color3.fromRGB(105,214,180)}
+local C = {stone=Color3.fromRGB(218,221,224),darkstone=Color3.fromRGB(89,101,118),navy=Color3.fromRGB(16,35,70),blue=Color3.fromRGB(46,128,255),cyan=Color3.fromRGB(74,211,255),teal=Color3.fromRGB(55,188,202),pale=Color3.fromRGB(215,247,255),gold=Color3.fromRGB(246,184,55),orange=Color3.fromRGB(255,143,49),white=Color3.fromRGB(248,249,250),purple=Color3.fromRGB(151,190,255),green=Color3.fromRGB(82,174,104),leaf=Color3.fromRGB(54,132,72),water=Color3.fromRGB(92,203,255),wood=Color3.fromRGB(96,68,47)}
 local function part(name,size,cframe,color,parent,material)local p=Instance.new("Part");p.Name=name;p.Size=size;p.CFrame=cframe;p.Anchored=true;p.Color=color;p.Material=material or Enum.Material.Slate;p.TopSurface=Enum.SurfaceType.Smooth;p.BottomSurface=Enum.SurfaceType.Smooth;p.Parent=parent;return p end
 local function text(target,value,color)local g=Instance.new("SurfaceGui");g.Face=Enum.NormalId.Front;g.CanvasSize=Vector2.new(900,300);g.Parent=target;local l=Instance.new("TextLabel");l.Size=UDim2.fromScale(1,1);l.BackgroundTransparency=1;l.Text=value;l.TextColor3=color or C.white;l.TextScaled=true;l.TextWrapped=true;l.Font=Enum.Font.GothamBold;l.Parent=g end
 local function sound(parent,name,id,volume)
@@ -27,6 +27,67 @@ local function judgeBackdrop(root,name,x,z,color,width,height)
  rune(root,name.."BackdropRight",Vector3.new(.45,height+.8,.2),CFrame.new(x+width*.5-.55,height*.5+5,z+.62),color)
  rune(root,name.."BackdropTop",Vector3.new(width-.8,.45,.2),CFrame.new(x,height+4.6,z+.62),color)
  stageLight(root,name.."KeyLight",Vector3.new(x,19,z+7),color,1.8,30)
+end
+local function cylinder(name,diameter,height,cframe,color,parent,material)
+ local p=part(name,Vector3.new(height,diameter,diameter),cframe*CFrame.Angles(0,0,math.rad(90)),color,parent,material);p.Shape=Enum.PartType.Cylinder;return p
+end
+local function trimBlock(root,name,size,cframe)
+ return part(name,size,cframe,C.gold,root,Enum.Material.Metal)
+end
+local function marbleColumn(root,x,z,height)
+ part("ColumnBase",Vector3.new(6.8,1.4,6.8),CFrame.new(x,.7,z),C.white,root,Enum.Material.Marble)
+ part("Column",Vector3.new(5.2,height,5.2),CFrame.new(x,1.4+height*.5,z),C.stone,root,Enum.Material.Marble)
+ trimBlock(root,"ColumnGoldBand",Vector3.new(5.7,.45,5.7),CFrame.new(x,height*.58,z))
+ trimBlock(root,"ColumnGoldBand",Vector3.new(5.7,.45,5.7),CFrame.new(x,height*.78,z))
+ part("ColumnCapital",Vector3.new(7,1.5,7),CFrame.new(x,height+2.15,z),C.white,root,Enum.Material.Marble)
+end
+local function bannerPanel(root,x,y,z,labelText)
+ local panel=part("RoyalBanner",Vector3.new(7.5,14,.45),CFrame.new(x,y,z),C.navy,root,Enum.Material.Fabric);panel.CanCollide=false
+ trimBlock(root,"BannerTop",Vector3.new(8.1,.42,.55),CFrame.new(x,y+7.1,z+.05))
+ trimBlock(root,"BannerLeft",Vector3.new(.28,13.6,.55),CFrame.new(x-3.55,y,z+.05))
+ trimBlock(root,"BannerRight",Vector3.new(.28,13.6,.55),CFrame.new(x+3.55,y,z+.05))
+ local gui=Instance.new("SurfaceGui");gui.Face=Enum.NormalId.Front;gui.CanvasSize=Vector2.new(420,760);gui.Parent=panel
+ local emblem=Instance.new("TextLabel");emblem.BackgroundTransparency=1;emblem.Size=UDim2.fromScale(1,1);emblem.Text="◆\n"..labelText;emblem.TextColor3=C.gold;emblem.TextScaled=true;emblem.TextWrapped=true;emblem.Font=Enum.Font.GothamBold;emblem.Parent=gui
+end
+local function waterfall(root,x,z,height)
+ local water=part("Waterfall",Vector3.new(8,height,.55),CFrame.new(x,height*.5+5,z),C.water,root,Enum.Material.Glass);water.Transparency=.28;water.CanCollide=false;water.CastShadow=false
+ local foam=rune(root,"WaterfallFoam",Vector3.new(8.5,.35,2.2),CFrame.new(x,5.15,z+1),C.pale);foam.Transparency=.18
+ local pool=part("WaterPool",Vector3.new(11,.25,5),CFrame.new(x,.66,z+2),C.water,root,Enum.Material.Glass);pool.Transparency=.25;pool.CanCollide=false
+ stageLight(root,"WaterGlow",Vector3.new(x,8,z+2),C.water,.8,18)
+end
+local function garden(root,x,z,scale)
+ local s=scale or 1
+ local planter=part("Planter",Vector3.new(7*s,1.7*s,4.5*s),CFrame.new(x,.85*s,z),C.white,root,Enum.Material.Marble)
+ trimBlock(root,"PlanterTrim",Vector3.new(7.2*s,.28*s,4.7*s),CFrame.new(x,1.65*s,z))
+ for i,offset in ipairs({Vector3.new(-2.1,2.2,0),Vector3.new(0,2.8,.3),Vector3.new(2,2.1,-.2),Vector3.new(-.8,3.6,-.4),Vector3.new(1.1,3.8,.2)})do
+  local leaf=part("LeafCluster"..i,Vector3.new(2.7*s,2.7*s,2.7*s),CFrame.new(x+offset.X*s,offset.Y*s,z+offset.Z*s),i%2==0 and C.green or C.leaf,root,Enum.Material.Grass);leaf.Shape=Enum.PartType.Ball;leaf.CanCollide=false
+ end
+end
+local function terrace(root,side)
+ local x=side*39
+ for row=0,3 do
+  local z=4-row*8
+  part("SpectatorTerrace",Vector3.new(12,1.3,6.5),CFrame.new(x,row*1.3+.65,z),C.white,root,Enum.Material.Marble)
+  trimBlock(root,"TerraceTrim",Vector3.new(12.2,.22,6.7),CFrame.new(x,row*1.3+1.34,z))
+ end
+end
+local function judgePlinth(root,name,x,z,color,role)
+ local base=part(name.."Plinth",Vector3.new(18,4.8,11),CFrame.new(x,7.8,z),C.white,root,Enum.Material.Marble)
+ trimBlock(root,name.."PlinthGold",Vector3.new(18.5,.5,11.5),CFrame.new(x,10.25,z))
+ local plaque=part(name.."Plaque",Vector3.new(13.8,3.3,.5),CFrame.new(x,7.3,z+5.75),C.navy,root,Enum.Material.Metal);plaque.CanCollide=false
+ local gui=Instance.new("SurfaceGui");gui.Face=Enum.NormalId.Front;gui.CanvasSize=Vector2.new(760,220);gui.Parent=plaque
+ local label=Instance.new("TextLabel");label.BackgroundTransparency=1;label.Size=UDim2.fromScale(1,1);label.Text=name.."\n"..role;label.TextColor3=color;label.TextScaled=true;label.TextWrapped=true;label.Font=Enum.Font.GothamBold;label.Parent=gui
+ stageLight(root,name.."HeroLight",Vector3.new(x,17,z+7),color,2.2,32)
+ return base
+end
+local function worldModeSign(root,x,z,titleText,subtitleText,color)
+ local post=part("ModeSignPost",Vector3.new(.8,7,.8),CFrame.new(x,3.5,z),C.gold,root,Enum.Material.Metal)
+ local board=part("ModeSign",Vector3.new(15,7,.55),CFrame.lookAt(Vector3.new(x,7,z),Vector3.new(0,6,7)),C.navy,root,Enum.Material.Metal);board.CanCollide=false
+ trimBlock(root,"ModeSignTop",Vector3.new(15.6,.35,.7),board.CFrame*CFrame.new(0,3.6,0))
+ local gui=Instance.new("SurfaceGui");gui.Face=Enum.NormalId.Front;gui.CanvasSize=Vector2.new(820,360);gui.Parent=board
+ local title=Instance.new("TextLabel");title.BackgroundTransparency=1;title.Position=UDim2.fromScale(.06,.1);title.Size=UDim2.fromScale(.88,.48);title.Text=titleText;title.TextColor3=color;title.TextScaled=true;title.TextWrapped=true;title.Font=Enum.Font.GothamBold;title.Parent=gui
+ local sub=Instance.new("TextLabel");sub.BackgroundTransparency=1;sub.Position=UDim2.fromScale(.08,.62);sub.Size=UDim2.fromScale(.84,.24);sub.Text=subtitleText;sub.TextColor3=C.white;sub.TextScaled=true;sub.TextWrapped=true;sub.Font=Enum.Font.Gotham;sub.Parent=gui
+ return post
 end
 local function fireBowl(root,x,z)
  local bowl=part("FireBowl",Vector3.new(3.6,1.6,3.6),CFrame.new(x,1.3,z),C.stone,root,Enum.Material.Slate)
@@ -122,6 +183,7 @@ local function guardian(root,name,x,y,z,color,headShape,statueHeight)
   rune(m,"ChestRune",Vector3.new(1.1,4.2,.35),CFrame.new(chestPosition),color)
   local light = glow(m:FindFirstChildWhichIsA("BasePart", true) or m.PrimaryPart or m:GetChildren()[1], color, 24, 2.2)
   judgeTag(m,name,color,boxCFrame,scaledSize)
+  local highlight=Instance.new("Highlight");highlight.Name="GuardianOutline";highlight.FillColor=color;highlight.FillTransparency=.9;highlight.OutlineColor=color;highlight.OutlineTransparency=.12;highlight.DepthMode=Enum.HighlightDepthMode.Occluded;highlight.Parent=m
   -- Set PrimaryPart for float animation
   if not m.PrimaryPart then
    m.PrimaryPart = m:FindFirstChildWhichIsA("BasePart", true)
@@ -204,46 +266,109 @@ function World.Init()
  for _,name in ipairs({"BeatTheBotWorld","BeatTheBotDebateStage"})do local old=workspace:FindFirstChild(name);if old then old:Destroy()end end
  destroyHologram();World.Judges={};World.Podiums={};World.PodRunes={};World.Sounds={};World.MissingTemplates={};World.LightingPulseToken+=1
  local root=Instance.new("Folder");root.Name="BeatTheBotDebateStage";root.Parent=workspace
- part("ArenaFloor",Vector3.new(Definitions.Arena.SizeX,1,Definitions.Arena.SizeZ),CFrame.new(0,0,Definitions.Arena.CenterZ),C.stone,root,Enum.Material.Slate)
- part("EntryPath",Vector3.new(14,.18,22),CFrame.new(0,.6,18),Color3.fromRGB(116,122,136),root,Enum.Material.Slate)
- rune(root,"EntryPathLeft",Vector3.new(.25,.14,22),CFrame.new(-6.7,.71,18),C.gold);rune(root,"EntryPathRight",Vector3.new(.25,.14,22),CFrame.new(6.7,.71,18),C.gold)
- part("StageInset",Vector3.new(36,.2,26),CFrame.new(0,.59,4),C.darkstone,root,Enum.Material.Slate)
- rune(root,"StageRuneN",Vector3.new(36.6,.15,.5),CFrame.new(0,.7,-8.9));rune(root,"StageRuneS",Vector3.new(36.6,.15,.5),CFrame.new(0,.7,16.9));rune(root,"StageRuneE",Vector3.new(.5,.15,26.6),CFrame.new(18.3,.7,4));rune(root,"StageRuneW",Vector3.new(.5,.15,26.6),CFrame.new(-18.3,.7,4))
- local circle=rune(root,"StageRuneCircle",Vector3.new(.15,13,13),CFrame.new(0,.7,4)*CFrame.Angles(0,0,math.rad(90)),C.teal);circle.Transparency=.45
- part("JudgeDais",Vector3.new(54,4,12),CFrame.new(0,6,-18),C.darkstone,root,Enum.Material.Slate)
- part("DaisStep1",Vector3.new(26,1.4,3),CFrame.new(0,.7,-10.4),C.stone,root,Enum.Material.Slate);part("DaisStep2",Vector3.new(26,2.8,3),CFrame.new(0,1.4,-12.2),C.stone,root,Enum.Material.Slate)
- part("TempleWall",Vector3.new(90,40,3),CFrame.new(0,20,-35.5),C.darkstone,root,Enum.Material.Slate)
- for _,wx in ipairs({-21,-7,7,21})do rune(root,"WallRune",Vector3.new(.7,17,.35),CFrame.new(wx,15,-33.9)) end
- for _,px in ipairs({-27,27})do for _,pz in ipairs({-18,2,22})do pillar(root,px,pz) end end
- -- v0.5.2: Fire bowls using Creator Store asset (falls back to primitive)
- torchBowl(root,-42,-27);torchBowl(root,-24,-27);torchBowl(root,24,-27);torchBowl(root,42,-27)
- local sign=part("DebateSign",Vector3.new(26,3.4,.5),CFrame.new(0,10,-11.8),C.navy,root,Enum.Material.Metal);text(sign,"GUARDIAN DEBATE ARENA",C.gold)
- local function podium(name,cframe)local p=part(name,Vector3.new(8,1.2,7),cframe,C.darkstone,root,Enum.Material.Slate);local r=rune(root,name.."Rune",Vector3.new(8.4,.2,7.4),CFrame.new(cframe.X,.72,cframe.Z),C.teal);return p,r end
- World.Podiums[1],World.PodRunes[1]=podium("PlayerPodiumA",CFrame.new(-9,.65,6));World.Podiums[2],World.PodRunes[2]=podium("PlayerPodiumB",CFrame.new(9,.65,6))
- -- v0.5.2: Guardians using Creator Store assets (falls back to primitives)
- -- GuardianSentinel natively faces -Z; template already rotated 180° on Y so clones face +Z
+
+ -- Bright marble foundation and ceremonial center.
+ part("ArenaFloor",Vector3.new(Definitions.Arena.SizeX,1,Definitions.Arena.SizeZ),CFrame.new(0,0,Definitions.Arena.CenterZ),C.stone,root,Enum.Material.Marble)
+ part("ArenaApron",Vector3.new(84,.22,56),CFrame.new(0,.61,-4),C.white,root,Enum.Material.Marble)
+ local arenaDisc=cylinder("ArenaDisc",39,.42,CFrame.new(0,.86,5),C.white,root,Enum.Material.Marble)
+ arenaDisc.CanCollide=true
+ local goldRing=cylinder("ArenaGoldRing",41,.16,CFrame.new(0,1.09,5),C.gold,root,Enum.Material.Metal);goldRing.CanCollide=false
+ local innerDisc=cylinder("ArenaInnerDisc",31,.2,CFrame.new(0,1.2,5),Color3.fromRGB(235,239,244),root,Enum.Material.Marble);innerDisc.CanCollide=false
+ local innerRing=cylinder("ArenaInnerGoldRing",32.5,.12,CFrame.new(0,1.33,5),C.gold,root,Enum.Material.Metal);innerRing.CanCollide=false
+ rune(root,"ArenaAxisN",Vector3.new(.35,.08,25),CFrame.new(0,1.38,-1),C.blue)
+ rune(root,"ArenaAxisE",Vector3.new(25,.08,.35),CFrame.new(0,1.39,5),C.blue)
+
+ -- Grand entrance path and staircase.
+ part("EntryPath",Vector3.new(16,.3,17),CFrame.new(0,.72,24),C.white,root,Enum.Material.Marble)
+ for i=0,6 do
+  local y=.8+i*.55;local z=17-i*1.65;local width=24-i*.9
+  part("GrandStair",Vector3.new(width,1.1,2),CFrame.new(0,y,z),C.white,root,Enum.Material.Marble)
+  trimBlock(root,"GrandStairGold",Vector3.new(width+.15,.16,.22),CFrame.new(0,y+.62,z+1.02))
+ end
+ rune(root,"EntryPathLeft",Vector3.new(.3,.12,16.5),CFrame.new(-7.6,.92,24),C.gold)
+ rune(root,"EntryPathRight",Vector3.new(.3,.12,16.5),CFrame.new(7.6,.92,24),C.gold)
+
+ -- Monumental back wall, columns and royal banners.
+ part("TempleWall",Vector3.new(90,38,3),CFrame.new(0,20,-36.5),C.white,root,Enum.Material.Marble)
+ part("TempleWallInset",Vector3.new(72,30,.8),CFrame.new(0,19,-34.55),Color3.fromRGB(202,210,221),root,Enum.Material.Marble)
+ for _,x in ipairs({-40,-28,28,40})do marbleColumn(root,x,-31,28)end
+ for _,x in ipairs({-34,34})do marbleColumn(root,x,8,22)end
+ bannerPanel(root,-31,20,-34,"PIP")
+ bannerPanel(root,31,20,-34,"MOSS")
+ bannerPanel(root,-12,22,-34,"RIVET")
+ bannerPanel(root,12,22,-34,"ARENA")
+ waterfall(root,-42,-34,29);waterfall(root,42,-34,29)
+
+ -- Side terraces and gardens keep the arena rich without blocking play.
+ terrace(root,-1);terrace(root,1)
+ garden(root,-32,22,1);garden(root,32,22,1)
+ garden(root,-32,-8,.9);garden(root,32,-8,.9)
+ garden(root,-43,8,.72);garden(root,43,8,.72)
+
+ -- Judge staircase/dais.
+ for i=0,4 do
+  local width=64-i*5;local z=-12.5-i*2.4;local y=1.5+i*.9
+  part("JudgeStair",Vector3.new(width,1.8,2.6),CFrame.new(0,y,z),C.white,root,Enum.Material.Marble)
+  trimBlock(root,"JudgeStairGold",Vector3.new(width+.1,.18,.25),CFrame.new(0,y+.98,z+1.35))
+ end
+ part("JudgeDais",Vector3.new(66,5,14),CFrame.new(0,6.8,-27.5),C.white,root,Enum.Material.Marble)
+ trimBlock(root,"JudgeDaisGold",Vector3.new(66.5,.55,14.5),CFrame.new(0,9.55,-27.5))
+ judgePlinth(root,"RIVET",-23,-28,C.blue,"REASON • CLARITY")
+ judgePlinth(root,"PIP",0,-31,C.gold,"EXAMPLE • STRUCTURE")
+ judgePlinth(root,"MOSS",23,-28,Color3.fromRGB(74,224,113),"REBUTTAL • NUANCE")
+
+ -- World-space mode cards mirror the actual UI choices.
+ worldModeSign(root,-28,22,"DEBATE A\nREAL PLAYER","HUMAN OPPONENT • MULTIPLAYER",C.cyan)
+ worldModeSign(root,28,22,"SOLO PRACTICE","SCRIPTED BOT • NO WINNER",C.gold)
+
+ -- Hero arena sign and flame accents.
+ local sign=part("DebateSign",Vector3.new(30,4.5,.65),CFrame.new(0,19,-12.3),C.navy,root,Enum.Material.Metal);text(sign,"GUARDIAN DEBATE ARENA",C.gold)
+ trimBlock(root,"DebateSignTop",Vector3.new(31,.35,.8),CFrame.new(0,21.55,-12.3))
+ for _,x in ipairs({-43,-25,25,43})do torchBowl(root,x,-25)end
+ for _,x in ipairs({-22,22})do torchBowl(root,x,12)end
+
+ -- Player podiums: marble base, navy face, gold rim, reactive rune.
+ local function podium(name,cframe)
+  part(name.."Base",Vector3.new(9.5,2.3,8.5),CFrame.new(cframe.X,1.2,cframe.Z),C.white,root,Enum.Material.Marble)
+  local face=part(name.."Face",Vector3.new(7.6,2.3,.5),CFrame.new(cframe.X,2.1,cframe.Z+4.15),C.navy,root,Enum.Material.Metal);face.CanCollide=false
+  trimBlock(root,name.."GoldRim",Vector3.new(9.9,.35,8.9),CFrame.new(cframe.X,2.48,cframe.Z))
+  local p=part(name,Vector3.new(8,1.2,7),CFrame.new(cframe.X,2.9,cframe.Z),C.darkstone,root,Enum.Material.Marble)
+  local r=rune(root,name.."Rune",Vector3.new(8.4,.18,7.4),CFrame.new(cframe.X,3.53,cframe.Z),C.blue)
+  return p,r
+ end
+ World.Podiums[1],World.PodRunes[1]=podium("PlayerPodiumA",CFrame.new(-10,0,6))
+ World.Podiums[2],World.PodRunes[2]=podium("PlayerPodiumB",CFrame.new(10,0,6))
+
+ -- Existing sanitized guardians remain the functional judge models, now framed as hero statues.
  local rivet=Definitions.Judges.RIVET;local pip=Definitions.Judges.PIP;local moss=Definitions.Judges.MOSS
- judgeBackdrop(root,"RIVET",rivet.X,-34.2,C.cyan,18,27)
- judgeBackdrop(root,"PIP",pip.X,-34.6,C.gold,20,31)
- judgeBackdrop(root,"MOSS",moss.X,-34.2,C.pale,18,27)
- guardian(root,"RIVET",rivet.X,rivet.Y,rivet.Z,C.cyan,"square",rivet.Height)
+ guardian(root,"RIVET",rivet.X,rivet.Y,rivet.Z,C.blue,"square",rivet.Height)
  guardian(root,"PIP",pip.X,pip.Y,pip.Z,C.gold,"square",pip.Height)
- guardian(root,"MOSS",moss.X,moss.Y,moss.Z,C.pale,"round",moss.Height)
- stageLight(root,"ArenaFill",Vector3.new(0,18,8),Color3.fromRGB(225,238,255),2.3,52)
- stageLight(root,"WarmEntry",Vector3.new(0,10,24),Color3.fromRGB(255,214,154),1.4,34)
- -- v0.5.2: Temple banners flanking the guardians
- banner(root,-31,-34.5,22);banner(root,31,-34.5,22)
+ guardian(root,"MOSS",moss.X,moss.Y,moss.Z,Color3.fromRGB(74,224,113),"round",moss.Height)
+
+ -- Decorative collectibles move to the gardens instead of occupying the arena focal point.
  local blip=Definitions.Collectibles.BLIP;local zapp=Definitions.Collectibles.ZAPP;local chomp=Definitions.Collectibles.CHOMP
- collectible(root,"BLIP",Vector3.new(blip.X,blip.Y,blip.Z),C.cyan);collectible(root,"ZAPP",Vector3.new(zapp.X,zapp.Y,zapp.Z),C.teal);collectible(root,"CHOMP",Vector3.new(chomp.X,chomp.Y,chomp.Z),C.pale)
+ collectible(root,"BLIP",Vector3.new(blip.X,blip.Y,blip.Z),C.cyan)
+ collectible(root,"ZAPP",Vector3.new(zapp.X,zapp.Y,zapp.Z),C.gold)
+ collectible(root,"CHOMP",Vector3.new(chomp.X,chomp.Y,chomp.Z),C.green)
+
  local audio=part("ArenaAudio",Vector3.new(1,1,1),CFrame.new(0,4,0),C.navy,root);audio.Transparency=1;audio.CanCollide=false
  sound(audio,"TurnStart",Definitions.Sounds.TurnStart,.18);sound(audio,"TenSecondWarning",Definitions.Sounds.TenSecondWarning,.14)
  sound(audio,"ScoreTick",Definitions.Sounds.ScoreTick,.1);sound(audio,"VerdictSting",Definitions.Sounds.VerdictSting,.2);sound(audio,"MatchWin",Definitions.Sounds.MatchWin,.22)
- local spawnDefinition=Definitions.Spawn;local spawn=Instance.new("SpawnLocation");spawn.Name="DebateSpawn";spawn.Size=Vector3.new(8,1,5);spawn.CFrame=CFrame.lookAt(Vector3.new(spawnDefinition.X,spawnDefinition.Y,spawnDefinition.Z),Vector3.new(spawnDefinition.LookX,spawnDefinition.LookY,spawnDefinition.LookZ));spawn.Anchored=true;spawn.Neutral=true;spawn.Duration=0;spawn.Transparency=1;spawn.Parent=root;World.Spawn=spawn
+
+ local spawnDefinition=Definitions.Spawn;local spawn=Instance.new("SpawnLocation");spawn.Name="DebateSpawn";spawn.Size=Vector3.new(8,1,5);spawn.CFrame=CFrame.lookAt(Vector3.new(spawnDefinition.X,spawnDefinition.Y+1.1,spawnDefinition.Z+5),Vector3.new(spawnDefinition.LookX,spawnDefinition.LookY,spawnDefinition.LookZ));spawn.Anchored=true;spawn.Neutral=true;spawn.Duration=0;spawn.Transparency=1;spawn.Parent=root;World.Spawn=spawn
  local cameraFocus=part("ArenaCameraFocus",Vector3.new(1,1,1),CFrame.new(0,14,-22),C.navy,root);cameraFocus.Transparency=1;cameraFocus.CanCollide=false;cameraFocus.CanTouch=false;cameraFocus.CanQuery=false
- local cameraAnchor=part("ArenaCameraAnchor",Vector3.new(1,1,1),CFrame.lookAt(Vector3.new(0,18,35),cameraFocus.Position),C.navy,root);cameraAnchor.Transparency=1;cameraAnchor.CanCollide=false;cameraAnchor.CanTouch=false;cameraAnchor.CanQuery=false
- Lighting.ClockTime=14.5;Lighting.Brightness=2.6;Lighting.ExposureCompensation=.22;Lighting.Ambient=Color3.fromRGB(112,120,138);Lighting.OutdoorAmbient=Color3.fromRGB(152,160,178);Lighting.FogColor=Color3.fromRGB(176,192,210);Lighting.FogStart=150;Lighting.FogEnd=620;Lighting.EnvironmentDiffuseScale=.9;Lighting.EnvironmentSpecularScale=.75;Lighting.GlobalShadows=true;Lighting.ShadowSoftness=.45
- local bloom=Lighting:FindFirstChild("BeatTheBotBloom");if not bloom then bloom=Instance.new("BloomEffect");bloom.Name="BeatTheBotBloom";bloom.Parent=Lighting end;bloom.Intensity=.22;bloom.Size=18;bloom.Threshold=1.25
- local grade=Lighting:FindFirstChild("BeatTheBotColorGrade");if not grade then grade=Instance.new("ColorCorrectionEffect");grade.Name="BeatTheBotColorGrade";grade.Parent=Lighting end;grade.Brightness=.04;grade.Contrast=.06;grade.Saturation=.08;grade.TintColor=Color3.fromRGB(244,248,255)
+ local cameraAnchor=part("ArenaCameraAnchor",Vector3.new(1,1,1),CFrame.lookAt(Vector3.new(0,21,43),cameraFocus.Position),C.navy,root);cameraAnchor.Transparency=1;cameraAnchor.CanCollide=false;cameraAnchor.CanTouch=false;cameraAnchor.CanQuery=false
+
+ -- Bright sky-temple grade.
+ Lighting.ClockTime=14.2;Lighting.Brightness=3;Lighting.ExposureCompensation=.34;Lighting.Ambient=Color3.fromRGB(145,154,170);Lighting.OutdoorAmbient=Color3.fromRGB(188,197,211);Lighting.FogColor=Color3.fromRGB(202,224,242);Lighting.FogStart=220;Lighting.FogEnd=820;Lighting.EnvironmentDiffuseScale=1;Lighting.EnvironmentSpecularScale=.9;Lighting.GlobalShadows=true;Lighting.ShadowSoftness=.38
+ local bloom=Lighting:FindFirstChild("BeatTheBotBloom");if not bloom then bloom=Instance.new("BloomEffect");bloom.Name="BeatTheBotBloom";bloom.Parent=Lighting end;bloom.Intensity=.18;bloom.Size=20;bloom.Threshold=1.35
+ local grade=Lighting:FindFirstChild("BeatTheBotColorGrade");if not grade then grade=Instance.new("ColorCorrectionEffect");grade.Name="BeatTheBotColorGrade";grade.Parent=Lighting end;grade.Brightness=.06;grade.Contrast=.08;grade.Saturation=.12;grade.TintColor=Color3.fromRGB(251,248,238)
+ local rays=Lighting:FindFirstChild("BeatTheBotSunRays");if not rays then rays=Instance.new("SunRaysEffect");rays.Name="BeatTheBotSunRays";rays.Parent=Lighting end;rays.Intensity=.06;rays.Spread=.74
+ local atmosphere=Lighting:FindFirstChild("BeatTheBotAtmosphere");if not atmosphere then atmosphere=Instance.new("Atmosphere");atmosphere.Name="BeatTheBotAtmosphere";atmosphere.Parent=Lighting end;atmosphere.Density=.18;atmosphere.Offset=.1;atmosphere.Color=Color3.fromRGB(215,232,246);atmosphere.Decay=Color3.fromRGB(143,164,190);atmosphere.Glare=.08;atmosphere.Haze=1.2
+
+ stageLight(root,"ArenaWarmFill",Vector3.new(0,18,17),Color3.fromRGB(255,230,185),1.2,55)
+ stageLight(root,"ArenaCoolFill",Vector3.new(0,15,-3),Color3.fromRGB(190,225,255),1.3,48)
+
  task.spawn(function()
   local elapsed=0
   while root.Parent do
@@ -252,7 +377,7 @@ function World.Init()
    for id,data in pairs(World.Judges)do if data.Model.Parent then
     local phase=id=="RIVET"and 0 or(id=="PIP"and 2 or 4);local pitch=0
     if now<data.ReactionUntil then local progress=(now-data.ReactionStarted)/(data.ReactionUntil-data.ReactionStarted);pitch=math.sin(math.clamp(progress,0,1)*math.pi)*data.ReactionPitch end
-    data.Model:PivotTo(data.BaseCFrame*CFrame.new(0,math.sin(elapsed+phase)*.35,0)*CFrame.Angles(pitch,0,0))
+    data.Model:PivotTo(data.BaseCFrame*CFrame.new(0,math.sin(elapsed+phase)*.22,0)*CFrame.Angles(pitch,0,0))
    end end
    if World.Hologram and World.Hologram.Parent and World.HoloBase and World.HoloPlayerIndex then
     local podium=World.Podiums[World.HoloPlayerIndex]
