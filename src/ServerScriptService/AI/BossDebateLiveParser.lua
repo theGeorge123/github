@@ -17,6 +17,7 @@ function Parser.Parse(text,limits)
     local maxReply=limits.MaxReplyBytes or 320
     if #text>maxOutput then return nil,"OUTPUT_TOO_LARGE"end
     if utf8.len(text)==nil then return nil,"INVALID_UTF8"end
+    text=trim(text)
     if string.find(text,"\n",1,true)or string.find(text,"\r",1,true)then return nil,"BAD_SCHEMA"end
     local reply=text:match("^REPLY=(.+)$")
     if not reply then return nil,"BAD_SCHEMA"end
