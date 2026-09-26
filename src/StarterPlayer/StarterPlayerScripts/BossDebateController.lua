@@ -5,13 +5,13 @@ function Controller.Init(remotes,parent,buttonFactory,labelFactory,colors)
   local grad=Instance.new("UIGradient");grad.Color=ColorSequence.new(frame.BackgroundColor3:Lerp(colors.white,.05),frame.BackgroundColor3:Lerp(Color3.new(0,0,0),.15));grad.Rotation=90;grad.Parent=frame
  end
  local state=remotes:WaitForChild("BossDebateState");local submit=remotes:WaitForChild("BossDebateSubmit");local multiplayerState=remotes:WaitForChild("MultiplayerDebateState");local multiplayerSubmit=remotes:WaitForChild("MultiplayerDebateSubmit")
- local card=Instance.new("Frame");card.AnchorPoint=Vector2.new(0,.5);card.Position=UDim2.new(0,18,.5,0);card.Size=UDim2.fromOffset(224,258);card.BackgroundColor3=colors.bg;card.Parent=parent
+ local card=Instance.new("Frame");card.AnchorPoint=Vector2.new(0,.5);card.Position=UDim2.new(0,14,.5,0);card.Size=UDim2.fromOffset(184,222);card.BackgroundColor3=colors.bg;card.Parent=parent
  local corner=Instance.new("UICorner");corner.CornerRadius=UDim.new(0,14);corner.Parent=card;style(card,colors.gold)
- local title=labelFactory(card,"SOLO PRACTICE",19,colors.gold,true);title.Position=UDim2.fromOffset(14,12);title.Size=UDim2.new(1,-28,0,30);title.TextXAlignment=Enum.TextXAlignment.Center
- local mode=labelFactory(card,"SCRIPTED BOT • NO WINNER",11,colors.white,true);mode.Position=UDim2.fromOffset(14,44);mode.Size=UDim2.new(1,-28,0,24);mode.TextXAlignment=Enum.TextXAlignment.Center
- local disclosure=labelFactory(card,"Checking server availability...",11,colors.muted);disclosure.Position=UDim2.fromOffset(14,72);disclosure.Size=UDim2.new(1,-28,0,82);disclosure.TextYAlignment=Enum.TextYAlignment.Top;disclosure.TextXAlignment=Enum.TextXAlignment.Center
- local cta=buttonFactory(card,"LOCKED",colors.gold);cta.Position=UDim2.fromOffset(14,160);cta.Size=UDim2.new(1,-28,0,46);cta.Active=false;cta.AutoButtonColor=false
- local friend=buttonFactory(card,"INVITE FRIEND / PRIVATE",colors.panel);friend.Position=UDim2.fromOffset(14,214);friend.Size=UDim2.new(1,-28,0,32)
+ local title=labelFactory(card,"SOLO PRACTICE",15,colors.gold,true);title.Position=UDim2.fromOffset(12,10);title.Size=UDim2.new(1,-24,0,26);title.TextXAlignment=Enum.TextXAlignment.Center
+ local mode=labelFactory(card,"SCRIPTED BOT • NO WINNER",9,colors.white,true);mode.Position=UDim2.fromOffset(12,36);mode.Size=UDim2.new(1,-24,0,20);mode.TextXAlignment=Enum.TextXAlignment.Center
+ local disclosure=labelFactory(card,"Checking server availability...",9,colors.muted);disclosure.Position=UDim2.fromOffset(12,60);disclosure.Size=UDim2.new(1,-24,0,68);disclosure.TextYAlignment=Enum.TextYAlignment.Top;disclosure.TextXAlignment=Enum.TextXAlignment.Center
+ local cta=buttonFactory(card,"LOCKED",colors.gold);cta.Position=UDim2.fromOffset(12,136);cta.Size=UDim2.new(1,-24,0,40);cta.TextSize=11;cta.Active=false;cta.AutoButtonColor=false
+ local friend=buttonFactory(card,"INVITE FRIEND / PRIVATE",colors.panel);friend.Position=UDim2.fromOffset(12,182);friend.Size=UDim2.new(1,-24,0,28);friend.TextSize=9
  local practice=Instance.new("Frame");practice.AnchorPoint=Vector2.new(.5,.5);practice.Position=UDim2.fromScale(.42,.61);practice.Size=UDim2.fromOffset(460,600);practice.BackgroundColor3=colors.bg;practice.Visible=false;practice.Parent=parent
  local pc=Instance.new("UICorner");pc.CornerRadius=UDim.new(0,16);pc.Parent=practice;style(practice,colors.gold)
  local pt=labelFactory(practice,"SOLO ARGUMENT PRACTICE",20,colors.gold,true);pt.Position=UDim2.fromOffset(16,12);pt.Size=UDim2.new(1,-32,0,30);pt.TextXAlignment=Enum.TextXAlignment.Center
