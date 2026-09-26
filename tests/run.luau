@@ -550,7 +550,7 @@ end)
 
 
 test("debate live beta is enabled only behind server-side eligibility", function()
-    assert(Config.DebateEnabled == true and Config.DebateLiveEnabled == true)
+    assert(Config.DebateEnabled == true and Config.DebateLiveEnabled == false)
     assert(Config.BossDebate.LiveBetaEnabled == true and Config.DebateProbe.Enabled == false)
 end)
 
@@ -660,7 +660,7 @@ test("Boss availability defaults to scripted without private live eligibility",f
  assert(tier=="SCRIPTED_PRACTICE")
 end)
 test("Boss live AI tier is Studio or allowlisted-private only",function()
- local config={DebateLiveEnabled=true,BossDebate={Enabled=true,ScriptedPracticeEnabled=true,LiveBetaEnabled=true}}
+ local config={DebateLiveEnabled=false,BossDebate={Enabled=true,ScriptedPracticeEnabled=true,LiveBetaEnabled=true}}
  assert(BossAvailability.Resolve(config,{IsStudio=true})=="LIVE_AI_BETA")
  assert(BossAvailability.Resolve(config,{IsTester=true,IsPrivateServer=true})=="LIVE_AI_BETA")
  assert(BossAvailability.Resolve(config,{IsTester=true,IsPrivateServer=false})=="SCRIPTED_PRACTICE")
@@ -688,7 +688,7 @@ test("AI diagnostics normalize and omit sensitive fields",function()local d=AIDi
 test("strict parser rejects malformed and oversized output",function()local l={MaxOutputBytes=64,MaxReplyBytes=10};for _,text in ipairs({"","```\nTACTIC=verify\nSTRENGTH=normal\nREPLY=ok\n```","TACTIC=verify\nTACTIC=verify\nREPLY=ok","INTENT=verify\nSTRENGTH=normal\nREPLY=ok","TACTIC=verify\nSTRENGTH=normal\nREPLY=12345678901","preamble\nTACTIC=verify\nSTRENGTH=normal\nREPLY=ok"})do assert(Parser.Parse(text,l)==nil)end;assert(Parser.Parse(string.rep("x",65),l)==nil);assert(Parser.Parse("TACTIC=verify\nSTRENGTH=normal\nREPLY="..string.char(255),{MaxOutputBytes=2048,MaxReplyBytes=320})==nil)end)
 
 test("probe stays disabled while live Boss beta is independently gated",function()
- assert(Config.DebateLiveEnabled==true and Config.BossDebate.LiveBetaEnabled==true and Config.DebateProbe.Enabled==false)
+ assert(Config.DebateLiveEnabled==false and Config.BossDebate.LiveBetaEnabled==true and Config.DebateProbe.Enabled==false)
 end)
 test("Boss live reply parser accepts only one bounded reply field",function()
  local parsed=BossLiveParser.Parse("REPLY=Because the trade-off matters, the other side still needs to explain the cost.",{MaxOutputBytes=200,MaxReplyBytes=160})
