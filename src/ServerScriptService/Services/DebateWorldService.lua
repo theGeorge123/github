@@ -7,7 +7,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local TweenService = game:GetService("TweenService")
 local Definitions=require(script.Parent.Parent.Core.GuardianTempleDefinitions)
 local World = {Spawn=nil, Judges={}, Podiums={}, PodRunes={}, Sounds={}, Hologram=nil, HoloBase=nil, HoloPlayerIndex=nil, LightingPulseToken=0, MissingTemplates={}}
-local C = {stone=Color3.fromRGB(218,221,224),darkstone=Color3.fromRGB(89,101,118),navy=Color3.fromRGB(16,35,70),blue=Color3.fromRGB(46,128,255),cyan=Color3.fromRGB(74,211,255),teal=Color3.fromRGB(55,188,202),pale=Color3.fromRGB(215,247,255),gold=Color3.fromRGB(246,184,55),orange=Color3.fromRGB(255,143,49),white=Color3.fromRGB(248,249,250),purple=Color3.fromRGB(151,190,255),green=Color3.fromRGB(82,174,104),leaf=Color3.fromRGB(54,132,72),water=Color3.fromRGB(92,203,255),wood=Color3.fromRGB(96,68,47)}
+local C = {stone=Color3.fromRGB(218,221,224),darkstone=Color3.fromRGB(89,101,118),navy=Color3.fromRGB(16,35,70),blue=Color3.fromRGB(46,128,255),cyan=Color3.fromRGB(74,211,255),teal=Color3.fromRGB(55,188,202),pale=Color3.fromRGB(215,247,255),gold=Color3.fromRGB(246,184,55),orange=Color3.fromRGB(255,143,49),white=Color3.fromRGB(248,249,250),purple=Color3.fromRGB(151,190,255),green=Color3.fromRGB(82,174,104),red=Color3.fromRGB(235,68,82),leaf=Color3.fromRGB(54,132,72),water=Color3.fromRGB(92,203,255),wood=Color3.fromRGB(96,68,47)}
 local function part(name,size,cframe,color,parent,material)local p=Instance.new("Part");p.Name=name;p.Size=size;p.CFrame=cframe;p.Anchored=true;p.Color=color;p.Material=material or Enum.Material.Slate;p.TopSurface=Enum.SurfaceType.Smooth;p.BottomSurface=Enum.SurfaceType.Smooth;p.Parent=parent;return p end
 local function text(target,value,color)local g=Instance.new("SurfaceGui");g.Face=Enum.NormalId.Front;g.CanvasSize=Vector2.new(900,300);g.Parent=target;local l=Instance.new("TextLabel");l.Size=UDim2.fromScale(1,1);l.BackgroundTransparency=1;l.Text=value;l.TextColor3=color or C.white;l.TextScaled=true;l.TextWrapped=true;l.Font=Enum.Font.GothamBold;l.Parent=g end
 local function sound(parent,name,id,volume)
@@ -313,8 +313,8 @@ function World.Init()
  end
  part("JudgeDais",Vector3.new(66,5,14),CFrame.new(0,6.8,-27.5),C.white,root,Enum.Material.Marble)
  trimBlock(root,"JudgeDaisGold",Vector3.new(66.5,.55,14.5),CFrame.new(0,9.55,-27.5))
- judgePlinth(root,"RIVET",-23,-28,C.blue,"REASON • CLARITY")
- judgePlinth(root,"PIP",0,-31,C.gold,"EXAMPLE • STRUCTURE")
+ judgePlinth(root,"RIVET",-23,-28,C.red,"REASON • CLARITY")
+ judgePlinth(root,"PIP",0,-31,C.blue,"EXAMPLE • STRUCTURE")
  judgePlinth(root,"MOSS",23,-28,Color3.fromRGB(74,224,113),"REBUTTAL • NUANCE")
 
  -- World-space mode cards mirror the actual UI choices.
@@ -341,8 +341,8 @@ function World.Init()
 
  -- Existing sanitized guardians remain the functional judge models, now framed as hero statues.
  local rivet=Definitions.Judges.RIVET;local pip=Definitions.Judges.PIP;local moss=Definitions.Judges.MOSS
- guardian(root,"RIVET",rivet.X,rivet.Y,rivet.Z,C.blue,"square",rivet.Height)
- guardian(root,"PIP",pip.X,pip.Y,pip.Z,C.gold,"square",pip.Height)
+ guardian(root,"RIVET",rivet.X,rivet.Y,rivet.Z,C.red,"square",rivet.Height)
+ guardian(root,"PIP",pip.X,pip.Y,pip.Z,C.blue,"square",pip.Height)
  guardian(root,"MOSS",moss.X,moss.Y,moss.Z,Color3.fromRGB(74,224,113),"round",moss.Height)
 
  -- Decorative collectibles move to the gardens instead of occupying the arena focal point.
