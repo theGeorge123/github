@@ -31,6 +31,21 @@ end
 local function cylinder(name,diameter,height,cframe,color,parent,material)
  local p=part(name,Vector3.new(height,diameter,diameter),cframe*CFrame.Angles(0,0,math.rad(90)),color,parent,material);p.Shape=Enum.PartType.Cylinder;return p
 end
+local function ringSegments(root,name,radius,y,color,segments,thickness,width)
+ local count=segments or 28;local circumference=2*math.pi*radius;local length=(circumference/count)*1.05
+ for i=0,count-1 do
+  local angle=(i/count)*math.pi*2;local x=math.sin(angle)*radius;local z=math.cos(angle)*radius+5
+  local seg=part(name,Vector3.new(length,thickness or .12,width or .34),CFrame.new(x,y,z)*CFrame.Angles(0,angle,0),color,root,Enum.Material.Metal);seg.CanCollide=false
+ end
+end
+local function heroNiche(root,name,x,z,color,width,height)
+ local back=part(name.."NicheBack",Vector3.new(width,height,.8),CFrame.new(x,height*.5+8,z),Color3.fromRGB(106,116,132),root,Enum.Material.Marble);back.CanCollide=false
+ part(name.."NicheLeft",Vector3.new(2.2,height+2,2.4),CFrame.new(x-width*.5-1,height*.5+8,z+1),C.stone,root,Enum.Material.Marble)
+ part(name.."NicheRight",Vector3.new(2.2,height+2,2.4),CFrame.new(x+width*.5+1,height*.5+8,z+1),C.stone,root,Enum.Material.Marble)
+ part(name.."NicheTop",Vector3.new(width+4,2.1,2.4),CFrame.new(x,height+8.8,z+1),C.stone,root,Enum.Material.Marble)
+ trimBlock(root,name.."NicheGold",Vector3.new(width+4.2,.28,2.55),CFrame.new(x,height+7.7,z+1))
+ stageLight(root,name.."NicheLight",Vector3.new(x,18,z+5),color,.75,24)
+end
 local function trimBlock(root,name,size,cframe)
  return part(name,size,cframe,C.gold,root,Enum.Material.Metal)
 end
@@ -72,12 +87,12 @@ local function terrace(root,side)
  end
 end
 local function judgePlinth(root,name,x,z,color,role)
- local base=part(name.."Plinth",Vector3.new(18,4.8,11),CFrame.new(x,7.8,z),C.white,root,Enum.Material.Marble)
- trimBlock(root,name.."PlinthGold",Vector3.new(18.5,.5,11.5),CFrame.new(x,10.25,z))
- local plaque=part(name.."Plaque",Vector3.new(13.8,3.3,.5),CFrame.new(x,7.3,z+5.75),C.navy,root,Enum.Material.Metal);plaque.CanCollide=false
- local gui=Instance.new("SurfaceGui");gui.Face=Enum.NormalId.Front;gui.CanvasSize=Vector2.new(760,220);gui.Parent=plaque
- local label=Instance.new("TextLabel");label.BackgroundTransparency=1;label.Size=UDim2.fromScale(1,1);label.Text=name.."\n"..role;label.TextColor3=color;label.TextScaled=true;label.TextWrapped=true;label.Font=Enum.Font.GothamBold;label.Parent=gui
- stageLight(root,name.."HeroLight",Vector3.new(x,17,z+7),color,1.1,28)
+ local base=part(name.."Plinth",Vector3.new(16,4.2,10),CFrame.new(x,7.5,z),C.stone,root,Enum.Material.Marble)
+ trimBlock(root,name.."PlinthGold",Vector3.new(16.4,.28,10.4),CFrame.new(x,9.72,z))
+ local plaque=part(name.."Plaque",Vector3.new(9.6,1.9,.34),CFrame.new(x,6.85,z+5.18),C.navy,root,Enum.Material.Metal);plaque.CanCollide=false
+ local gui=Instance.new("SurfaceGui");gui.Face=Enum.NormalId.Front;gui.CanvasSize=Vector2.new(640,150);gui.Parent=plaque
+ local label=Instance.new("TextLabel");label.BackgroundTransparency=1;label.Size=UDim2.fromScale(1,1);label.Text=name.."  •  "..role;label.TextColor3=color;label.TextScaled=true;label.TextWrapped=true;label.Font=Enum.Font.GothamBold;label.Parent=gui
+ stageLight(root,name.."HeroLight",Vector3.new(x,17,z+7),color,.9,26)
  return base
 end
 local function worldModeSign(root,x,z,titleText,subtitleText,color)
@@ -213,27 +228,31 @@ local function baseSize(p)
 end
 local function judge(root,name,x,y,z,color,headShape)
  local m=Instance.new("Model");m.Name=name.."Judge";m.Parent=root
- local width=name=="RIVET"and 8.2 or(name=="MOSS"and 7.4 or 6.8)
- local body=part("Body",Vector3.new(width,8.8,4.8),CFrame.new(x,y,z),Color3.fromRGB(48,54,64),m,Enum.Material.Metal)
- local chest=part("Chest",Vector3.new(width*.74,3.2,5.05),CFrame.new(x,y+.8,z+.08),color,m,Enum.Material.Metal);chest.CanCollide=false
- local head=heroBall(m,"Head",5.1,CFrame.new(x,y+6.7,z),Color3.fromRGB(54,60,70),Enum.Material.Metal)
- local visor=part("Eyes",Vector3.new(3.2,.65,.35),CFrame.new(x,y+6.75,z+2.55),color,m,Enum.Material.Neon);visor.CanCollide=false
- local leftShoulder=heroBall(m,"LeftShoulder",3.2,CFrame.new(x-width*.62,y+2.8,z),Color3.fromRGB(62,68,78),Enum.Material.Metal)
- local rightShoulder=heroBall(m,"RightShoulder",3.2,CFrame.new(x+width*.62,y+2.8,z),Color3.fromRGB(62,68,78),Enum.Material.Metal)
- local leftArm=heroPart(m,"LeftArm",Vector3.new(1.55,6.2,1.55),CFrame.new(x-width*.62,y-.5,z)*CFrame.Angles(0,0,math.rad(-4)),Color3.fromRGB(50,56,66),Enum.Material.Metal)
- local rightArm=heroPart(m,"RightArm",Vector3.new(1.55,6.2,1.55),CFrame.new(x+width*.62,y-.5,z)*CFrame.Angles(0,0,math.rad(4)),Color3.fromRGB(50,56,66),Enum.Material.Metal)
- heroBall(m,"LeftHand",1.9,CFrame.new(x-width*.62,y-3.8,z),color,Enum.Material.Metal)
- heroBall(m,"RightHand",1.9,CFrame.new(x+width*.62,y-3.8,z),color,Enum.Material.Metal)
- local waist=part("Waist",Vector3.new(width*.68,1.5,4.2),CFrame.new(x,y-4.7,z),C.navy,m,Enum.Material.Metal)
- local hover=cylinder("HoverCore",6.7,.75,CFrame.new(x,y-6.15,z),C.navy,m,Enum.Material.Metal);hover.CanCollide=false
- local hoverGlow=cylinder("HoverRune",7.4,.22,CFrame.new(x,y-6.18,z),color,m,Enum.Material.Neon);hoverGlow.CanCollide=false;hoverGlow.Transparency=.15
- glow(hoverGlow,color,17,.9)
- rune(m,"ChestRune",Vector3.new(.65,3.2,.22),CFrame.new(x,y+.8,z+2.62),color)
- local light=glow(body,color,19,.85)
+ local baseMetal=name=="MOSS"and C.wood or Color3.fromRGB(48,54,66)
+ local torsoWidth=name=="RIVET"and 8.4 or(name=="MOSS"and 7.8 or 7.2)
+ local torso=part("Body",Vector3.new(torsoWidth,8.2,4.8),CFrame.new(x,y,z),baseMetal,m,name=="MOSS"and Enum.Material.Wood or Enum.Material.Metal)
+ local chestColor=name=="PIP"and Color3.fromRGB(205,211,220)or(name=="RIVET"and Color3.fromRGB(66,68,76)or C.wood)
+ local chest=heroWedge(m,"ChestArmor",Vector3.new(torsoWidth*.82,3.2,1.8),CFrame.new(x,y+1.3,z+2.6)*CFrame.Angles(math.rad(180),0,0),chestColor,name=="MOSS"and Enum.Material.Wood or Enum.Material.Metal)
+ local waist=part("Waist",Vector3.new(torsoWidth*.58,2.1,4),CFrame.new(x,y-4.6,z),C.darkstone,m,Enum.Material.Metal)
+ for side=-1,1,2 do
+  local sx=x+side*(torsoWidth*.58)
+  local shoulder=heroBall(m,side<0 and"LeftShoulder"or"RightShoulder",2.7,CFrame.new(sx,y+2.7,z),color,Enum.Material.Metal)
+  local upper=part(side<0 and"LeftArm"or"RightArm",Vector3.new(1.7,4.6,1.8),CFrame.new(sx+side*.15,y-.1,z)*CFrame.Angles(0,0,math.rad(side*7)),baseMetal,m,Enum.Material.Metal)
+  local hand=heroBall(m,side<0 and"LeftHand"or"RightHand",2.15,CFrame.new(sx+side*.42,y-3.2,z+.1),color,Enum.Material.Metal)
+ end
+ local headColor=name=="PIP"and Color3.fromRGB(205,211,220)or baseMetal
+ local head=part("Head",Vector3.new(5,4.6,4.5),CFrame.new(x,y+6.7,z),headColor,m,name=="MOSS"and Enum.Material.Wood or Enum.Material.Metal)
+ if headShape=="round"then head.Shape=Enum.PartType.Ball end
+ local brow=part("Brow",Vector3.new(5.2,.8,4.7),CFrame.new(x,y+7.65,z),C.darkstone,m,Enum.Material.Metal)
+ local eye=part("Eyes",Vector3.new(3.1,.55,.28),CFrame.new(x,y+6.75,z+2.38),color,m,Enum.Material.Neon);eye.CanCollide=false
+ local core=heroBall(m,"BaseCore",3.2,CFrame.new(x,y-6,z),C.navy,Enum.Material.Metal)
+ local ring=cylinder("HoverRing",5.2,.35,CFrame.new(x,y-6.2,z),color,m,Enum.Material.Neon);ring.CanCollide=false
+ glow(core,color,18,1.1)
  local boxCFrame,boxSize=m:GetBoundingBox()
+ judgeTag(m,name,color,boxCFrame,boxSize)
  local signature=decorateHero(m,name,boxCFrame,boxSize,color)
- m.PrimaryPart=body
- World.Judges[name]={Model=m,BaseCFrame=body.CFrame,Eye=visor,Light=light,Signature=signature,ReactionStarted=0,ReactionUntil=0,ReactionPitch=signature.ReactionPitch or 0,IdleAmplitude=name=="RIVET"and .08 or(name=="MOSS"and .12 or .1)}
+ m.PrimaryPart=torso
+ World.Judges[name]={Model=m,BaseCFrame=torso.CFrame,Eye=eye,Light=core:FindFirstChildOfClass("PointLight"),Signature=signature,ReactionStarted=0,ReactionUntil=0,ReactionPitch=signature.ReactionPitch or 0,IdleAmplitude=name=="RIVET"and .08 or(name=="MOSS"and .13 or .11)}
 end
 -- v0.5.2: Asset-based guardian with primitive fallback
 local function guardian(root,name,x,y,z,color,headShape,statueHeight)
@@ -370,33 +389,34 @@ function World.Init()
  -- Bright marble foundation and ceremonial center.
  part("ArenaFloor",Vector3.new(Definitions.Arena.SizeX,1,Definitions.Arena.SizeZ),CFrame.new(0,0,Definitions.Arena.CenterZ),C.stone,root,Enum.Material.Marble)
  part("ArenaApron",Vector3.new(84,.22,56),CFrame.new(0,.61,-4),C.white,root,Enum.Material.Marble)
- local arenaDisc=cylinder("ArenaDisc",39,.42,CFrame.new(0,.86,5),C.white,root,Enum.Material.Marble)
+ local arenaDisc=cylinder("ArenaDisc",39,.42,CFrame.new(0,.86,5),Color3.fromRGB(198,202,209),root,Enum.Material.Marble)
  arenaDisc.CanCollide=true
- local goldRing=cylinder("ArenaGoldRing",41,.16,CFrame.new(0,1.09,5),C.gold,root,Enum.Material.Metal);goldRing.CanCollide=false
- local innerDisc=cylinder("ArenaInnerDisc",31,.2,CFrame.new(0,1.2,5),Color3.fromRGB(235,239,244),root,Enum.Material.Marble);innerDisc.CanCollide=false
- local innerRing=cylinder("ArenaInnerGoldRing",32.5,.12,CFrame.new(0,1.33,5),C.gold,root,Enum.Material.Metal);innerRing.CanCollide=false
- rune(root,"ArenaAxisN",Vector3.new(.35,.08,25),CFrame.new(0,1.38,-1),C.blue)
- rune(root,"ArenaAxisE",Vector3.new(25,.08,.35),CFrame.new(0,1.39,5),C.blue)
+ local innerDisc=cylinder("ArenaInnerDisc",30,.18,CFrame.new(0,1.12,5),Color3.fromRGB(174,180,190),root,Enum.Material.Marble);innerDisc.CanCollide=false
+ ringSegments(root,"ArenaGoldRing",20.1,1.33,C.gold,32,.12,.34)
+ ringSegments(root,"ArenaInnerGoldRing",14.7,1.34,C.gold,28,.1,.26)
+ ringSegments(root,"ArenaBlueRing",17.1,1.35,C.blue,28,.08,.18)
+ rune(root,"ArenaAxisN",Vector3.new(.18,.06,21),CFrame.new(0,1.38,5),C.blue)
+ rune(root,"ArenaAxisE",Vector3.new(21,.06,.18),CFrame.new(0,1.39,5),C.blue)
 
- -- Grand entrance path and staircase.
- part("EntryPath",Vector3.new(16,.3,17),CFrame.new(0,.72,24),C.white,root,Enum.Material.Marble)
- for i=0,6 do
-  local y=.8+i*.55;local z=17-i*1.65;local width=24-i*.9
-  part("GrandStair",Vector3.new(width,1.1,2),CFrame.new(0,y,z),C.white,root,Enum.Material.Marble)
-  trimBlock(root,"GrandStairGold",Vector3.new(width+.15,.16,.22),CFrame.new(0,y+.62,z+1.02))
- end
- rune(root,"EntryPathLeft",Vector3.new(.3,.12,16.5),CFrame.new(-7.6,.92,24),C.gold)
- rune(root,"EntryPathRight",Vector3.new(.3,.12,16.5),CFrame.new(7.6,.92,24),C.gold)
+ -- Low approach keeps the circular debate floor unobstructed.
+ part("EntryPath",Vector3.new(14,.22,16),CFrame.new(0,.7,24),Color3.fromRGB(188,192,199),root,Enum.Material.Marble)
+ part("EntryStep",Vector3.new(18,.65,2.2),CFrame.new(0,.32,17.8),C.stone,root,Enum.Material.Marble)
+ trimBlock(root,"EntryStepGold",Vector3.new(18.2,.12,.22),CFrame.new(0,.68,18.85))
+ rune(root,"EntryPathLeft",Vector3.new(.18,.08,15.5),CFrame.new(-6.5,.84,24),C.gold)
+ rune(root,"EntryPathRight",Vector3.new(.18,.08,15.5),CFrame.new(6.5,.84,24),C.gold)
 
  -- Monumental back wall, columns and royal banners.
  part("TempleWall",Vector3.new(90,38,3),CFrame.new(0,20,-36.5),C.white,root,Enum.Material.Marble)
  part("TempleWallInset",Vector3.new(72,30,.8),CFrame.new(0,19,-34.55),Color3.fromRGB(202,210,221),root,Enum.Material.Marble)
  for _,x in ipairs({-40,-28,28,40})do marbleColumn(root,x,-31,28)end
  for _,x in ipairs({-34,34})do marbleColumn(root,x,8,22)end
- bannerPanel(root,-31,20,-34,"PIP")
+ bannerPanel(root,-31,20,-34,"RIVET")
  bannerPanel(root,31,20,-34,"MOSS")
- bannerPanel(root,-12,22,-34,"RIVET")
+ bannerPanel(root,-12,22,-34,"PIP")
  bannerPanel(root,12,22,-34,"ARENA")
+ heroNiche(root,"RIVET",-23,-35.2,C.red,15,23)
+ heroNiche(root,"PIP",0,-35.2,C.blue,16,27)
+ heroNiche(root,"MOSS",23,-35.2,C.green,15,23)
  waterfall(root,-42,-34,29);waterfall(root,42,-34,29)
 
  -- Side terraces and gardens keep the arena rich without blocking play.
