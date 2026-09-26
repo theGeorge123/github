@@ -1,7 +1,7 @@
 return table.freeze({
     GameName = "Beat the Bot",
-    -- 0.6.0: bright marble arena rebuild and premium debate HUD; live debate and probe remain disabled.
-    Version = "0.6.0",
+    -- 0.6.1: distinct PIP/RIVET/MOSS hero silhouettes and reactions; live debate and probe remain disabled.
+    Version = "0.6.1",
     ProfileSchema = 2,
     OpponentRating = 1000,
     InitialRating = 1000,
