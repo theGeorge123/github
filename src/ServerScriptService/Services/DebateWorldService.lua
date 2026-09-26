@@ -213,21 +213,27 @@ local function baseSize(p)
 end
 local function judge(root,name,x,y,z,color,headShape)
  local m=Instance.new("Model");m.Name=name.."Judge";m.Parent=root
- local body=part("Body",Vector3.new(9,10,6),CFrame.new(x,y,z),C.darkstone,m,Enum.Material.Metal)
- part("Chest",Vector3.new(6.4,3,6.3),CFrame.new(x,y+1.2,z-.1),color,m,Enum.Material.Metal)
- part("LeftPauldron",Vector3.new(3.4,2.4,3.4),CFrame.new(x-5.6,y+4.2,z),color,m,Enum.Material.Metal);part("RightPauldron",Vector3.new(3.4,2.4,3.4),CFrame.new(x+5.6,y+4.2,z),color,m,Enum.Material.Metal)
- part("LeftArm",Vector3.new(2.2,8,2.2),CFrame.new(x-5.2,y-1,z),C.darkstone,m,Enum.Material.Metal);part("RightArm",Vector3.new(2.2,8,2.2),CFrame.new(x+5.2,y-1,z),C.darkstone,m,Enum.Material.Metal)
- part("LeftGauntlet",Vector3.new(2.7,2,2.7),CFrame.new(x-5.2,y-4.8,z),color,m,Enum.Material.Metal);part("RightGauntlet",Vector3.new(2.7,2,2.7),CFrame.new(x+5.2,y-4.8,z),color,m,Enum.Material.Metal)
- local head=part("Head",Vector3.new(6.5,5.5,6),CFrame.new(x,y+7.5,z),C.darkstone,m,Enum.Material.Metal);if headShape=="round"then head.Shape=Enum.PartType.Ball end
- local eye=part("Eyes",Vector3.new(4,.8,.4),CFrame.new(x,y+7.6,z+3.05),color,m,Enum.Material.Neon);eye.CanCollide=false
- rune(m,"ChestRune",Vector3.new(1.1,4.2,.35),CFrame.new(x,y+1.2,z+3.2),color)
- local base=part("HoverCore",Vector3.new(.8,7.5,7.5),CFrame.new(x,y-6.2,z)*CFrame.Angles(0,0,math.rad(90)),C.navy,m,Enum.Material.Metal)
- rune(m,"HoverRune",Vector3.new(.5,8.4,8.4),CFrame.new(x,y-6.2,z)*CFrame.Angles(0,0,math.rad(90)),color)
- local light=glow(base,color,24,2.2)
+ local width=name=="RIVET"and 8.2 or(name=="MOSS"and 7.4 or 6.8)
+ local body=part("Body",Vector3.new(width,8.8,4.8),CFrame.new(x,y,z),Color3.fromRGB(48,54,64),m,Enum.Material.Metal)
+ local chest=part("Chest",Vector3.new(width*.74,3.2,5.05),CFrame.new(x,y+.8,z+.08),color,m,Enum.Material.Metal);chest.CanCollide=false
+ local head=heroBall(m,"Head",5.1,CFrame.new(x,y+6.7,z),Color3.fromRGB(54,60,70),Enum.Material.Metal)
+ local visor=part("Eyes",Vector3.new(3.2,.65,.35),CFrame.new(x,y+6.75,z+2.55),color,m,Enum.Material.Neon);visor.CanCollide=false
+ local leftShoulder=heroBall(m,"LeftShoulder",3.2,CFrame.new(x-width*.62,y+2.8,z),Color3.fromRGB(62,68,78),Enum.Material.Metal)
+ local rightShoulder=heroBall(m,"RightShoulder",3.2,CFrame.new(x+width*.62,y+2.8,z),Color3.fromRGB(62,68,78),Enum.Material.Metal)
+ local leftArm=heroPart(m,"LeftArm",Vector3.new(1.55,6.2,1.55),CFrame.new(x-width*.62,y-.5,z)*CFrame.Angles(0,0,math.rad(-4)),Color3.fromRGB(50,56,66),Enum.Material.Metal)
+ local rightArm=heroPart(m,"RightArm",Vector3.new(1.55,6.2,1.55),CFrame.new(x+width*.62,y-.5,z)*CFrame.Angles(0,0,math.rad(4)),Color3.fromRGB(50,56,66),Enum.Material.Metal)
+ heroBall(m,"LeftHand",1.9,CFrame.new(x-width*.62,y-3.8,z),color,Enum.Material.Metal)
+ heroBall(m,"RightHand",1.9,CFrame.new(x+width*.62,y-3.8,z),color,Enum.Material.Metal)
+ local waist=part("Waist",Vector3.new(width*.68,1.5,4.2),CFrame.new(x,y-4.7,z),C.navy,m,Enum.Material.Metal)
+ local hover=cylinder("HoverCore",6.7,.75,CFrame.new(x,y-6.15,z),C.navy,m,Enum.Material.Metal);hover.CanCollide=false
+ local hoverGlow=cylinder("HoverRune",7.4,.22,CFrame.new(x,y-6.18,z),color,m,Enum.Material.Neon);hoverGlow.CanCollide=false;hoverGlow.Transparency=.15
+ glow(hoverGlow,color,17,.9)
+ rune(m,"ChestRune",Vector3.new(.65,3.2,.22),CFrame.new(x,y+.8,z+2.62),color)
+ local light=glow(body,color,19,.85)
  local boxCFrame,boxSize=m:GetBoundingBox()
- judgeTag(m,name,color,boxCFrame,boxSize)
  local signature=decorateHero(m,name,boxCFrame,boxSize,color)
- m.PrimaryPart=body;World.Judges[name]={Model=m,BaseCFrame=body.CFrame,Eye=eye,Light=light,Signature=signature,ReactionStarted=0,ReactionUntil=0,ReactionPitch=signature.ReactionPitch or 0,IdleAmplitude=name=="RIVET"and .12 or(name=="MOSS"and .18 or .16)}
+ m.PrimaryPart=body
+ World.Judges[name]={Model=m,BaseCFrame=body.CFrame,Eye=visor,Light=light,Signature=signature,ReactionStarted=0,ReactionUntil=0,ReactionPitch=signature.ReactionPitch or 0,IdleAmplitude=name=="RIVET"and .08 or(name=="MOSS"and .12 or .1)}
 end
 -- v0.5.2: Asset-based guardian with primitive fallback
 local function guardian(root,name,x,y,z,color,headShape,statueHeight)
