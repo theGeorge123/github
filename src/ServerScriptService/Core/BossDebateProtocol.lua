@@ -12,7 +12,7 @@ function Protocol.ValidateClient(message)
  return true
 end
 function Protocol.Availability(tier,reason,disclosure)
- assert(tier=="LOCKED"or tier=="SCRIPTED_PRACTICE","Invalid Boss tier")
+ assert(tier=="LOCKED"or tier=="SCRIPTED_PRACTICE"or tier=="LIVE_AI_BETA","Invalid Boss tier")
  return {Kind="BossAvailability",Tier=tier,ReasonCode=reason,Disclosure=disclosure}
 end
 function Protocol.Rejected(code,message)
