@@ -9,12 +9,12 @@ local function label(pa,t,z,col,b)local l=Instance.new("TextLabel");l.Background
 local function button(pa,t,col)local b=Instance.new("TextButton");b.Text=t;b.TextColor3=C.white;b.TextSize=14;b.Font=Enum.Font.GothamBold;b.BackgroundColor3=col or C.panel;b.Parent=pa;corner(b,9);stroke(b,(col==C.gold and C.gold or C.blue),.55,1.2);gradient(b,b.BackgroundColor3:Lerp(C.white,.08),b.BackgroundColor3:Lerp(Color3.new(0,0,0),.15),90);return b end
 local g=Instance.new("ScreenGui");g.Name="MultiplayerDebateUI";g.ResetOnSpawn=false;g.Parent=p:WaitForChild("PlayerGui")
 local MAX_ARGUMENT_BYTES=500 -- mirrors authoritative server limit
-local badge=label(g,"SCRIPTED PRACTICE — NO WINNER OR SCORE • NOT A REAL OPPONENT",12,C.gold,true);badge.Position=UDim2.fromOffset(14,8);badge.Size=UDim2.fromOffset(480,26)
-local menu=Instance.new("Frame");menu.AnchorPoint=Vector2.new(1,.5);menu.Position=UDim2.new(1,-18,.5,0);menu.Size=UDim2.fromOffset(224,302);menu.BackgroundColor3=C.bg;menu.Parent=g;corner(menu,14);panelStyle(menu,C.gold)
-local ml=Instance.new("UIListLayout");ml.Padding=UDim.new(0,8);ml.HorizontalAlignment=Enum.HorizontalAlignment.Center;ml.VerticalAlignment=Enum.VerticalAlignment.Center;ml.SortOrder=Enum.SortOrder.LayoutOrder;ml.Parent=menu
-local menuTitle=label(menu,"CHOOSE YOUR MODE",16,C.gold,true);menuTitle.LayoutOrder=0;menuTitle.Size=UDim2.new(1,-20,0,30);menuTitle.TextXAlignment=Enum.TextXAlignment.Center
-local play=button(menu,"DEBATE A REAL PLAYER\nHUMAN OPPONENT",C.blue);play.LayoutOrder=1;play.Size=UDim2.new(1,-18,0,74);play.TextWrapped=true
-local chairs=button(menu,"CHAIRS");chairs.LayoutOrder=2;chairs.Size=UDim2.new(1,-18,0,42)
+local badge=label(g,"SCRIPTED PRACTICE — NO WINNER OR SCORE • NOT A REAL OPPONENT",10,C.gold,true);badge.Position=UDim2.fromOffset(12,8);badge.Size=UDim2.fromOffset(360,20)
+local menu=Instance.new("Frame");menu.AnchorPoint=Vector2.new(1,.5);menu.Position=UDim2.new(1,-14,.5,0);menu.Size=UDim2.fromOffset(184,242);menu.BackgroundColor3=C.bg;menu.Parent=g;corner(menu,14);panelStyle(menu,C.gold)
+local ml=Instance.new("UIListLayout");ml.Padding=UDim.new(0,6);ml.HorizontalAlignment=Enum.HorizontalAlignment.Center;ml.VerticalAlignment=Enum.VerticalAlignment.Center;ml.SortOrder=Enum.SortOrder.LayoutOrder;ml.Parent=menu
+local menuTitle=label(menu,"CHOOSE MODE",13,C.gold,true);menuTitle.LayoutOrder=0;menuTitle.Size=UDim2.new(1,-18,0,24);menuTitle.TextXAlignment=Enum.TextXAlignment.Center
+local play=button(menu,"DEBATE A REAL PLAYER\nHUMAN OPPONENT",C.blue);play.LayoutOrder=1;play.Size=UDim2.new(1,-16,0,58);play.TextSize=12;play.TextWrapped=true
+local chairs=button(menu,"CHAIRS");chairs.LayoutOrder=2;chairs.Size=UDim2.new(1,-16,0,34)
 local titles=button(menu,"TITLES");titles.LayoutOrder=3;titles.Size=chairs.Size
 local profileButton=button(menu,"PROFILE");profileButton.LayoutOrder=4;profileButton.Size=chairs.Size
 BossController.Init(r,g,button,label,C)
@@ -35,8 +35,8 @@ task.spawn(function()
  local destination=CFrame.lookAt(Vector3.new(0,14,29),focus.Position);local tween=TweenService:Create(camera,TweenInfo.new(2.4,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{CFrame=destination});tween:Play()
  task.delay(2.5,finishCameraIntro)
 end)
-local panel=Instance.new("Frame");panel.AnchorPoint=Vector2.new(.5,.5);panel.Position=UDim2.fromScale(.59,.61);panel.Size=UDim2.new(.69,0,.7,0);panel.BackgroundColor3=C.bg;panel.Visible=false;panel.Parent=g;corner(panel,16);panelStyle(panel,C.gold)
-local pc=Instance.new("UISizeConstraint");pc.MaxSize=Vector2.new(900,650);pc.MinSize=Vector2.new(310,440);pc.Parent=panel
+local panel=Instance.new("Frame");panel.AnchorPoint=Vector2.new(.5,.5);panel.Position=UDim2.fromScale(.55,.62);panel.Size=UDim2.new(.64,0,.66,0);panel.BackgroundColor3=C.bg;panel.Visible=false;panel.Parent=g;corner(panel,16);panelStyle(panel,C.gold)
+local pc=Instance.new("UISizeConstraint");pc.MaxSize=Vector2.new(820,600);pc.MinSize=Vector2.new(310,420);pc.Parent=panel
 local title=label(panel,"WAITING FOR ANOTHER PLAYER",21,C.white,true);title.Position=UDim2.fromOffset(18,12);title.Size=UDim2.new(1,-140,0,32);local panelLeave=button(panel,"LEAVE",C.panel);panelLeave.Name="LeaveDebate";panelLeave.AnchorPoint=Vector2.new(1,0);panelLeave.Position=UDim2.new(1,-14,0,12);panelLeave.Size=UDim2.fromOffset(104,34);panelLeave.ZIndex=10
 local topic=label(panel,"Two players take turns making and answering arguments.",13,C.gold,true);topic.Position=UDim2.fromOffset(18,46);topic.Size=UDim2.new(1,-36,0,42);topic.TextXAlignment=Enum.TextXAlignment.Center
 local roundHud=label(panel,"ROUND 0 / 6",12,C.gold,true);roundHud.Position=UDim2.fromOffset(18,92);roundHud.Size=UDim2.fromOffset(112,32);roundHud.BackgroundTransparency=.08;roundHud.BackgroundColor3=C.card;roundHud.TextXAlignment=Enum.TextXAlignment.Center;corner(roundHud,8);stroke(roundHud,C.gold,.55,1)
