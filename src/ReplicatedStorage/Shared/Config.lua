@@ -1,7 +1,7 @@
 return table.freeze({
     GameName = "Beat the Bot",
-    -- 0.6.1: distinct PIP/RIVET/MOSS hero silhouettes and reactions; live debate and probe remain disabled.
-    Version = "0.6.1",
+    -- 0.6.2: visual rescue for exposure, fallback judges, and UI obstruction; live debate and probe remain disabled.
+    Version = "0.6.2",
     ProfileSchema = 2,
     OpponentRating = 1000,
     InitialRating = 1000,
