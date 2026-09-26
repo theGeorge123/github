@@ -204,7 +204,9 @@ local function decorateHero(model,name,boxCFrame,boxSize,color)
   end
   signature.IdleStyle="GROWTH";signature.ReactionDuration=.7;signature.ReactionPitch=math.rad(-4)
  end
- for _,p in ipairs(signature.Parts)do p:SetAttribute("HeroBaseSizeX",p.Size.X);p:SetAttribute("HeroBaseSizeY",p.Size.Y);p:SetAttribute("HeroBaseSizeZ",p.Size.Z)end
+ for _,p in ipairs(signature.Parts)do p:SetAttribute("HeroBaseSizeX",p.Size.X);p:SetAttribute("HeroBaseSizeY",p.Size.Y);p:SetAttribute("HeroBaseSizeZ",p.Size.Z);p:SetAttribute("HeroBaseColor",p.Color)end
+ if signature.LeftScale then signature.LeftScaleOffset=model:GetPivot():ToObjectSpace(signature.LeftScale.CFrame)end
+ if signature.RightScale then signature.RightScaleOffset=model:GetPivot():ToObjectSpace(signature.RightScale.CFrame)end
  return signature
 end
 local function baseSize(p)
@@ -323,7 +325,7 @@ function World.React(reactions)
     if signature.Knuckle and signature.Knuckle.Parent then TweenService:Create(signature.Knuckle,TweenInfo.new(.25),{Transparency=.08,Color=C.red}):Play()end
    elseif reaction.Judge=="MOSS"then
     if signature.StaffOrb and signature.StaffOrb.Parent then TweenService:Create(signature.StaffOrb,TweenInfo.new(.35),{Size=baseSize(signature.StaffOrb),Color=C.green}):Play()end
-    for _,leaf in ipairs(signature.IdleParts or{})do if leaf and leaf.Parent then TweenService:Create(leaf,TweenInfo.new(.35),{Size=baseSize(leaf)}):Play()end end
+    for _,leaf in ipairs(signature.IdleParts or{})do if leaf and leaf.Parent then TweenService:Create(leaf,TweenInfo.new(.35),{Size=baseSize(leaf),Color=leaf:GetAttribute("HeroBaseColor")or C.green}):Play()end end
    end
   end)
  end end
@@ -474,10 +476,11 @@ function World.Init()
     local amplitude=data.IdleAmplitude or .16
     data.Model:PivotTo(data.BaseCFrame*CFrame.new(0,math.sin(elapsed+phase)*amplitude,0)*CFrame.Angles(pitch,0,0))
     local signature=data.Signature
-    if signature and signature.IdleStyle=="BALANCE"and signature.LeftScale and signature.RightScale then
-     local sway=math.sin(elapsed*1.25+phase)*.16
-     signature.LeftScale.CFrame=signature.LeftScale.CFrame*CFrame.Angles(0,0,sway*.025)
-     signature.RightScale.CFrame=signature.RightScale.CFrame*CFrame.Angles(0,0,-sway*.025)
+    if signature and signature.IdleStyle=="BALANCE"and signature.LeftScale and signature.RightScale and signature.LeftScaleOffset and signature.RightScaleOffset then
+     local sway=math.sin(elapsed*1.25+phase)*.045
+     local pivot=data.Model:GetPivot()
+     signature.LeftScale.CFrame=pivot*signature.LeftScaleOffset*CFrame.Angles(0,0,sway)
+     signature.RightScale.CFrame=pivot*signature.RightScaleOffset*CFrame.Angles(0,0,-sway)
     elseif signature and signature.IdleStyle=="GROWTH"and signature.StaffOrb then
      signature.StaffOrb.Transparency=.06+math.abs(math.sin(elapsed*1.3))*.12
     elseif signature and signature.IdleStyle=="POWER"and signature.Knuckle then
